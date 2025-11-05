@@ -418,6 +418,8 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
+import Shift from "@/Models/Shift";
+import Agent from "@/Models/Agent"; 
 
 export async function GET(request) {
   try {
