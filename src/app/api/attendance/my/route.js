@@ -186,7 +186,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get("month") || "", 10);
     const year = parseInt(searchParams.get("year") || "", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
 
     // ✅ FIXED: Check if user is agent or regular user
     const isAgent = decoded.type === 'agent';
@@ -207,6 +207,7 @@ export async function GET(request) {
       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
       const to = new Date(year, month, 1, 0, 0, 0, 0);
 
+      // ✅ FIXED: Use checkInTime instead of createdAt
       query.checkInTime = { $gte: from, $lt: to };
 
       const attends = await Attendance.find(query)
@@ -250,6 +251,18 @@ export async function GET(request) {
       .limit(limit);
 
     console.log('📊 Found records:', records.length);
+    
+    // ✅ FIXED: Debug each record
+    if (records.length > 0) {
+      console.log('📅 Sample record dates:');
+      records.forEach((record, index) => {
+        console.log(`Record ${index + 1}:`, {
+          checkInTime: record.checkInTime,
+          checkOutTime: record.checkOutTime,
+          date: record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date'
+        });
+      });
+    }
 
     return NextResponse.json({ 
       success: true, 
