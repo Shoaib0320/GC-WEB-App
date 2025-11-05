@@ -4,7 +4,9 @@ import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import Shift from "@/Models/Shift";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
+import Agent from "@/Models/Agent";
 
+// Helper to parse "HH:MM" into Date object on a given date
 function parseShiftDateTime(baseDate, timeStr) {
   const [hh, mm] = timeStr.split(":").map(Number);
   const dt = new Date(baseDate);
