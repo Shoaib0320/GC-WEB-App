@@ -1,29 +1,113 @@
-// // // // /app/api/attendance/my/route.js
+// // // // // /app/api/attendance/my/route.js
+// // // // import { NextResponse } from "next/server";
+// // // // import connectDB from "@/lib/mongodb";
+// // // // import Attendance from "@/Models/Attendance";
+// // // // import { verifyToken } from "@/lib/jwt";
+
+// // // // export async function GET(request) {
+// // // //   try {
+// // // //     await connectDB();
+// // // //     const token = request.cookies.get("token")?.value;
+// // // //     if (!token) return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+// // // //     const decoded = verifyToken(token);
+// // // //     if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+
+// // // //     const { searchParams } = new URL(request.url);
+// // // //     const month = parseInt(searchParams.get("month") || "", 10);
+// // // //     const year = parseInt(searchParams.get("year") || "", 10);
+
+// // // //     const userId = decoded.userId;
+
+// // // //     if (month && year) {
+// // // //       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
+// // // //       const to = new Date(year, month - 1 + 1, 1, 0, 0, 0, 0);
+
+// // // //       const attends = await Attendance.find({
+// // // //         user: userId,
+// // // //         createdAt: { $gte: from, $lt: to },
+// // // //       }).populate("shift", "name startTime endTime");
+
+// // // //       const present = attends.filter(a => a.checkInTime).length;
+// // // //       const presentWithCheckout = attends.filter(a => a.checkInTime && a.checkOutTime).length;
+// // // //       const overtimeMinutes = attends.reduce((s, a) => s + (a.overtimeMinutes || 0), 0);
+// // // //       const leaves = attends.filter(a => a.status === "leave").length;
+// // // //       const daysInMonth = Math.floor((to - from) / (24*60*60*1000));
+// // // //       const absent = Math.max(0, daysInMonth - present - leaves);
+
+// // // //       return NextResponse.json({
+// // // //         success: true,
+// // // //         data: {
+// // // //           month,
+// // // //           year,
+// // // //           totalDays: daysInMonth,
+// // // //           present,
+// // // //           presentWithCheckout,
+// // // //           absent,
+// // // //           leaves,
+// // // //           overtimeMinutes,
+// // // //           records: attends,
+// // // //         },
+// // // //       });
+// // // //     }
+
+// // // //     // otherwise recent records
+// // // //     const limit = parseInt(searchParams.get("limit") || "20", 10);
+// // // //     const records = await Attendance.find({ user: userId })
+// // // //       .populate("shift", "name startTime endTime")
+// // // //       .populate("manager", "firstName lastName email")
+// // // //       .sort({ createdAt: -1 })
+// // // //       .limit(limit);
+
+// // // //     return NextResponse.json({ success: true, data: records });
+// // // //   } catch (error) {
+// // // //     console.error("GET /api/attendance/my error:", error);
+// // // //     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+// // // //   }
+// // // // }
+
+
+
+
+// // // // app/api/attendance/my/route.js
 // // // import { NextResponse } from "next/server";
 // // // import connectDB from "@/lib/mongodb";
 // // // import Attendance from "@/Models/Attendance";
-// // // import { verifyToken } from "@/lib/jwt";
+// // // import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 
 // // // export async function GET(request) {
 // // //   try {
 // // //     await connectDB();
-// // //     const token = request.cookies.get("token")?.value;
-// // //     if (!token) return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+    
+// // //     // ✅ FIXED: Get token from headers
+// // //     const authHeader = request.headers.get('authorization');
+// // //     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+// // //       return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+// // //     }
+    
+// // //     const token = authHeader.replace('Bearer ', '');
 // // //     const decoded = verifyToken(token);
-// // //     if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+    
+// // //     if (!decoded) {
+// // //       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+// // //     }
+
+// // //     // ✅ FIXED: Use getUserIdFromToken
+// // //     const userId = getUserIdFromToken(decoded);
 
 // // //     const { searchParams } = new URL(request.url);
 // // //     const month = parseInt(searchParams.get("month") || "", 10);
 // // //     const year = parseInt(searchParams.get("year") || "", 10);
 
-// // //     const userId = decoded.userId;
+// // //     // ✅ FIXED: Check if user is agent or regular user
+// // //     const isAgent = decoded.type === 'agent';
+// // //     const queryField = isAgent ? 'agent' : 'user';
 
 // // //     if (month && year) {
 // // //       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
-// // //       const to = new Date(year, month - 1 + 1, 1, 0, 0, 0, 0);
+// // //       const to = new Date(year, month, 1, 0, 0, 0, 0);
 
 // // //       const attends = await Attendance.find({
-// // //         user: userId,
+// // //         [queryField]: userId, // ✅ Dynamic field based on user type
 // // //         createdAt: { $gte: from, $lt: to },
 // // //       }).populate("shift", "name startTime endTime");
 
@@ -31,7 +115,7 @@
 // // //       const presentWithCheckout = attends.filter(a => a.checkInTime && a.checkOutTime).length;
 // // //       const overtimeMinutes = attends.reduce((s, a) => s + (a.overtimeMinutes || 0), 0);
 // // //       const leaves = attends.filter(a => a.status === "leave").length;
-// // //       const daysInMonth = Math.floor((to - from) / (24*60*60*1000));
+// // //       const daysInMonth = Math.floor((to - from) / (24 * 60 * 60 * 1000));
 // // //       const absent = Math.max(0, daysInMonth - present - leaves);
 
 // // //       return NextResponse.json({
@@ -50,21 +134,27 @@
 // // //       });
 // // //     }
 
-// // //     // otherwise recent records
+// // //     // Otherwise recent records
 // // //     const limit = parseInt(searchParams.get("limit") || "20", 10);
-// // //     const records = await Attendance.find({ user: userId })
+// // //     const records = await Attendance.find({ [queryField]: userId })
 // // //       .populate("shift", "name startTime endTime")
-// // //       .populate("manager", "firstName lastName email")
+// // //       // .populate("manager", "firstName lastName email")
 // // //       .sort({ createdAt: -1 })
 // // //       .limit(limit);
 
-// // //     return NextResponse.json({ success: true, data: records });
+// // //     return NextResponse.json({ 
+// // //       success: true, 
+// // //       data: records 
+// // //     });
+
 // // //   } catch (error) {
 // // //     console.error("GET /api/attendance/my error:", error);
-// // //     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+// // //     return NextResponse.json({ 
+// // //       success: false, 
+// // //       message: error.message 
+// // //     }, { status: 500 });
 // // //   }
 // // // }
-
 
 
 
@@ -78,7 +168,7 @@
 // //   try {
 // //     await connectDB();
     
-// //     // ✅ FIXED: Get token from headers
+// //     // Get token from headers
 // //     const authHeader = request.headers.get('authorization');
 // //     if (!authHeader || !authHeader.startsWith('Bearer ')) {
 // //       return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
@@ -91,32 +181,50 @@
 // //       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
 // //     }
 
-// //     // ✅ FIXED: Use getUserIdFromToken
 // //     const userId = getUserIdFromToken(decoded);
 
 // //     const { searchParams } = new URL(request.url);
 // //     const month = parseInt(searchParams.get("month") || "", 10);
 // //     const year = parseInt(searchParams.get("year") || "", 10);
+// //     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
 // //     // ✅ FIXED: Check if user is agent or regular user
 // //     const isAgent = decoded.type === 'agent';
 // //     const queryField = isAgent ? 'agent' : 'user';
 
+// //     console.log('🔍 Attendance Query:', {
+// //       userId,
+// //       queryField,
+// //       month,
+// //       year,
+// //       limit
+// //     });
+
+// //     let query = { [queryField]: userId };
+
+// //     // If month and year provided, get monthly data
 // //     if (month && year) {
 // //       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
 // //       const to = new Date(year, month, 1, 0, 0, 0, 0);
 
-// //       const attends = await Attendance.find({
-// //         [queryField]: userId, // ✅ Dynamic field based on user type
-// //         createdAt: { $gte: from, $lt: to },
-// //       }).populate("shift", "name startTime endTime");
+// //       // ✅ FIXED: Use checkInTime instead of createdAt
+// //       query.checkInTime = { $gte: from, $lt: to };
 
-// //       const present = attends.filter(a => a.checkInTime).length;
-// //       const presentWithCheckout = attends.filter(a => a.checkInTime && a.checkOutTime).length;
-// //       const overtimeMinutes = attends.reduce((s, a) => s + (a.overtimeMinutes || 0), 0);
-// //       const leaves = attends.filter(a => a.status === "leave").length;
-// //       const daysInMonth = Math.floor((to - from) / (24 * 60 * 60 * 1000));
-// //       const absent = Math.max(0, daysInMonth - present - leaves);
+// //       const attends = await Attendance.find(query)
+// //         .populate("shift", "name startTime endTime")
+// //         .sort({ checkInTime: -1 });
+
+// //       // Calculate statistics
+// //       const presentDays = attends.filter(a => a.checkInTime).length;
+// //       const completedDays = attends.filter(a => a.checkInTime && a.checkOutTime).length;
+// //       const lateDays = attends.filter(a => a.isLate).length;
+// //       const overtimeDays = attends.filter(a => a.isOvertime).length;
+      
+// //       const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
+// //       const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
+
+// //       const daysInMonth = new Date(year, month, 0).getDate();
+// //       const absentDays = Math.max(0, daysInMonth - presentDays);
 
 // //       return NextResponse.json({
 // //         success: true,
@@ -124,23 +232,37 @@
 // //           month,
 // //           year,
 // //           totalDays: daysInMonth,
-// //           present,
-// //           presentWithCheckout,
-// //           absent,
-// //           leaves,
-// //           overtimeMinutes,
+// //           present: presentDays,
+// //           completed: completedDays,
+// //           absent: absentDays,
+// //           late: lateDays,
+// //           overtime: overtimeDays,
+// //           totalLateMinutes,
+// //           totalOvertimeMinutes,
 // //           records: attends,
 // //         },
 // //       });
 // //     }
 
-// //     // Otherwise recent records
-// //     const limit = parseInt(searchParams.get("limit") || "20", 10);
-// //     const records = await Attendance.find({ [queryField]: userId })
+// //     // Otherwise get recent records with proper sorting
+// //     const records = await Attendance.find(query)
 // //       .populate("shift", "name startTime endTime")
-// //       // .populate("manager", "firstName lastName email")
-// //       .sort({ createdAt: -1 })
+// //       .sort({ checkInTime: -1 }) // Sort by check-in time descending
 // //       .limit(limit);
+
+// //     console.log('📊 Found records:', records.length);
+    
+// //     // ✅ FIXED: Debug each record
+// //     if (records.length > 0) {
+// //       console.log('📅 Sample record dates:');
+// //       records.forEach((record, index) => {
+// //         console.log(`Record ${index + 1}:`, {
+// //           checkInTime: record.checkInTime,
+// //           checkOutTime: record.checkOutTime,
+// //           date: record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date'
+// //         });
+// //       });
+// //     }
 
 // //     return NextResponse.json({ 
 // //       success: true, 
@@ -156,8 +278,6 @@
 // //   }
 // // }
 
-
-
 // // app/api/attendance/my/route.js
 // import { NextResponse } from "next/server";
 // import connectDB from "@/lib/mongodb";
@@ -168,7 +288,6 @@
 //   try {
 //     await connectDB();
     
-//     // Get token from headers
 //     const authHeader = request.headers.get('authorization');
 //     if (!authHeader || !authHeader.startsWith('Bearer ')) {
 //       return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
@@ -181,25 +300,37 @@
 //       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
 //     }
 
-//     const userId = getUserIdFromToken(decoded);
+//     // Get user ID from token
+//     let userId;
+//     try {
+//       userId = getUserIdFromToken(decoded);
+//       console.log('🔍 My Attendance - User ID:', userId);
+//     } catch (error) {
+//       return NextResponse.json({ 
+//         success: false, 
+//         message: "Invalid token data: " + error.message 
+//       }, { status: 401 });
+//     }
 
 //     const { searchParams } = new URL(request.url);
 //     const month = parseInt(searchParams.get("month") || "", 10);
 //     const year = parseInt(searchParams.get("year") || "", 10);
-//     const limit = parseInt(searchParams.get("limit") || "50", 10);
+//     const limit = parseInt(searchParams.get("limit") || "100", 10);
 
-//     // ✅ FIXED: Check if user is agent or regular user
+//     // Determine user type
 //     const isAgent = decoded.type === 'agent';
 //     const queryField = isAgent ? 'agent' : 'user';
 
-//     console.log('🔍 Attendance Query:', {
+//     console.log('🔍 Attendance Query Details:', {
 //       userId,
 //       queryField,
+//       isAgent,
 //       month,
 //       year,
 //       limit
 //     });
 
+//     // Base query
 //     let query = { [queryField]: userId };
 
 //     // If month and year provided, get monthly data
@@ -207,7 +338,6 @@
 //       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
 //       const to = new Date(year, month, 1, 0, 0, 0, 0);
 
-//       // ✅ FIXED: Use checkInTime instead of createdAt
 //       query.checkInTime = { $gte: from, $lt: to };
 
 //       const attends = await Attendance.find(query)
@@ -244,24 +374,27 @@
 //       });
 //     }
 
-//     // Otherwise get recent records with proper sorting
+//     // Otherwise get recent records
 //     const records = await Attendance.find(query)
 //       .populate("shift", "name startTime endTime")
-//       .sort({ checkInTime: -1 }) // Sort by check-in time descending
+//       .sort({ checkInTime: -1 })
 //       .limit(limit);
 
 //     console.log('📊 Found records:', records.length);
-    
-//     // ✅ FIXED: Debug each record
+
+//     // Debug records
 //     if (records.length > 0) {
-//       console.log('📅 Sample record dates:');
+//       console.log('📅 Recent attendance records:');
 //       records.forEach((record, index) => {
-//         console.log(`Record ${index + 1}:`, {
-//           checkInTime: record.checkInTime,
-//           checkOutTime: record.checkOutTime,
-//           date: record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date'
-//         });
+//         const recordDate = record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date';
+//         const isToday = record.checkInTime ? 
+//           new Date(record.checkInTime).toDateString() === new Date().toDateString() : 
+//           false;
+        
+//         console.log(`  ${index + 1}. ${recordDate} - Today: ${isToday} - CheckOut: ${!!record.checkOutTime}`);
 //       });
+//     } else {
+//       console.log('❌ No attendance records found for user:', userId);
 //     }
 
 //     return NextResponse.json({ 
@@ -278,6 +411,8 @@
 //   }
 // }
 
+
+
 // app/api/attendance/my/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
@@ -287,61 +422,112 @@ import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 export async function GET(request) {
   try {
     await connectDB();
+    console.log('🔍 Attendance My Route - Started');
     
+    // Get token from headers
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+      console.log('❌ No auth header');
+      return NextResponse.json({ 
+        success: false, 
+        message: "Not authenticated" 
+      }, { status: 401 });
     }
     
     const token = authHeader.replace('Bearer ', '');
     const decoded = verifyToken(token);
     
     if (!decoded) {
-      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
-    }
-
-    // Get user ID from token
-    let userId;
-    try {
-      userId = getUserIdFromToken(decoded);
-      console.log('🔍 My Attendance - User ID:', userId);
-    } catch (error) {
+      console.log('❌ Invalid token');
       return NextResponse.json({ 
         success: false, 
-        message: "Invalid token data: " + error.message 
+        message: "Invalid token" 
       }, { status: 401 });
     }
+
+    const userId = getUserIdFromToken(decoded);
+    const userType = decoded.type || 'agent';
+
+    console.log('👤 User details:', {
+      userId,
+      userType,
+      agentId: decoded.agentId
+    });
 
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get("month") || "", 10);
     const year = parseInt(searchParams.get("year") || "", 10);
-    const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const today = searchParams.get("today");
+    const start = searchParams.get("start");
+    const end = searchParams.get("end");
 
-    // Determine user type
-    const isAgent = decoded.type === 'agent';
-    const queryField = isAgent ? 'agent' : 'user';
-
-    console.log('🔍 Attendance Query Details:', {
-      userId,
-      queryField,
-      isAgent,
-      month,
-      year,
-      limit
+    console.log('📋 Query parameters:', {
+      month, year, limit, page, today, start, end
     });
 
-    // Base query
+    // ✅ Determine query field based on user type
+    const queryField = userType === 'agent' ? 'agent' : 'user';
     let query = { [queryField]: userId };
 
-    // If month and year provided, get monthly data
+    // 🎯 SPECIAL CASE: Today's attendance
+    if (today === 'true') {
+      console.log('🎯 Fetching today attendance specifically');
+      
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(todayStart);
+      todayEnd.setDate(todayEnd.getDate() + 1);
+
+      query.checkInTime = { 
+        $gte: todayStart, 
+        $lt: todayEnd 
+      };
+
+      const todayAttendance = await Attendance.findOne(query)
+        .populate("shift", "name startTime endTime hours days")
+        .populate("user", "firstName lastName email")
+        .populate("agent", "agentName agentId email")
+        .sort({ checkInTime: -1 });
+
+      console.log('📅 Today attendance result:', {
+        found: !!todayAttendance,
+        checkInTime: todayAttendance?.checkInTime,
+        checkOutTime: todayAttendance?.checkOutTime
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: todayAttendance
+      });
+    }
+
+    // 📅 Date range filter
+    if (start && end) {
+      console.log('📅 Applying date range filter');
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      
+      query.checkInTime = { 
+        $gte: startDate, 
+        $lte: endDate 
+      };
+    }
+
+    // 📊 Monthly data request
     if (month && year) {
+      console.log('📊 Fetching monthly data:', { month, year });
+      
       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
       const to = new Date(year, month, 1, 0, 0, 0, 0);
 
       query.checkInTime = { $gte: from, $lt: to };
 
       const attends = await Attendance.find(query)
-        .populate("shift", "name startTime endTime")
+        .populate("shift", "name startTime endTime hours days")
+        .populate("user", "firstName lastName email")
+        .populate("agent", "agentName agentId email")
         .sort({ checkInTime: -1 });
 
       // Calculate statistics
@@ -355,6 +541,16 @@ export async function GET(request) {
 
       const daysInMonth = new Date(year, month, 0).getDate();
       const absentDays = Math.max(0, daysInMonth - presentDays);
+
+      console.log('📈 Monthly stats calculated:', {
+        month, year,
+        present: presentDays,
+        completed: completedDays,
+        late: lateDays,
+        overtime: overtimeDays,
+        absent: absentDays,
+        totalRecords: attends.length
+      });
 
       return NextResponse.json({
         success: true,
@@ -374,39 +570,68 @@ export async function GET(request) {
       });
     }
 
-    // Otherwise get recent records
-    const records = await Attendance.find(query)
-      .populate("shift", "name startTime endTime")
-      .sort({ checkInTime: -1 })
-      .limit(limit);
+    // 📜 Regular records with pagination
+    const skip = (page - 1) * limit;
+    
+    console.log('📜 Fetching regular records:', {
+      queryField,
+      userId,
+      limit,
+      skip,
+      page
+    });
 
-    console.log('📊 Found records:', records.length);
+    const [records, total] = await Promise.all([
+      Attendance.find(query)
+        .populate("shift", "name startTime endTime hours days")
+        .populate("user", "firstName lastName email")
+        .populate("agent", "agentName agentId email")
+        .sort({ checkInTime: -1 })
+        .skip(skip)
+        .limit(limit),
+      Attendance.countDocuments(query)
+    ]);
 
-    // Debug records
+    console.log('✅ Records fetched:', {
+      count: records.length,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
+
+    // Debug: Log first few records
     if (records.length > 0) {
-      console.log('📅 Recent attendance records:');
-      records.forEach((record, index) => {
-        const recordDate = record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date';
-        const isToday = record.checkInTime ? 
-          new Date(record.checkInTime).toDateString() === new Date().toDateString() : 
-          false;
-        
-        console.log(`  ${index + 1}. ${recordDate} - Today: ${isToday} - CheckOut: ${!!record.checkOutTime}`);
+      console.log('📅 Sample records:');
+      records.slice(0, 3).forEach((record, index) => {
+        console.log(`Record ${index + 1}:`, {
+          id: record._id,
+          checkInTime: record.checkInTime,
+          checkOutTime: record.checkOutTime,
+          date: record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date',
+          shift: record.shift?.name
+        });
       });
-    } else {
-      console.log('❌ No attendance records found for user:', userId);
     }
 
     return NextResponse.json({ 
       success: true, 
-      data: records 
+      data: records,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
+      }
     });
 
   } catch (error) {
-    console.error("GET /api/attendance/my error:", error);
+    console.error("❌ GET /api/attendance/my error:", error);
     return NextResponse.json({ 
       success: false, 
-      message: error.message 
+      message: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
 }
