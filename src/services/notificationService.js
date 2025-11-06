@@ -2,10 +2,29 @@
 import api from '@/lib/api';
 
 export const notificationService = {
-  // Create new notification
+  // Create new notification with better error handling
   createNotification: async (notificationData) => {
-    const response = await api.post('/notifications', notificationData);
-    return response.data;
+    try {
+      console.log('📨 Creating notification with data:', notificationData);
+      
+      const response = await api.post('/notifications', notificationData);
+      console.log('✅ Notification created successfully:', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error creating notification:', error);
+      
+      // Add more context to the error
+      if (error.response?.status === 401) {
+        error.message = 'Authentication failed. Please login again.';
+      } else if (error.response?.status === 403) {
+        error.message = 'You do not have permission to create notifications.';
+      } else if (error.response?.data?.error) {
+        error.message = error.response.data.error;
+      }
+      
+      throw error;
+    }
   },
 
   // Update notification

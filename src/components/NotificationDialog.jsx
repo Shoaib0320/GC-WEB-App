@@ -65,37 +65,85 @@ const NotificationDialog = ({ open, onOpenChange, notification = null, users = [
       });
     }
   }, [notification]);
+//   //
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setLoading(true);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+//     try {
+//       const submitData = {
+//         ...formData,
+//         scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
+//         expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
+//         specificUsers: formData.specificUsers.map(id => id),
+//         specificAgents: formData.specificAgents.map(id => id),
+//         roles: formData.roles.map(id => id)
+//       };
 
-    try {
-      const submitData = {
-        ...formData,
-        scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
-        expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
-        specificUsers: formData.specificUsers.map(id => id),
-        specificAgents: formData.specificAgents.map(id => id),
-        roles: formData.roles.map(id => id)
-      };
+//       if (notification) {
+//         await notificationService.updateNotification(notification._id, submitData);
+//       } else {
+//         await notificationService.createNotification(submitData);
+//       }
 
-      if (notification) {
-        await notificationService.updateNotification(notification._id, submitData);
-      } else {
-        await notificationService.createNotification(submitData);
-      }
+//       onOpenChange(false);
+//       // Refresh notifications list
+//       window.dispatchEvent(new CustomEvent('notificationUpdated'));
+//     } catch (error) {
+//       console.error('Error saving notification:', error);
+//       alert('Error saving notification: ' + error.message);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
-      onOpenChange(false);
-      // Refresh notifications list
-      window.dispatchEvent(new CustomEvent('notificationUpdated'));
-    } catch (error) {
-      console.error('Error saving notification:', error);
-      alert('Error saving notification: ' + error.message);
-    } finally {
-      setLoading(false);
+// components/NotificationDialog.jsx - Updated submit handler
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    console.log('🔄 Submitting notification form...');
+    
+    const submitData = {
+      ...formData,
+      scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
+      expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
+      specificUsers: formData.specificUsers.map(id => id),
+      specificAgents: formData.specificAgents.map(id => id),
+      roles: formData.roles.map(id => id)
+    };
+
+    console.log('📤 Sending notification data:', submitData);
+
+    let result;
+    if (notification) {
+      result = await notificationService.updateNotification(notification._id, submitData);
+    } else {
+      result = await notificationService.createNotification(submitData);
     }
-  };
+
+    console.log('✅ Notification saved successfully:', result);
+
+    onOpenChange(false);
+    
+    // Show success message
+    alert(notification ? 'Notification updated successfully!' : 'Notification created successfully!');
+    
+    // Refresh notifications list
+    window.dispatchEvent(new CustomEvent('notificationUpdated'));
+    
+  } catch (error) {
+    console.error('❌ Error saving notification:', error);
+    
+    // Show user-friendly error message
+    const errorMessage = error.userMessage || error.message || 'Failed to save notification. Please try again.';
+    alert(`Error: ${errorMessage}`);
+    
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleArrayChange = (field, value, checked) => {
     setFormData(prev => ({

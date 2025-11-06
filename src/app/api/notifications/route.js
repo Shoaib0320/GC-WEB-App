@@ -1,3 +1,4 @@
+// app/api/notifications/route.js
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Notification from '@/Models/Notification';
@@ -54,13 +55,21 @@ export async function POST(request) {
   try {
     await connectDB();
     
+    console.log('🔐 Checking authentication for notification creation...');
+    
     // Verify authentication using JWT
     const auth = await verifyAuth(request);
+    console.log('🔑 Auth result:', auth);
+    
     if (auth.error) {
+      console.log('❌ Authentication failed:', auth.error);
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
+    console.log('✅ Authentication successful, user:', auth.userId);
+    
     const body = await request.json();
+    console.log('📦 Request body received:', body);
     
     // Create notification
     const notification = await Notification.create({
@@ -68,65 +77,97 @@ export async function POST(request) {
       createdBy: auth.userId
     });
 
-    // Send notification to recipients
-    await sendNotificationToRecipients(notification);
+    console.log('✅ Notification created:', notification._id);
 
-    return NextResponse.json(notification, { status: 201 });
+    // Send notification to recipients (async - don't wait for it)
+    sendNotificationToRecipients(notification).catch(error => {
+      console.error('❌ Error sending notifications to recipients:', error);
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Notification created successfully',
+      notification
+    }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('❌ Error creating notification:', error);
+    return NextResponse.json({ 
+      error: error.message,
+      details: 'Failed to create notification'
+    }, { status: 500 });
   }
 }
 
 // Helper function to send notifications to recipients
 async function sendNotificationToRecipients(notification) {
-  let users = [];
-  let agents = [];
+  try {
+    console.log('📤 Sending notification to recipients...');
+    
+    let users = [];
+    let agents = [];
 
-  switch (notification.recipientType) {
-    case 'all':
-      users = await User.find({ isActive: true }).select('_id');
-      agents = await Agent.find({ isActive: true }).select('_id');
-      break;
+    switch (notification.recipientType) {
+      case 'all':
+        console.log('👥 Sending to all users and agents');
+        users = await User.find({ isActive: true }).select('_id');
+        agents = await Agent.find({ isActive: true }).select('_id');
+        break;
+      
+      case 'specific_users':
+        console.log('👤 Sending to specific users:', notification.specificUsers);
+        users = await User.find({ 
+          _id: { $in: notification.specificUsers },
+          isActive: true 
+        }).select('_id');
+        break;
+      
+      case 'specific_agents':
+        console.log('🤖 Sending to specific agents:', notification.specificAgents);
+        agents = await Agent.find({ 
+          _id: { $in: notification.specificAgents },
+          isActive: true 
+        }).select('_id');
+        break;
+      
+      case 'role_based':
+        console.log('🎯 Sending to role-based users:', notification.roles);
+        users = await User.find({ 
+          role: { $in: notification.roles },
+          isActive: true 
+        }).select('_id');
+        break;
+    }
+
+    console.log(`📊 Found ${users.length} users and ${agents.length} agents`);
+
+    // Create UserNotification records
+    const userNotifications = users.map(user => ({
+      user: user._id,
+      notification: notification._id
+    }));
+
+    const agentNotifications = agents.map(agent => ({
+      agent: agent._id,
+      notification: notification._id
+    }));
+
+    const allNotifications = [...userNotifications, ...agentNotifications];
     
-    case 'specific_users':
-      users = await User.find({ 
-        _id: { $in: notification.specificUsers },
-        isActive: true 
-      }).select('_id');
-      break;
-    
-    case 'specific_agents':
-      agents = await Agent.find({ 
-        _id: { $in: notification.specificAgents },
-        isActive: true 
-      }).select('_id');
-      break;
-    
-    case 'role_based':
-      users = await User.find({ 
-        role: { $in: notification.roles },
-        isActive: true 
-      }).select('_id');
-      break;
+    if (allNotifications.length > 0) {
+      await UserNotification.insertMany(allNotifications);
+      console.log(`✅ Created ${allNotifications.length} user/agent notification records`);
+    } else {
+      console.log('⚠️ No recipients found for notification');
+    }
+
+    // Update total recipients count
+    await Notification.findByIdAndUpdate(notification._id, {
+      totalRecipients: users.length + agents.length
+    });
+
+    console.log('✅ Notification distribution completed');
+  } catch (error) {
+    console.error('❌ Error in sendNotificationToRecipients:', error);
+    throw error;
   }
-
-  // Create UserNotification records
-  const userNotifications = users.map(user => ({
-    user: user._id,
-    notification: notification._id
-  }));
-
-  const agentNotifications = agents.map(agent => ({
-    agent: agent._id,
-    notification: notification._id
-  }));
-
-  if (userNotifications.length > 0 || agentNotifications.length > 0) {
-    await UserNotification.insertMany([...userNotifications, ...agentNotifications]);
-  }
-
-  // Update total recipients count
-  await Notification.findByIdAndUpdate(notification._id, {
-    totalRecipients: users.length + agents.length
-  });
 }
