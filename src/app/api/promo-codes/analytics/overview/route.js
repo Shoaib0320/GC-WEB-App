@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import PromoCode from '@/Models/PromoCode';
 import Booking from '@/Models/Booking';
 import connectDB from '@/lib/mongodb';
+import Agent from '@/Models/Agent';
 
 export async function GET(request) {
   try {
