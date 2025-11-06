@@ -4,16 +4,17 @@ import Notification from '@/Models/Notification';
 import UserNotification from '@/Models/UserNotification';
 import User from '@/Models/User';
 import Agent from '@/Models/Agent';
-import { getServerSession } from 'next-auth';
+import { verifyAuth } from '@/lib/auth';
 
 // GET all notifications (admin)
 export async function GET(request) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -52,10 +53,11 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const body = await request.json();
@@ -63,7 +65,7 @@ export async function POST(request) {
     // Create notification
     const notification = await Notification.create({
       ...body,
-      createdBy: session.user.id
+      createdBy: auth.userId
     });
 
     // Send notification to recipients
@@ -119,7 +121,9 @@ async function sendNotificationToRecipients(notification) {
     notification: notification._id
   }));
 
-  await UserNotification.insertMany([...userNotifications, ...agentNotifications]);
+  if (userNotifications.length > 0 || agentNotifications.length > 0) {
+    await UserNotification.insertMany([...userNotifications, ...agentNotifications]);
+  }
 
   // Update total recipients count
   await Notification.findByIdAndUpdate(notification._id, {

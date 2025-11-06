@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import UserNotification from '@/Models/UserNotification';
-import { getServerSession } from 'next-auth';
+import { verifyAuth } from '@/lib/auth';
 
 // GET my notifications
 export async function GET(request) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -18,13 +19,14 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit')) || 10;
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
 
-    let query = {
-      $or: [
-        { user: session.user.id },
-        { agent: session.user.id }
-      ],
-      dismissed: false
-    };
+    // Build query based on user type
+    let query = { dismissed: false };
+
+    if (auth.userType === 'agent') {
+      query.agent = auth.userId;
+    } else {
+      query.user = auth.userId;
+    }
 
     if (unreadOnly) {
       query.isRead = false;

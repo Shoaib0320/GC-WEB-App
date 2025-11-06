@@ -1,16 +1,16 @@
-// app/api/notifications/user/[userId]/route.js
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import UserNotification from '@/Models/UserNotification';
-import { getServerSession } from 'next-auth';
+import { verifyAuth } from '@/lib/auth';
 
 export async function GET(request, { params }) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { userId } = params;

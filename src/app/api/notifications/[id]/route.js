@@ -2,16 +2,17 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Notification from '@/Models/Notification';
 import UserNotification from '@/Models/UserNotification';
-import { getServerSession } from 'next-auth';
+import { verifyAuth } from '@/lib/auth';
 
 // GET single notification
 export async function GET(request, { params }) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const notification = await Notification.findById(params.id)
@@ -34,10 +35,11 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const body = await request.json();
@@ -61,10 +63,11 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-    const session = await getServerSession();
     
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify authentication using JWT
+    const auth = await verifyAuth(request);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     // Delete notification and associated user notifications
