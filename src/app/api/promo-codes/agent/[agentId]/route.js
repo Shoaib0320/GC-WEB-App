@@ -1,3 +1,4 @@
+// src/app/api/promo-codes/agent/[agentId]/route.js
 import { NextResponse } from 'next/server';
 import PromoCode from '@/Models/PromoCode';
 import connectDB from '@/lib/mongodb';
