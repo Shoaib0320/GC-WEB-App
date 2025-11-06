@@ -96,10 +96,10 @@ export async function POST(request) {
       );
     }
 
-    // Find promo code without agentId
+    // Find promo code
     const promo = await PromoCode.findOne({
       promoCode: promoCode.toUpperCase()
-    });
+    }).populate('agentId', 'agentName agentId email');
 
     if (!promo) {
       return NextResponse.json(
@@ -108,7 +108,7 @@ export async function POST(request) {
       );
     }
 
-    // Validate promo code (conditional checks)
+    // Validate promo code
     if (!promo.isActive) {
       return NextResponse.json({
         success: false,
@@ -134,10 +134,6 @@ export async function POST(request) {
     const discountAmount = (amount * promo.discountPercentage) / 100;
     const finalAmount = amount - discountAmount;
 
-    // Increment usage count (always track usage)
-    promo.usedCount += 1;
-    await promo.save();
-
     return NextResponse.json({
       success: true,
       message: 'Promo code applied successfully',
@@ -147,8 +143,10 @@ export async function POST(request) {
         discountAmount,
         finalAmount,
         promoCode: promo.promoCode,
+        promoCodeId: promo._id, // ID bhi send karo
         agentInfo: promo.agentId,
-        remainingUsage: promo.maxUsage ? promo.maxUsage - promo.usedCount : null
+        remainingUsage: promo.maxUsage ? promo.maxUsage - promo.usedCount : null,
+        promoDetails: promo // Complete promo details
       }
     });
   } catch (error) {

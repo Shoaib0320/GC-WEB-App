@@ -1,7 +1,7 @@
 // import { NextResponse } from "next/server";
-
-// import Booking, { BookingStatus } from "@/models/Booking";
+// import Booking, { BookingStatus } from "@/Models/Booking";
 // import connectDB from "@/lib/mongodb";
+// import { sendEmail } from "@/lib/mailer";
 
 // const corsHeaders = {
 //   "Access-Control-Allow-Origin": "*",
@@ -15,7 +15,7 @@
 // }
 
 // /**
-//  * ✅ POST — Create a new booking
+//  * ✅ POST — Create a new booking + send emails
 //  */
 // export async function POST(req) {
 //   try {
@@ -44,7 +44,9 @@
 //     }
 
 //     // ✅ Check for duplicate bookingId
-//     const existingBooking = await Booking.findOne({ bookingId: data.bookingId });
+//     const existingBooking = await Booking.findOne({
+//       bookingId: data.bookingId,
+//     });
 //     if (existingBooking) {
 //       return NextResponse.json(
 //         { success: false, error: "Booking ID already exists" },
@@ -80,10 +82,40 @@
 //       status: BookingStatus.PENDING,
 //     });
 
+//     // ✅ Email sending logic
+//     // const { firstName, lastName, email, date, timeSlot, phone } = data.formData;
+//     const { email } = data.formData;
+
+//     // 📨 User email
+//     // const userHtml = render(<BookingConfirmation bookingData={newBooking} />);
+
+//     // 📨 Owner email
+//     // const ownerHtml = render(<OwnerNotification bookingData={newBooking} />);
+
+//     try {
+//       // Send to user
+//       await sendEmail({
+//         to: email,
+//         subject: `Your Booking Confirmation - ${newBooking.webName} (#${newBooking.bookingId})`,
+//         html: userHtml,
+//       });
+
+//       // Send to owner
+//       await sendEmail({
+//         to: process.env.OWNER_EMAIL,
+//         subject: `New Booking Received (#${newBooking.bookingId})`,
+//         html: ownerHtml,
+//       });
+
+//       console.log("✅ Emails sent to user and owner");
+//     } catch (mailError) {
+//       console.error("❌ Email sending failed:", mailError);
+//     }
+
 //     return NextResponse.json(
 //       {
 //         success: true,
-//         message: "Booking created successfully",
+//         message: "Booking created and emails sent successfully",
 //         data: newBooking,
 //       },
 //       { status: 201, headers: corsHeaders }
@@ -122,8 +154,14 @@
 //   }
 // }
 
+
+
+
+
+// src/app/api/booking/route.js
 import { NextResponse } from "next/server";
 import Booking, { BookingStatus } from "@/Models/Booking";
+import PromoCode from "@/Models/PromoCode"; // Import PromoCode model
 import connectDB from "@/lib/mongodb";
 import { sendEmail } from "@/lib/mailer";
 
@@ -133,14 +171,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// ✅ OPTIONS (for CORS preflight)
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-/**
- * ✅ POST — Create a new booking + send emails
- */
 export async function POST(req) {
   try {
     await connectDB();
@@ -178,6 +212,45 @@ export async function POST(req) {
       );
     }
 
+    // ✅ PROMO CODE VALIDATION & PROCESSING
+    let promoCodeData = null;
+    let promoCodeId = null;
+
+    if (data.promoCode) {
+      // Find and validate promo code
+      promoCodeData = await PromoCode.findOne({
+        promoCode: data.promoCode.toUpperCase(),
+        isActive: true
+      });
+
+      if (promoCodeData) {
+        // Check if promo code is valid
+        if (promoCodeData.validUntil && new Date() > new Date(promoCodeData.validUntil)) {
+          return NextResponse.json(
+            { success: false, error: "Promo code has expired" },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        if (promoCodeData.maxUsage && promoCodeData.usedCount >= promoCodeData.maxUsage) {
+          return NextResponse.json(
+            { success: false, error: "Promo code usage limit reached" },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Increment usage count
+        promoCodeData.usedCount += 1;
+        await promoCodeData.save();
+        promoCodeId = promoCodeData._id;
+      } else {
+        return NextResponse.json(
+          { success: false, error: "Invalid promo code" },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+    }
+
     // ✅ Create new booking
     const newBooking = await Booking.create({
       bookingId: data.bookingId,
@@ -201,6 +274,7 @@ export async function POST(req) {
       discountApplied: data.discountApplied || false,
       discountPercent: data.discountPercent || 0,
       promoCode: data.promoCode || null,
+      promoCodeId: promoCodeId, // Store promo code reference
       submittedAt: data.submittedAt,
       vehicleCount: data.vehicleCount,
       status: BookingStatus.PENDING,
@@ -254,12 +328,14 @@ export async function POST(req) {
 }
 
 /**
- * ✅ GET — Fetch all bookings (latest first)
+ * ✅ GET — Fetch all bookings with promo code details
  */
 export async function GET() {
   try {
     await connectDB();
-    const bookings = await Booking.find().sort({ createdAt: -1 });
+    const bookings = await Booking.find()
+      .populate('promoCodeId') // Populate promo code details
+      .sort({ createdAt: -1 });
 
     return NextResponse.json(
       {

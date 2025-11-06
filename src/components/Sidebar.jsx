@@ -46,6 +46,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { label: "Promo Code", href: "/dashboard/promo-codes", icon: Code2Icon },
     { label: "Attedance", href: "/dashboard/view-attendance", icon: BarChart3 },
     { label: "Shfit Panel", href: "/dashboard/shift-pannel", icon: BarChart3 },
+        { label: "Notifications", href: "/dashboard/notifications", icon: BarChart3 },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
     { label: "Setting", href: "/dashboard/settings", icon: Settings },
   ];
