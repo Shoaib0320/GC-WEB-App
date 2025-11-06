@@ -52,7 +52,7 @@ export async function POST(request) {
 
       const attendanceData = {
         shift: null,
-        status: "approved_leave",
+        status: "leave",
         leaveReason: reason,
         leaveType: leaveType,
         createdAt: date,
