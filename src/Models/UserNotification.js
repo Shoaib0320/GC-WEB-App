@@ -3,14 +3,14 @@ import mongoose from "mongoose";
 
 const UserNotificationSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    userId: {
+      type: String, // Simple string ID (user ID or agent ID)
       required: true
     },
-    agent: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Agent"
+    userType: {
+      type: String,
+      enum: ["user", "agent"],
+      required: true
     },
     notification: {
       type: mongoose.Schema.Types.ObjectId,
@@ -23,22 +23,13 @@ const UserNotificationSchema = new mongoose.Schema(
     },
     readAt: {
       type: Date
-    },
-    dismissed: {
-      type: Boolean,
-      default: false
-    },
-    dismissedAt: {
-      type: Date
     }
   },
   { timestamps: true }
 );
 
-// Composite index for better query performance
-UserNotificationSchema.index({ user: 1, notification: 1 }, { unique: true });
-UserNotificationSchema.index({ agent: 1, notification: 1 }, { unique: true });
-UserNotificationSchema.index({ isRead: 1, createdAt: -1 });
-UserNotificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
+// Index for better performance
+UserNotificationSchema.index({ userId: 1, isRead: 1 });
+UserNotificationSchema.index({ userType: 1, createdAt: -1 });
 
 export default mongoose.models.UserNotification || mongoose.model("UserNotification", UserNotificationSchema);
