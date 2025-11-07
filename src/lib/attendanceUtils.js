@@ -219,20 +219,74 @@ export async function isWeeklyOff(date = new Date()) {
 /**
  * Check if shift is assigned for today
  */
+// export async function isShiftDay(shiftId, date = new Date()) {
+//   try {
+//     const shift = await Shift.findById(shiftId);
+//     if (!shift || !shift.days || !Array.isArray(shift.days)) return false;
+
+//     const dayNames = [
+//       "sunday", "monday", "tuesday", "wednesday", 
+//       "thursday", "friday", "saturday"
+//     ];
+//     const todayName = dayNames[date.getDay()];
+
+//     return shift.days.includes(todayName);
+//   } catch (error) {
+//     console.error('Error checking shift day:', error);
+//     return false;
+//   }
+// }
+
 export async function isShiftDay(shiftId, date = new Date()) {
   try {
     const shift = await Shift.findById(shiftId);
-    if (!shift || !shift.days || !Array.isArray(shift.days)) return false;
+    if (!shift || !shift.days || !Array.isArray(shift.days)) {
+      console.log('❌ Shift not found or invalid days array:', {
+        shiftId,
+        hasShift: !!shift,
+        days: shift?.days
+      });
+      return false;
+    }
 
     const dayNames = [
       "sunday", "monday", "tuesday", "wednesday", 
       "thursday", "friday", "saturday"
     ];
     const todayName = dayNames[date.getDay()];
+    
+    // Convert today's full name to short format for comparison
+    const shortDayMap = {
+      "sunday": "Sun",
+      "monday": "Mon", 
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    };
+    
+    const todayShortName = shortDayMap[todayName];
+    
+    // Also check for full names in case some shifts use full names
+    const isMatch = shift.days.includes(todayShortName) || 
+                    shift.days.includes(todayName);
+    
+    console.log('🔍 Shift Day Check:', {
+      shiftId,
+      shiftName: shift.name,
+      shiftDays: shift.days,
+      todayFullName: todayName,
+      todayShortName: todayShortName,
+      isMatch,
+      currentDay: date.getDay(),
+      currentDate: date.toLocaleDateString('en-IN')
+    });
 
-    return shift.days.includes(todayName);
+    return isMatch;
+    
   } catch (error) {
-    console.error('Error checking shift day:', error);
+    console.error('❌ Error checking shift day:', error);
     return false;
   }
 }
