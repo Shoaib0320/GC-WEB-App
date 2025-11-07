@@ -5,6 +5,8 @@ import Attendance from "@/Models/Attendance";
 import Shift from "@/Models/Shift";
 import Holiday from "@/Models/Holiday";
 import WeeklyOff from "@/Models/WeeklyOff";
+import Agent from "@/Models/Agent";
+import User from "@/Models/User";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 import {
   isHoliday,
