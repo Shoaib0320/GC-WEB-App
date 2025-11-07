@@ -160,8 +160,8 @@
 
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Attendance from "@/models/Attendance";
-import Shift from "@/models/Shift";
+import Attendance from "@/Models/Attendance";
+import Shift from "@/Models/Shift";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 import { 
   parseShiftDateTime, 

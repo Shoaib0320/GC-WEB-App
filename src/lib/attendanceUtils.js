@@ -1,6 +1,6 @@
-import Holiday from "@/models/Holiday";
-import WeeklyOff from "@/models/WeeklyOff";
-import Shift from "@/models/Shift";
+import Holiday from "@/Models/Holiday";
+import WeeklyOff from "@/Models/WeeklyOff";
+import Shift from "@/Models/Shift";
 
 /**
  * Check if today is a holiday
