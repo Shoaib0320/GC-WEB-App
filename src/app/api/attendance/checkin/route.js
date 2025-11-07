@@ -275,14 +275,14 @@ export async function POST(request) {
       });
     }
 
-    // Step 4: Check if shift is assigned for today
-    const isTodayShiftDay = await isShiftDay(shiftId, now);
-    if (!isTodayShiftDay) {
-      return NextResponse.json({ 
-        success: false, 
-        message: "No shift assigned for today." 
-      }, { status: 400 });
-    }
+    // // Step 4: Check if shift is assigned for today
+    // const isTodayShiftDay = await isShiftDay(shiftId, now);
+    // if (!isTodayShiftDay) {
+    //   return NextResponse.json({ 
+    //     success: false, 
+    //     message: "No shift assigned for today." 
+    //   }, { status: 400 });
+    // }
 
     // Step 5: Get shift details for late calculation
     const shift = await Shift.findById(shiftId);
