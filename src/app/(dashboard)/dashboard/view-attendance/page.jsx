@@ -1350,6 +1350,7 @@ export default function AdminAttendancePage() {
                 <SelectItem value="leave">Leave</SelectItem>
                 <SelectItem value="late">Late</SelectItem>
                 <SelectItem value="holiday">Holiday</SelectItem>
+                <SelectItem value="half_day">Half Day</SelectItem>
                 <SelectItem value="weekly_off">Weekly Off</SelectItem>
                 <SelectItem value="approved_leave">Approved Leave</SelectItem>
               </SelectContent>

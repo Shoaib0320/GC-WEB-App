@@ -261,7 +261,8 @@ export async function POST(request) {
     }
 
     // Step 2: Set check-out details
-    attendance.checkOutTime = now;
+    // attendance.checkOutTime = now;
+    attendance.checkOutTime = new Date();
     attendance.checkOutLocation = location || null;
 
     // Step 3: Calculate working hours
