@@ -165,7 +165,6 @@ import Shift from "@/Models/Shift";
 import Holiday from "@/Models/Holiday";
 import WeeklyOff from "@/Models/WeeklyOff";
 import Agent from "@/Models/Agent";
-import User from "@/Models/User";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 import { 
   isHoliday, 
@@ -196,6 +195,13 @@ export async function POST(request) {
     const body = await request.json();
     const { shiftId, location, userType = 'agent' } = body;
 
+    if (!shiftId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Shift ID is required" 
+      }, { status: 400 });
+    }
+
     // Get user ID from token
     let userId;
     try {
@@ -214,7 +220,8 @@ export async function POST(request) {
       userId,
       userType,
       shiftId,
-      currentTime: now.toLocaleString()
+      currentTime: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      todayStart: todayStart.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
     });
 
     // Step 1: Check for existing attendance
@@ -240,7 +247,6 @@ export async function POST(request) {
     // Step 2: Check if today is holiday
     const holiday = await isHoliday(now);
     if (holiday) {
-      // Auto-create holiday attendance
       const holidayAttendance = new Attendance({
         [userType === 'agent' ? 'agent' : 'user']: userId,
         shift: shiftId,
@@ -261,7 +267,6 @@ export async function POST(request) {
     // Step 3: Check if today is weekly off
     const weeklyOff = await isWeeklyOff(now);
     if (weeklyOff) {
-      // Auto-create weekly off attendance
       const weeklyOffAttendance = new Attendance({
         [userType === 'agent' ? 'agent' : 'user']: userId,
         shift: shiftId,
@@ -279,14 +284,14 @@ export async function POST(request) {
       });
     }
 
-    // // Step 4: Check if shift is assigned for today
-    // const isTodayShiftDay = await isShiftDay(shiftId, now);
-    // if (!isTodayShiftDay) {
-    //   return NextResponse.json({ 
-    //     success: false, 
-    //     message: "No shift assigned for today." 
-    //   }, { status: 400 });
-    // }
+    // Step 4: Check if shift is assigned for today
+    const isTodayShiftDay = await isShiftDay(shiftId, now);
+    if (!isTodayShiftDay) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "No shift assigned for today." 
+      }, { status: 400 });
+    }
 
     // Step 5: Get shift details for late calculation
     const shift = await Shift.findById(shiftId);
@@ -297,7 +302,14 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
-    // Step 6: Late calculation with proper logic
+    console.log('🕒 Shift Details:', {
+      shiftName: shift.name,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      days: shift.days
+    });
+
+    // Step 6: PROPER LATE CALCULATION - FIXED
     const shiftStartTime = parseShiftDateTime(todayStart, shift.startTime);
     const gracePeriod = 15; // 15 minutes grace period
     
@@ -305,19 +317,48 @@ export async function POST(request) {
     let lateMinutes = 0;
     let status = 'present';
 
-    if (now > shiftStartTime) {
-      lateMinutes = getTimeDifferenceInMinutes(shiftStartTime, now);
+    // Debug timing information
+    console.log('⏰ Timing Comparison:', {
+      currentTime: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      shiftStartTime: shiftStartTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      currentTimeISO: now.toISOString(),
+      shiftStartTimeISO: shiftStartTime.toISOString(),
+      currentTimeMs: now.getTime(),
+      shiftStartTimeMs: shiftStartTime.getTime()
+    });
+
+    // Calculate time difference
+    const timeDifferenceMs = now.getTime() - shiftStartTime.getTime();
+    const timeDifferenceMinutes = Math.floor(timeDifferenceMs / (1000 * 60));
+
+    console.log('📊 Time Difference Calculation:', {
+      timeDifferenceMs,
+      timeDifferenceMinutes,
+      gracePeriod
+    });
+
+    // Check if late (after grace period)
+    if (timeDifferenceMinutes > gracePeriod) {
+      isLate = true;
+      lateMinutes = timeDifferenceMinutes;
+      status = 'late';
       
-      // Consider late only after grace period
-      if (lateMinutes > gracePeriod) {
-        isLate = true;
-        status = 'late';
-        console.log('⏰ Late Check-in:', { lateMinutes, gracePeriod });
-      } else {
-        // Within grace period, not considered late
-        lateMinutes = 0;
-        console.log('✅ Within grace period');
-      }
+      console.log('⚠️ LATE DETECTED:', {
+        lateMinutes,
+        gracePeriod,
+        status
+      });
+    } else if (timeDifferenceMinutes > 0) {
+      // Within grace period
+      console.log('✅ Within grace period:', {
+        minutesAfterStart: timeDifferenceMinutes,
+        gracePeriod
+      });
+    } else {
+      // Early or on time
+      console.log('🎉 On time or early:', {
+        minutesBeforeStart: Math.abs(timeDifferenceMinutes)
+      });
     }
 
     // Step 7: Create attendance record
@@ -340,23 +381,43 @@ export async function POST(request) {
       .populate(userType === 'agent' ? "agent" : "user", "name email userId")
       .populate("shift", "name startTime endTime hours days");
 
-    console.log('✅ Check-in Successful:', {
+    console.log('✅ Check-in Final Result:', {
       attendanceId: populated._id,
-      checkInTime: populated.checkInTime?.toLocaleString(),
+      checkInTime: populated.checkInTime?.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
       status: populated.status,
       isLate: populated.isLate,
-      lateMinutes: populated.lateMinutes
+      lateMinutes: populated.lateMinutes,
+      shiftStartTime: shift.startTime
     });
 
+    // Generate appropriate message
     let successMessage = "Checked in successfully! ✅";
+    
     if (isLate) {
-      successMessage = `Checked in successfully! ⚠️ (Late by ${lateMinutes} minutes)`;
+      const hours = Math.floor(lateMinutes / 60);
+      const minutes = lateMinutes % 60;
+      
+      if (hours > 0) {
+        successMessage = `Checked in successfully! ⚠️ (Late by ${hours}h ${minutes}m)`;
+      } else {
+        successMessage = `Checked in successfully! ⚠️ (Late by ${minutes} minutes)`;
+      }
+    } else if (timeDifferenceMinutes > 0) {
+      successMessage = `Checked in successfully! ✅ (Within grace period)`;
+    } else {
+      successMessage = `Checked in successfully! 🎉 (On time)`;
     }
 
     return NextResponse.json({ 
       success: true, 
       message: successMessage, 
-      data: populated 
+      data: populated,
+      lateInfo: {
+        isLate,
+        lateMinutes,
+        shiftStartTime: shift.startTime,
+        checkInTime: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+      }
     });
 
   } catch (error) {
