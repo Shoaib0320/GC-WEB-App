@@ -5,7 +5,7 @@ export const notificationService = {
   // GET ALL - Admin ke liye
   getAllNotifications: async () => {
     try {
-      const response = await api.get('/notifications?type=super_admin');
+      const response = await api.get('/notifications');
       return {
         success: true,
         data: response.data,
