@@ -1,7 +1,7 @@
 // app/api/notifications/[id]/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Notification from "@/models/Notification";
+import Notification from "@/Models/Notification";
 import { verifyAuth } from "@/lib/auth";
 
 // GET single notification

@@ -1,7 +1,7 @@
 // app/api/notifications/route.
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Notification from "@/models/Notification";
+import Notification from "@/Models/Notification";
 import { verifyToken } from "@/lib/jwt"; // ✅ verifyToken use karo
 
 // GET - All notifications (Admin) OR User-specific notifications
