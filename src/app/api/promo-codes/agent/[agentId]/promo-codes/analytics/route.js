@@ -10,7 +10,7 @@ export async function GET(request, { params }) {
         console.log('Params received:', params); // Debug ke liye
 
     
-    const { agentId } = params;
+    const { agentId } = await params;
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');

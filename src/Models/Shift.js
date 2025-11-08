@@ -1,4 +1,4 @@
-// /models/Shift.js
+// /Models/Shift.js
 import mongoose from "mongoose";
 
 const ShiftSchema = new mongoose.Schema(

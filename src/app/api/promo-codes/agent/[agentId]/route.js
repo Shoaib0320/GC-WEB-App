@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
   try {
     await connectDB();
     
-    const { agentId } = params;
+    const { agentId } = await params;
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page')) || 1;
