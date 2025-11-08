@@ -12,12 +12,12 @@ export async function GET(req) {
     // ✅ verifyToken use karo directly
     const authHeader = req.headers.get('authorization');
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { message: "No token provided" },
-        { status: 401 }
-      );
-    }
+    // if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    //   return NextResponse.json(
+    //     { message: "No token provided" },
+    //     { status: 401 }
+    //   );
+    // }
 
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
@@ -64,6 +64,7 @@ export async function GET(req) {
     return NextResponse.json(notifications, { status: 200 });
 
   } catch (error) {
+          console.log('Notifications GET error:', error);
     return NextResponse.json(
       { message: "Server error", error: error.message },
       { status: 500 }
