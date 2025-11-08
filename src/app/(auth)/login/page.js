@@ -61,7 +61,7 @@ export default function LoginPage() {
             alt="Logo"
             width={74}
             height={74}
-            className="rounded-lg shadow-sm"
+            // className="rounded-lg shadow-sm"
             priority
           />
         </div>
