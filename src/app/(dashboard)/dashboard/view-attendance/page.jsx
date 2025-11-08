@@ -1846,6 +1846,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Calendar, Users, CheckCircle, XCircle, Clock, Plus, Trash2, PlayCircle, ToggleLeft, ToggleRight, Edit, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/ui/customModal";
+import Link from "next/link";
 
 export default function AdminAttendancePage() {
   // State variables
@@ -1974,20 +1975,20 @@ export default function AdminAttendancePage() {
       const usersResponse = await adminService.getUsersAndAgents("all");
       if (usersResponse.success) {
         // ✅ Ensure data has proper IDs
-        const usersData = Array.isArray(usersResponse.data?.users) 
+        const usersData = Array.isArray(usersResponse.data?.users)
           ? usersResponse.data.users.map(user => ({
-              ...user,
-              id: user._id || user.id,
-              name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
-            }))
+            ...user,
+            id: user._id || user.id,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+          }))
           : [];
 
         const agentsData = Array.isArray(usersResponse.data?.agents)
           ? usersResponse.data.agents.map(agent => ({
-              ...agent,
-              id: agent._id || agent.id,
-              name: agent.agentName || ''
-            }))
+            ...agent,
+            id: agent._id || agent.id,
+            name: agent.agentName || ''
+          }))
           : [];
 
         setUsers(usersData);
@@ -2380,15 +2381,15 @@ export default function AdminAttendancePage() {
   // ✅ Check if attendance can be edited
   const canEditAttendance = (attendanceRecord) => {
     if (!attendanceRecord) return false;
-    
+
     // Cannot edit holiday or weekly off records
     if (attendanceRecord.status === 'holiday' || attendanceRecord.status === 'weekly_off') {
       return false;
     }
-    
+
     const recordDate = new Date(attendanceRecord.createdAt);
     const today = new Date();
-    
+
     // Can only edit today's or past records
     return recordDate <= today;
   };
@@ -2764,7 +2765,7 @@ export default function AdminAttendancePage() {
       </form>
     </CustomModal>
   );
-  
+
   //✅ Leave Assignment Modal
   const LeaveModal = () => (
     <CustomModal
@@ -3108,7 +3109,7 @@ export default function AdminAttendancePage() {
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="userType">User Type</Label>
             <Select
@@ -3595,21 +3596,26 @@ export default function AdminAttendancePage() {
               Click for shift-based auto attendance
             </div>
           </div>
-          <Button
+          {/* <Button
             onClick={() => setShowAutoModal(true)}
             variant="outline"
             className="border-blue-600 text-blue-600 hover:bg-blue-50"
           >
             <PlayCircle className="h-4 w-4 mr-2" />
             Simple Auto
-          </Button>
-          <a
-            href="/api/attendance/export"
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition flex items-center"
+          </Button> */}
+          <Link
+            href={'/api/attendance/export'}
           >
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </a>
+            <Button
+              className="border-purple-600 text-blue-600 hover:bg-blue-50"
+              variant="outline"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </Link>
+
           <Button
             onClick={() => fetchAttendance(1)}
             variant="outline"
@@ -3729,7 +3735,7 @@ export default function AdminAttendancePage() {
                                 onClick={() => handleEditAttendance(a)}
                                 disabled={!canEditAttendance(a)}
                                 title={
-                                  !canEditAttendance(a) 
+                                  !canEditAttendance(a)
                                     ? a.status === 'holiday' || a.status === 'weekly_off'
                                       ? 'Cannot edit holiday/weekly off records'
                                       : 'Cannot edit this record'
