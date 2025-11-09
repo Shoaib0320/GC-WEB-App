@@ -162,6 +162,8 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Notification from "@/Models/Notification";
+import User from "@/Models/User";
+import Agent from "@/Models/Agent";
 
 // ✅ GET - All notifications or user-specific
 export async function GET(req) {
