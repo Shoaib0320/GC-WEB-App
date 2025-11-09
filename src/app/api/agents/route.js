@@ -9,12 +9,12 @@ import Agent from '../../../Models/Agent';
 export async function GET(request) {
   try {
     await connectDB();
-    
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 10;
     const search = searchParams.get('search') || '';
-    
+
     const skip = (page - 1) * limit;
 
     // Build search query
@@ -61,8 +61,8 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
-    
-    const { agentName, agentId, shift, email, password } = await request.json();
+
+    const { agentName, agentId, shift, email, password, monthlyTarget } = await request.json();
 
     // Validation
     if (!agentName || !agentId || !shift || !email || !password) {
@@ -102,7 +102,8 @@ export async function POST(request) {
       agentId,
       shift,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      monthlyTarget: monthlyTarget || 0
     });
 
     // Send welcome email
@@ -124,7 +125,7 @@ export async function POST(request) {
       .select('-password');
 
     return NextResponse.json(
-      { 
+      {
         message: 'Agent created successfully',
         agent: populatedAgent
       },

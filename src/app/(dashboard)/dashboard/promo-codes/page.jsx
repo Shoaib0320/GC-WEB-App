@@ -547,7 +547,7 @@ export default function PromoCodesPage() {
       </Dialog>
 
       {/* Search Bar */}
-      <Card>
+      {/* <Card>
         <CardContent className="p-4">
           <div className="relative">
             <Input
@@ -564,7 +564,7 @@ export default function PromoCodesPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Promo Codes List */}
       <Card>

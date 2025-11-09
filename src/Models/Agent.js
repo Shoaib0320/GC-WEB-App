@@ -27,6 +27,11 @@ const agentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  monthlyTarget: {
+    type: Number,
+    default: 0, // default 0 rakho
+    min: 0
+  },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   isActive: {
