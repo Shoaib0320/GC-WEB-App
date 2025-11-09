@@ -332,7 +332,7 @@ export default function AgentsPage() {
                     ) : (
                       shifts.map(shift => (
                         <SelectItem key={shift._id} value={shift._id}>
-                          {shift.shiftName} ({shift.startTime} - {shift.endTime})
+                          {shift.name} ({shift.startTime} - {shift.endTime})
                         </SelectItem>
                       ))
                     )}
@@ -460,7 +460,7 @@ export default function AgentsPage() {
                   ) : (
                     shifts.map(shift => (
                       <SelectItem key={shift._id} value={shift._id}>
-                        {shift.shiftName} ({shift.startTime} - {shift.endTime})
+                        {shift.name} ({shift.startTime} - {shift.endTime})
                       </SelectItem>
                     ))
                   )}
@@ -521,7 +521,7 @@ export default function AgentsPage() {
       </Dialog>
 
       {/* Search Bar */}
-      <Card>
+      {/* <Card>
         <CardContent className="p-4">
           <div className="relative">
             <Input
@@ -538,7 +538,7 @@ export default function AgentsPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Agents List */}
       <Card>

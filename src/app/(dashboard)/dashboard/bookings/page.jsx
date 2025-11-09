@@ -216,6 +216,14 @@ export default function BookingsPage() {
                 label: "Date",
                 render: (b) => new Date(b.createdAt).toLocaleDateString(),
               },
+              // {
+              //   label: "Appointment Date",
+              //   render: (b) => new Date(b.date).toLocaleDateString(),
+              // },
+              {
+  label: "Appointment Date",
+  render: (b) => new Date(b.formData?.date).toLocaleDateString(),
+},
               // ✅ UPDATED: Status column using STATUS_CONFIG
               {
                 label: "Status",
