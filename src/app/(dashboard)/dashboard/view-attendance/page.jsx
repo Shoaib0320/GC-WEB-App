@@ -2738,7 +2738,7 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea
             value={manualForm.notes}
@@ -2746,7 +2746,7 @@ export default function AdminAttendancePage() {
             placeholder="Additional notes..."
             rows={3}
           />
-        </div>
+        </div> */}
         <div className="flex gap-2 pt-4">
           <Button type="submit" className="flex-1" disabled={loading.manual}>
             {loading.manual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -3222,7 +3222,7 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea
             value={editForm.notes}
@@ -3230,7 +3230,7 @@ export default function AdminAttendancePage() {
             placeholder="Additional notes..."
             rows={3}
           />
-        </div>
+        </div> */}
 
         {editingAttendance && (
           <div className="bg-gray-50 p-3 rounded-lg border">

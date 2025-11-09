@@ -33,11 +33,10 @@ const NotificationSchema = new mongoose.Schema(
         return this.targetType === "specific";
       }
     },
-    // 'readBy' array yahan se hata diya gaya hai
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Admin user
-      required: true
+      // required: true
     },
     isActive: {
       type: Boolean,
