@@ -10,6 +10,11 @@
 !.yarn/releases
 !.yarn/versions
 
+# Service account keys
+*.json
+*.key
+*.pem
+
 # testing
 /coverage
 
