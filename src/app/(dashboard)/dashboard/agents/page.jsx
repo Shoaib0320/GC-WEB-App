@@ -722,209 +722,209 @@ export default function AgentsPage() {
         </CardContent>
       </Card> */}
       <Card>
-  <CardHeader>
-    <CardTitle>Agents</CardTitle>
-    <CardDescription>
-      View and manage all registered agents in the system
-    </CardDescription>
-  </CardHeader>
+        <CardHeader>
+          <CardTitle>Agents</CardTitle>
+          <CardDescription>
+            View and manage all registered agents in the system
+          </CardDescription>
+        </CardHeader>
 
-  <CardContent>
-    {loading ? (
-      <div className="text-center py-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="text-gray-600 mt-2">Loading agents...</p>
-      </div>
-    ) : agents.length === 0 ? (
-      <div className="text-center py-12">
-        <svg
-          className="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-          />
-        </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No agents found</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Get started by creating a new agent.
-        </p>
-      </div>
-    ) : (
-      <div className="rounded-lg border bg-white shadow-sm">
-        <Table>
-          <TableHeader className="bg-gray-50">
-            <TableRow>
-              <TableHead className="font-semibold text-gray-800">Agent Info</TableHead>
-              <TableHead className="font-semibold text-gray-800">Shift</TableHead>
-              <TableHead className="font-semibold text-gray-800">Monthly Target</TableHead>
-              <TableHead className="font-semibold text-gray-800">Status</TableHead>
-              <TableHead className="text-right font-semibold text-gray-800">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {agents.map((agent) => (
-              <TableRow
-                key={agent._id}
-                className="hover:bg-gray-50 transition-all duration-150"
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Loading agents...</p>
+            </div>
+          ) : agents.length === 0 ? (
+            <div className="text-center py-12">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                {/* Agent Info */}
-                <TableCell className="py-4">
-                  <div className="space-y-1">
-                    <div className="font-medium text-gray-900 text-base">
-                      {agent.agentName}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      ID: <span className="font-mono">{agent.agentId}</span>
-                    </div>
-                    <div className="text-sm text-gray-500">{agent.email}</div>
-                    <div className="text-xs text-gray-400">
-                      Created:{" "}
-                      {new Date(agent.createdAt).toLocaleDateString("en-GB")}
-                    </div>
-                  </div>
-                </TableCell>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No agents found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by creating a new agent.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border bg-white shadow-sm">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="font-semibold text-gray-800">Agent Info</TableHead>
+                    <TableHead className="font-semibold text-gray-800">Shift</TableHead>
+                    <TableHead className="font-semibold text-gray-800">Monthly Target</TableHead>
+                    <TableHead className="font-semibold text-gray-800">Status</TableHead>
+                    <TableHead className="text-right font-semibold text-gray-800">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
 
-                {/* Shift */}
-                <TableCell className="py-4">
-                  {agent.shift ? (
-                    <Badge
-                      variant="secondary"
-                      className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-md"
+                <TableBody>
+                  {agents.map((agent) => (
+                    <TableRow
+                      key={agent._id}
+                      className="hover:bg-gray-50 transition-all duration-150"
                     >
-                      {agent.shift.shiftName}
-                      <span className="ml-1 text-xs text-gray-500">
-                        ({agent.shift.startTime} - {agent.shift.endTime})
-                      </span>
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-100 text-gray-700 border-gray-300 px-3 py-1"
-                    >
-                      No Shift
-                    </Badge>
+                      {/* Agent Info */}
+                      <TableCell className="py-4">
+                        <div className="space-y-1">
+                          <div className="font-medium text-gray-900 text-base">
+                            {agent.agentName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ID: <span className="font-mono">{agent.agentId}</span>
+                          </div>
+                          <div className="text-sm text-gray-500">{agent.email}</div>
+                          <div className="text-xs text-gray-400">
+                            Created:{" "}
+                            {new Date(agent.createdAt).toLocaleDateString("en-GB")}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* Shift */}
+                      <TableCell className="py-4">
+                        {agent.shift ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-md"
+                          >
+                            {agent.shift.shiftName}
+                            <span className="ml-1 text-xs text-gray-500">
+                              ({agent.shift.startTime} - {agent.shift.endTime})
+                            </span>
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-100 text-gray-700 border-gray-300 px-3 py-1"
+                          >
+                            No Shift
+                          </Badge>
+                        )}
+                      </TableCell>
+
+                      {/* Monthly Target */}
+                      <TableCell className="py-4">
+                        <div className="font-semibold text-gray-800">
+                          {agent.monthlyTarget ? agent.monthlyTarget : "—"}
+                        </div>
+                        <div className="text-xs text-gray-500">Target / Month</div>
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell className="py-4">
+                        <Badge
+                          variant={agent.isActive ? "default" : "secondary"}
+                          className={
+                            agent.isActive
+                              ? "bg-green-50 text-green-700 border border-green-200 px-3 py-1"
+                              : "bg-red-50 text-red-700 border border-red-200 px-3 py-1"
+                          }
+                        >
+                          {agent.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell className="py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEdit(agent)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            Edit
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleToggleStatus(agent._id, agent.isActive)
+                            }
+                            className={
+                              agent.isActive
+                                ? "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                            }
+                          >
+                            {agent.isActive ? "Deactivate" : "Activate"}
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteAgent(agent._id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between space-x-2 py-6 px-1">
+              <div className="text-sm text-gray-700">
+                Showing{" "}
+                <span className="font-medium">
+                  {(pagination.currentPage - 1) * 10 + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-medium">
+                  {Math.min(
+                    pagination.currentPage * 10,
+                    pagination.totalAgents
                   )}
-                </TableCell>
-
-                {/* Monthly Target */}
-                <TableCell className="py-4">
-                  <div className="font-semibold text-gray-800">
-                    {agent.monthlyTarget ? agent.monthlyTarget : "—"}
-                  </div>
-                  <div className="text-xs text-gray-500">Target / Month</div>
-                </TableCell>
-
-                {/* Status */}
-                <TableCell className="py-4">
-                  <Badge
-                    variant={agent.isActive ? "default" : "secondary"}
-                    className={
-                      agent.isActive
-                        ? "bg-green-50 text-green-700 border border-green-200 px-3 py-1"
-                        : "bg-red-50 text-red-700 border border-red-200 px-3 py-1"
-                    }
-                  >
-                    {agent.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
-
-                {/* Actions */}
-                <TableCell className="py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenEdit(agent)}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                      Edit
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleToggleStatus(agent._id, agent.isActive)
-                      }
-                      className={
-                        agent.isActive
-                          ? "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                          : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                      }
-                    >
-                      {agent.isActive ? "Deactivate" : "Activate"}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteAgent(agent._id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    )}
-
-    {/* Pagination */}
-    {pagination.totalPages > 1 && (
-      <div className="flex items-center justify-between space-x-2 py-6 px-1">
-        <div className="text-sm text-gray-700">
-          Showing{" "}
-          <span className="font-medium">
-            {(pagination.currentPage - 1) * 10 + 1}
-          </span>{" "}
-          to{" "}
-          <span className="font-medium">
-            {Math.min(
-              pagination.currentPage * 10,
-              pagination.totalAgents
-            )}
-          </span>{" "}
-          of <span className="font-medium">{pagination.totalAgents}</span>{" "}
-          agents
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              fetchAgents(pagination.currentPage - 1, searchTerm)
-            }
-            disabled={!pagination.hasPrev}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              fetchAgents(pagination.currentPage + 1, searchTerm)
-            }
-            disabled={!pagination.hasNext}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-    )}
-  </CardContent>
-</Card>
+                </span>{" "}
+                of <span className="font-medium">{pagination.totalAgents}</span>{" "}
+                agents
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    fetchAgents(pagination.currentPage - 1, searchTerm)
+                  }
+                  disabled={!pagination.hasPrev}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    fetchAgents(pagination.currentPage + 1, searchTerm)
+                  }
+                  disabled={!pagination.hasNext}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
     </div>
   );

@@ -81,31 +81,6 @@ const FormDataSchema = new mongoose.Schema({
   notes: { type: String },
 });
 
-// // Main Booking Schema
-// const BookingSchema = new mongoose.Schema(
-//   {
-//     bookingId: { type: String, required: true, unique: true },
-//     webName: { type: String, required: true },
-//     formData: { type: FormDataSchema, required: true },
-//     totalPrice: { type: Number, required: true },
-//     discountedPrice: { type: Number, required: true },
-//     discountApplied: { type: Boolean, default: false },
-//     discountPercent: { type: Number },
-//     promoCode: { type: String },
-//     submittedAt: { type: String, required: true },
-//     vehicleCount: { type: Number, required: true },
-//     status: {
-//       type: String,
-//       enum: Object.values(BookingStatus),
-//       default: BookingStatus.PENDING,
-//     },
-//     cancellationReason: {
-//       type: String,
-//       default: null, // Ya isko bas 'type: String' bhi rakh saktay hain
-//     },
-//   },
-//   { timestamps: true }
-// );
 // Main Booking Schema
 const BookingSchema = new mongoose.Schema(
   {
