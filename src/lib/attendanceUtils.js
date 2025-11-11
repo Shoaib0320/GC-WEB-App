@@ -668,9 +668,11 @@ export async function batchCreateAttendanceRecords(attendanceDocs, options = {})
     };
   }
 }
-
+// /**
+//  * Check if shift has ended - SMARTER VERSION
+//  */
 export function hasShiftEndedSmart(shiftEndTime, processDate, timezone = DEFAULT_TZ) {
-  if (!shiftEndTime) return true; // No shift = consider ended
+  if (!shiftEndTime) return true;
   
   try {
     const [endHours, endMinutes] = shiftEndTime.split(':').map(Number);
@@ -685,14 +687,14 @@ export function hasShiftEndedSmart(shiftEndTime, processDate, timezone = DEFAULT
     let hasEnded;
     
     if (isPastDate) {
-      // 🔥 PAST DATES: Shift is always considered ended
+      // PAST DATES: Shift is always considered ended
       hasEnded = true;
     } else if (isToday) {
-      // 🔥 TODAY: Check current time vs shift end time
+      // TODAY: Check current time vs shift end time
       const currentInTz = new Date(today.toLocaleString("en-US", { timeZone: timezone }));
       hasEnded = currentInTz > shiftEnd;
     } else {
-      // 🔥 FUTURE DATES: Shift hasn't ended yet
+      // FUTURE DATES: Shift hasn't ended yet
       hasEnded = false;
     }
     
@@ -709,9 +711,53 @@ export function hasShiftEndedSmart(shiftEndTime, processDate, timezone = DEFAULT
     
   } catch (error) {
     console.error('Error in hasShiftEndedSmart:', error);
-    return true; // Default to ended for safety
+    return true;
   }
 }
+// //
+// export function hasShiftEndedSmart(shiftEndTime, processDate, timezone = DEFAULT_TZ) {
+//   if (!shiftEndTime) return true; // No shift = consider ended
+  
+//   try {
+//     const [endHours, endMinutes] = shiftEndTime.split(':').map(Number);
+//     const processDateInTz = new Date(processDate.toLocaleString("en-US", { timeZone: timezone }));
+//     const shiftEnd = new Date(processDateInTz);
+//     shiftEnd.setHours(endHours, endMinutes, 0, 0);
+    
+//     const today = new Date();
+//     const isToday = processDate.toDateString() === today.toDateString();
+//     const isPastDate = processDate < today;
+    
+//     let hasEnded;
+    
+//     if (isPastDate) {
+//       // 🔥 PAST DATES: Shift is always considered ended
+//       hasEnded = true;
+//     } else if (isToday) {
+//       // 🔥 TODAY: Check current time vs shift end time
+//       const currentInTz = new Date(today.toLocaleString("en-US", { timeZone: timezone }));
+//       hasEnded = currentInTz > shiftEnd;
+//     } else {
+//       // 🔥 FUTURE DATES: Shift hasn't ended yet
+//       hasEnded = false;
+//     }
+    
+//     console.log(`🎯 SMART Shift Check:`, {
+//       shiftEndTime,
+//       processDate: processDateInTz.toLocaleDateString(),
+//       shiftEnd: shiftEnd.toLocaleTimeString(),
+//       isPastDate,
+//       isToday,
+//       hasEnded
+//     });
+    
+//     return hasEnded;
+    
+//   } catch (error) {
+//     console.error('Error in hasShiftEndedSmart:', error);
+//     return true; // Default to ended for safety
+//   }
+// }
 
 /**
  * Smart Auto Attendance Logic - RECOMMENDED

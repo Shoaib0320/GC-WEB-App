@@ -1,4 +1,193 @@
-// app/api/attendance/checkin/route.js
+// // app/api/attendance/checkin/route.js
+// import { NextResponse } from "next/server";
+// import connectDB from "@/lib/mongodb";
+// import Attendance from "@/Models/Attendance";
+// import Shift from "@/Models/Shift";
+// import Holiday from "@/Models/Holiday";
+// import WeeklyOff from "@/Models/WeeklyOff";
+// import Agent from "@/Models/Agent";
+// import User from "@/Models/User";
+// import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
+// import {
+//   isHoliday,
+//   isWeeklyOff,
+//   isShiftDay,
+//   parseShiftDateTime,
+//   getTimeDifferenceInMinutes,
+//   getTodayDateRange,
+// } from "@/lib/attendanceUtils";
+
+// export async function POST(request) {
+//   try {
+//     await connectDB();
+
+//     // 🔐 Auth check
+//     const authHeader = request.headers.get("authorization");
+//     if (!authHeader?.startsWith("Bearer ")) {
+//       return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+//     }
+
+//     const token = authHeader.replace("Bearer ", "");
+//     const decoded = verifyToken(token);
+//     if (!decoded) {
+//       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+//     }
+
+//     const body = await request.json();
+//     const { shiftId, location, userType = "agent" } = body;
+
+//     if (!shiftId) {
+//       return NextResponse.json({ success: false, message: "Shift ID is required" }, { status: 400 });
+//     }
+
+//     const userId = getUserIdFromToken(decoded);
+
+//     // 🔹 Get timezone-aware date range (Pakistan)
+//     const { todayStart, todayEnd, now } = getTodayDateRange("Asia/Karachi");
+
+//     console.log("🔍 Check-in Request (Pakistan Time):", {
+//       userId,
+//       shiftId,
+//       currentTime: now.toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+//     });
+
+//     // Step 1️⃣: Existing attendance
+//     const query = {
+//       date: { $gte: todayStart, $lt: todayEnd },
+//       [userType === "agent" ? "agent" : "user"]: userId,
+//     };
+//     const existing = await Attendance.findOne(query);
+//     if (existing) {
+//       return NextResponse.json({
+//         success: false,
+//         message: "Already checked in today.",
+//       }, { status: 400 });
+//     }
+
+//     // Step 2️⃣: Holiday check
+//     const holiday = await isHoliday(now);
+//     if (holiday) {
+//       const attendance = await Attendance.create({
+//         [userType === "agent" ? "agent" : "user"]: userId,
+//         shift: shiftId,
+//         date: todayStart,
+//         status: "holiday",
+//         notes: `Auto-marked: ${holiday.name}`,
+//       });
+//       return NextResponse.json({
+//         success: true,
+//         message: `Today is a holiday (${holiday.name})`,
+//         data: attendance,
+//       });
+//     }
+
+//     // Step 3️⃣: Weekly off
+//     const weeklyOff = await isWeeklyOff(now);
+//     if (weeklyOff) {
+//       const attendance = await Attendance.create({
+//         [userType === "agent" ? "agent" : "user"]: userId,
+//         shift: shiftId,
+//         date: todayStart,
+//         status: "weekly_off",
+//         notes: `Auto-marked: ${weeklyOff.name}`,
+//       });
+//       return NextResponse.json({
+//         success: true,
+//         message: `Today is a weekly off (${weeklyOff.name})`,
+//         data: attendance,
+//       });
+//     }
+
+//     // Step 4️⃣: Check shift
+//     const shiftValid = await isShiftDay(shiftId, now);
+//     if (!shiftValid) {
+//       return NextResponse.json({
+//         success: false,
+//         message: "No shift assigned for today.",
+//       }, { status: 400 });
+//     }
+
+//     // Step 5️⃣: Get shift
+//     const shift = await Shift.findById(shiftId);
+//     if (!shift) {
+//       return NextResponse.json({ success: false, message: "Shift not found" }, { status: 404 });
+//     }
+
+//     console.log("🕒 Shift Info:", {
+//       name: shift.name,
+//       start: shift.startTime,
+//       end: shift.endTime,
+//       days: shift.days,
+//     });
+
+//     // Step 6️⃣: Calculate late
+//     const shiftStart = parseShiftDateTime(todayStart, shift.startTime);
+//     const grace = 15; // minutes
+//     const diffMinutes = getTimeDifferenceInMinutes(shiftStart, now);
+
+//     console.log("⏰ Timing Info (Asia/Karachi):", {
+//       shiftStart: shiftStart.toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+//       checkIn: now.toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+//       diffMinutes,
+//       grace,
+//     });
+
+//     let isLate = false;
+//     let lateMinutes = 0;
+//     let status = "present";
+
+//     if (diffMinutes > grace) {
+//       isLate = true;
+//       lateMinutes = diffMinutes;
+//       status = "late";
+//     }
+
+//     // Step 7️⃣: Save attendance
+//     const attendance = await Attendance.create({
+//       [userType === "agent" ? "agent" : "user"]: userId,
+//       shift: shiftId,
+//       date: todayStart,
+//       // checkInTime: now,
+//       // checkInLocation: location || null,
+//       checkInTime: new Date(),
+//   checkInLocation: location || null,
+//       status,
+//       isLate,
+//       lateMinutes,
+//     });
+
+//     // Step 8️⃣: Response
+//     let msg = "Checked in successfully ✅";
+//     if (isLate) {
+//       msg = `Checked in ⚠️ Late by ${lateMinutes} minutes`;
+//     } else if (diffMinutes > 0) {
+//       msg = "Checked in ✅ Within grace period";
+//     } else {
+//       msg = "Checked in 🎉 On time";
+//     }
+
+//     const populated = await Attendance.findById(attendance._id)
+//       .populate(userType === "agent" ? "agent" : "user", "name email userId")
+//       .populate("shift", "name startTime endTime days");
+
+//     return NextResponse.json({
+//       success: true,
+//       message: msg,
+//       data: populated,
+//       lateInfo: {
+//         isLate,
+//         lateMinutes,
+//         shiftStartTime: shift.startTime,
+//         checkInTime: now.toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+//       },
+//     });
+//   } catch (err) {
+//     console.error("❌ Check-in Error:", err);
+//     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+//   }
+// }
+
+
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
@@ -16,6 +205,34 @@ import {
   getTimeDifferenceInMinutes,
   getTodayDateRange,
 } from "@/lib/attendanceUtils";
+
+// Helper function to check if shift has ended
+function hasShiftEnded(shiftEndTime, currentTime, timezone = "Asia/Karachi") {
+  if (!shiftEndTime) return false;
+  
+  try {
+    const [endHours, endMinutes] = shiftEndTime.split(':').map(Number);
+    
+    // Convert current time to target timezone
+    const currentInTz = new Date(currentTime.toLocaleString("en-US", { timeZone: timezone }));
+    const shiftEnd = new Date(currentInTz);
+    shiftEnd.setHours(endHours, endMinutes, 0, 0);
+    
+    const hasEnded = currentInTz > shiftEnd;
+    
+    console.log(`⏰ Shift End Check:`, {
+      shiftEndTime,
+      currentTime: currentInTz.toLocaleTimeString(),
+      shiftEnd: shiftEnd.toLocaleTimeString(),
+      hasEnded
+    });
+    
+    return hasEnded;
+  } catch (error) {
+    console.error('Error in hasShiftEnded:', error);
+    return false;
+  }
+}
 
 export async function POST(request) {
   try {
@@ -120,7 +337,36 @@ export async function POST(request) {
       days: shift.days,
     });
 
-    // Step 6️⃣: Calculate late
+    // 🔥🔥🔥 IMPORTANT: Check if shift has already ended
+    const shiftEnded = hasShiftEnded(shift.endTime, now, "Asia/Karachi");
+    
+    if (shiftEnded) {
+      console.log("❌ Shift already ended - Marking as ABSENT");
+      
+      // Directly mark as ABSENT - Check-in allowed nahi hai
+      const absentAttendance = await Attendance.create({
+        [userType === "agent" ? "agent" : "user"]: userId,
+        shift: shiftId,
+        date: todayStart,
+        status: "absent",
+        notes: `Auto-marked absent: Attempted check-in after shift end time (${shift.endTime})`,
+        attemptedCheckInTime: now, // Record karte hain ke kab try kiya
+        autoMarked: true
+      });
+
+      return NextResponse.json({
+        success: false,
+        message: `❌ Check-in not allowed: Shift ended at ${shift.endTime}. You have been marked as ABSENT.`,
+        data: absentAttendance,
+        shiftInfo: {
+          shiftEndTime: shift.endTime,
+          currentTime: now.toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+          status: "absent"
+        }
+      }, { status: 400 });
+    }
+
+    // Step 6️⃣: Calculate late (only if shift hasn't ended)
     const shiftStart = parseShiftDateTime(todayStart, shift.startTime);
     const grace = 15; // minutes
     const diffMinutes = getTimeDifferenceInMinutes(shiftStart, now);
@@ -142,15 +388,13 @@ export async function POST(request) {
       status = "late";
     }
 
-    // Step 7️⃣: Save attendance
+    // Step 7️⃣: Save attendance (only if shift hasn't ended)
     const attendance = await Attendance.create({
       [userType === "agent" ? "agent" : "user"]: userId,
       shift: shiftId,
       date: todayStart,
-      // checkInTime: now,
-      // checkInLocation: location || null,
       checkInTime: new Date(),
-  checkInLocation: location || null,
+      checkInLocation: location || null,
       status,
       isLate,
       lateMinutes,
@@ -170,6 +414,22 @@ export async function POST(request) {
       .populate(userType === "agent" ? "agent" : "user", "name email userId")
       .populate("shift", "name startTime endTime days");
 
+    // 🔥 Auto checkout setup for future
+    console.log('✅ Check-in successful, setting up auto checkout monitoring...');
+    
+    setTimeout(async () => {
+      try {
+        console.log('🔄 Starting background auto checkout service...');
+        const { processAutoCheckout } = await import('@/lib/autoAttendanceService');
+        const result = await processAutoCheckout();
+        console.log('✅ Background auto checkout completed:', {
+          totalProcessed: result.totalAutoCheckedOut || 0
+        });
+      } catch (error) {
+        console.error('❌ Background auto checkout error:', error);
+      }
+    }, 2000);
+
     return NextResponse.json({
       success: true,
       message: msg,
@@ -180,6 +440,12 @@ export async function POST(request) {
         shiftStartTime: shift.startTime,
         checkInTime: now.toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
       },
+      autoCheckoutInfo: {
+        enabled: true,
+        message: "Auto checkout will be processed at shift end time",
+        shiftEndTime: shift.endTime,
+        timezone: "Asia/Karachi"
+      }
     });
   } catch (err) {
     console.error("❌ Check-in Error:", err);

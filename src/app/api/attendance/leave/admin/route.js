@@ -41,21 +41,27 @@ export async function GET(request) {
   }
 }
 
+// Admin can approve/reject leave requests
 export async function PUT(request) {
   try {
     await connectDB();
 
     const token = request.cookies.get("token")?.value;
-    if (!token) return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+    if (!token)
+      return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
 
     const decoded = verifyToken(token);
-    if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+    if (!decoded)
+      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
 
     const body = await request.json();
     const { leaveRequestId, status, comments } = body;
 
     if (!leaveRequestId || !status) {
-      return NextResponse.json({ success: false, message: "Leave request ID and status are required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Leave request ID and status are required" },
+        { status: 400 }
+      );
     }
 
     const leaveRequest = await LeaveRequest.findById(leaveRequestId)
@@ -66,72 +72,78 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, message: "Leave request not found" }, { status: 404 });
     }
 
+    // ✅ Update leave request status
     leaveRequest.status = status;
     leaveRequest.reviewedBy = decoded.userId;
     leaveRequest.reviewedAt = new Date();
     leaveRequest.comments = comments || "";
-
     await leaveRequest.save();
 
-    // If approved, create attendance records for each day
+    // ✅ Only process attendance if approved
     if (status === "approved") {
       const startDate = new Date(leaveRequest.startDate);
       const endDate = new Date(leaveRequest.endDate);
-      
-      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-        const attendanceData = {
-          shift: null, // You might want to get the user's default shift
-          status: "approved_leave",
-          leaveReason: leaveRequest.reason,
-          leaveType: leaveRequest.leaveType,
-        };
 
-        if (leaveRequest.user) {
-          attendanceData.user = leaveRequest.user._id;
-        } else if (leaveRequest.agent) {
-          attendanceData.agent = leaveRequest.agent._id;
-        }
+      const isAgent = !!leaveRequest.agent;
+      const relatedPerson = isAgent ? leaveRequest.agent : leaveRequest.user;
 
-        // Check if attendance record already exists for this date
-        const dateStart = new Date(date);
-        dateStart.setHours(0, 0, 0, 0);
-        const dateEnd = new Date(dateStart);
-        dateEnd.setDate(dateEnd.getDate() + 1);
+      // ✅ Ensure shift exists (required)
+      const shiftId = isAgent ? leaveRequest.agent?.shift : leaveRequest.user?.shift;
+      if (!shiftId) {
+        console.warn("⚠️ Shift is missing for leave request, skipping attendance creation.");
+        return NextResponse.json({
+          success: false,
+          message: "Shift missing for this person — cannot create attendance records.",
+        });
+      }
 
-        const existingQuery = {
-          createdAt: { $gte: dateStart, $lt: dateEnd }
-        };
+      // 🔁 Loop from start to end date
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateOnly = new Date(d);
+        dateOnly.setHours(0, 0, 0, 0);
 
-        if (leaveRequest.user) {
-          existingQuery.user = leaveRequest.user._id;
-        } else if (leaveRequest.agent) {
-          existingQuery.agent = leaveRequest.agent._id;
-        }
+        const query = isAgent
+          ? { agent: relatedPerson._id, date: dateOnly }
+          : { user: relatedPerson._id, date: dateOnly };
 
-        const existingAttendance = await Attendance.findOne(existingQuery);
+        let attendance = await Attendance.findOne(query);
 
-        if (existingAttendance) {
-          existingAttendance.status = "approved_leave";
-          existingAttendance.leaveReason = leaveRequest.reason;
-          existingAttendance.leaveType = leaveRequest.leaveType;
-          await existingAttendance.save();
+        if (attendance) {
+          attendance.status = "approved_leave";
+          attendance.leaveType = leaveRequest.leaveType;
+          attendance.leaveReason = leaveRequest.reason;
+          attendance.approvedBy = decoded.userId;
+          attendance.approvedAt = new Date();
         } else {
-          await Attendance.create({
-            ...attendanceData,
-            createdAt: date,
-            updatedAt: date
+          attendance = new Attendance({
+            shift: shiftId, // ✅ REQUIRED field
+            date: dateOnly, // ✅ REQUIRED field
+            status: "approved_leave",
+            leaveType: leaveRequest.leaveType,
+            leaveReason: leaveRequest.reason,
+            approvedBy: decoded.userId,
+            approvedAt: new Date(),
+            ...(isAgent
+              ? { agent: relatedPerson._id }
+              : { user: relatedPerson._id }),
           });
         }
+
+        await attendance.save();
+        console.log(`✅ Attendance marked for ${dateOnly.toDateString()}`);
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `Leave request ${status} successfully`,
-      data: leaveRequest 
+      data: leaveRequest,
     });
   } catch (error) {
     console.error("PUT /api/attendance/leave/admin error:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
