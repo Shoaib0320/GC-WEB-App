@@ -806,13 +806,13 @@ export default function AdminAttendancePage() {
                 <SelectValue placeholder="Select user type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">User</SelectItem>
+                {/* <SelectItem value="user">User</SelectItem> */}
                 <SelectItem value="agent">Agent</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="person">
               {manualForm.userType === 'user' ? 'Select User' : 'Select Agent'}
             </Label>
@@ -834,13 +834,38 @@ export default function AdminAttendancePage() {
                 ))}
               </SelectContent>
             </Select>
+          </div> */}
+          <div className="space-y-2">
+            <Label htmlFor="person">
+              {manualForm.userType === 'user' ? 'Select User' : 'Select Agent'}
+            </Label>
+            <Select
+              value={manualForm.userType === 'user' ? manualForm.userId : manualForm.agentId}
+              onValueChange={(value) => setManualForm({
+                ...manualForm,
+                [manualForm.userType === 'user' ? 'userId' : 'agentId']: value
+              })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={`Select ${manualForm.userType === 'user' ? 'User' : 'Agent'}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {(manualForm.userType === 'user' ? users : agents).map(person => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {manualForm.userType === 'user'
+                      ? `${person.name} (${person.email})`
+                      : `(${person.agentId})`
+                    }
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="shift">Shift (Optional)</Label>
+            <Label htmlFor="shift">Shift</Label>
             <Select
               value={manualForm.shiftId}
               onValueChange={(value) => setManualForm({ ...manualForm, shiftId: value })}
@@ -892,7 +917,7 @@ export default function AdminAttendancePage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="checkInTime">Check In Time (Optional)</Label>
+            <Label htmlFor="checkInTime">Check In Time</Label>
             <Input
               type="time"
               value={manualForm.checkInTime}
@@ -900,7 +925,7 @@ export default function AdminAttendancePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="checkOutTime">Check Out Time (Optional)</Label>
+            <Label htmlFor="checkOutTime">Check Out Time</Label>
             <Input
               type="time"
               value={manualForm.checkOutTime}
@@ -909,15 +934,6 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        {/* <div className="space-y-2">
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea
-            value={manualForm.notes}
-            onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
-            placeholder="Additional notes..."
-            rows={3}
-          />
-        </div> */}
         <div className="flex gap-2 pt-4">
           <Button type="submit" className="flex-1" disabled={loading.manual}>
             {loading.manual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -949,7 +965,7 @@ export default function AdminAttendancePage() {
     >
       <form onSubmit={handleAssignLeave} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+          <div className="space-y-2 w-full">
             <Label htmlFor="userType">User Type</Label>
             <Select
               value={leaveForm.userType}
@@ -959,7 +975,7 @@ export default function AdminAttendancePage() {
                 <SelectValue placeholder="Select user type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">User</SelectItem>
+                {/* <SelectItem value="user">User</SelectItem> */}
                 <SelectItem value="agent">Agent</SelectItem>
               </SelectContent>
             </Select>
@@ -982,7 +998,10 @@ export default function AdminAttendancePage() {
               <SelectContent>
                 {(leaveForm.userType === 'user' ? users : agents).map(person => (
                   <SelectItem key={person.id} value={person.id}>
-                    {person.name} ({person.email})
+                    {leaveForm.userType === 'user'
+                      ? `${person.name} (${person.email})`
+                      : `(${person.agentId})`
+                    }
                   </SelectItem>
                 ))}
               </SelectContent>
