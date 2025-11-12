@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Filter } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 
 export default function DataTable({
   title,
@@ -18,26 +19,37 @@ export default function DataTable({
   data = [],
   loading = false,
   rowsPerPage = 5,
+  searchEnabled = false,
+  filterOptions = [], // Array of { label, value, filterFn }
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // 🧠 Apply Filter
-  const filteredData = data.filter((item) => {
-    if (filter === "all") return true;
-    if (filter === "confirmed" || filter === "pending" || filter === "cancelled") {
-      return item.status === filter;
-    }
-    if (filter === "thisMonth") {
-      const bookingDate = new Date(item.createdAt);
-      const now = new Date();
-      return (
-        bookingDate.getMonth() === now.getMonth() &&
-        bookingDate.getFullYear() === now.getFullYear()
+  // 🧠 Apply Search and Filter
+  const filteredData = useMemo(() => {
+    let filtered = data;
+
+    // Apply search if enabled
+    if (searchEnabled && searchQuery.trim()) {
+      filtered = filtered.filter((item) =>
+        columns.some((col) => {
+          const value = col.render ? col.render(item) : item[col.key];
+          return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+        })
       );
     }
-    return true;
-  });
+
+    // Apply filter
+    if (filter !== "all") {
+      const selectedFilter = filterOptions.find((opt) => opt.value === filter);
+      if (selectedFilter && selectedFilter.filterFn) {
+        filtered = filtered.filter(selectedFilter.filterFn);
+      }
+    }
+
+    return filtered;
+  }, [data, searchQuery, filter, columns, searchEnabled, filterOptions]);
 
   // 🧮 Pagination logic
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
@@ -65,6 +77,11 @@ export default function DataTable({
     setCurrentPage(1);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -72,7 +89,7 @@ export default function DataTable({
       variants={fadeUp}
       className="space-y-4 w-full"
     >
-      {/* Header with Filter Button */}
+      {/* Header with Search and Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         {title && (
           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
@@ -81,30 +98,48 @@ export default function DataTable({
           </h2>
         )}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter className="w-4 h-4" />
-              Filter
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem onClick={() => handleFilter("all")}>All</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleFilter("confirmed")}>Confirmed</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleFilter("pending")}>Pending</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleFilter("cancelled")}>Cancelled</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleFilter("thisMonth")}>This Month</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {searchEnabled && (
+            <div className="relative flex-1 sm:flex-initial">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="pl-10 w-full sm:w-64"
+              />
+            </div>
+          )}
+
+          {filterOptions.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
+                  <Filter className="w-4 h-4" />
+                  Filter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => handleFilter("all")}>All</DropdownMenuItem>
+                {filterOptions.map((option) => (
+                  <DropdownMenuItem key={option.value} onClick={() => handleFilter(option.value)}>
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       {/* Table Section */}
       {loading ? (
         <p className="text-gray-500 text-center sm:text-left">Loading data...</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-white">
+        <div className="overflow-x-auto rounded-xl border bg-white max-h-96 overflow-y-auto">
           <table className="min-w-[600px] sm:min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+            <thead className="bg-gray-50 text-gray-600 sticky top-0">
               <tr>
                 {columns.map((col, i) => (
                   <th
@@ -156,7 +191,7 @@ export default function DataTable({
 
           {/* Pagination Footer */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t px-4 py-3 bg-gray-50 text-sm gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t px-4 py-3 bg-gray-50 text-sm gap-2 sticky bottom-0">
               <span className="text-gray-600 text-center sm:text-left">
                 Page <strong>{currentPage}</strong> of {totalPages}
               </span>

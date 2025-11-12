@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Agent from '@/Models/Agent';
 import { verifyToken } from '@/lib/jwt';
 import Shift from '@/Models/Shift';
+import { Month } from 'react-day-picker';
 
 export async function GET(request) {
   try {
@@ -33,6 +34,7 @@ export async function GET(request) {
       agentId: agent.agentId,
       email: agent.email,
       phone: agent.phone,
+      monthlyTarget: agent.monthlyTarget,
       isActive: agent.isActive,
       shift: agent.shift
     };

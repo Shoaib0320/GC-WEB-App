@@ -165,6 +165,7 @@ export async function POST(request) {
         agentName: agent.agentName,
         agentId: agent.agentId,
         email: agent.email,
+        monthlyTarget: agent.monthlyTarget,
         shift: agent.shift
       }
     };
