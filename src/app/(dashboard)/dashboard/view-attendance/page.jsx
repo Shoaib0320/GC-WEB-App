@@ -1386,7 +1386,7 @@ export default function AdminAttendancePage() {
             <Label htmlFor="date">Date</Label>
             <Input
               type="text"
-              value={editingAttendance ? new Date(editingAttendance.createdAt).toLocaleDateString() : ""}
+              value={editingAttendance ? new Date(editingAttendance.date).toLocaleDateString() : ""}
               disabled
               className="bg-gray-100"
             />
@@ -1916,7 +1916,7 @@ export default function AdminAttendancePage() {
                               )}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
-                              {new Date(a.createdAt).toLocaleDateString()}
+                              {new Date(a.date).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
                               <Button
