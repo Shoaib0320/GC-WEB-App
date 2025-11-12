@@ -1,3 +1,5 @@
+//src/
+
 import { NextResponse } from "next/server";
 import { processAutoCheckout } from "@/lib/autoAttendanceService";
 

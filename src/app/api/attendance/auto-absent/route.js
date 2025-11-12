@@ -1,3 +1,4 @@
+//src/app/api/attendance/auto-checkout/route.js
 import { NextResponse } from "next/server";
 import { markAutoAbsent } from "@/lib/autoAttendanceService";
 
