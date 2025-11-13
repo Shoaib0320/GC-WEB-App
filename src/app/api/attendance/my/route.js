@@ -295,6 +295,10 @@ import Attendance from "@/Models/Attendance";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 import Holiday from "@/Models/Holiday";
 import WeeklyOff from "@/Models/WeeklyOff";
+import Shift from "@/Models/Shift";
+import Agent from "@/Models/Agent";
+import User from "@/Models/User";
+
 
 /** ---------- Pakistan Time Utilities ---------- **/
 
