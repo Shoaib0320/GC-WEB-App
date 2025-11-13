@@ -17,10 +17,21 @@ const agentSchema = new mongoose.Schema({
     ref: 'Shift',
     required: true
   },
+  // email: {
+  //   type: String,
+  //   unique: true,
+  //   lowercase: true,
+  //   trim: true
+  // },
   email: {
     type: String,
     unique: true,
+    sparse: true, // Allow multiple null values
     lowercase: true,
+    trim: true
+  },
+  phone: {
+    type: String,
     trim: true
   },
   password: {
