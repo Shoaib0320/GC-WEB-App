@@ -3,259 +3,231 @@
 // import connectDB from "@/lib/mongodb";
 // import Attendance from "@/Models/Attendance";
 // import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
-// import Shift from "@/Models/Shift";
-// import Agent from "@/Models/Agent"; 
+// import { isHoliday, isWeeklyOff } from "@/lib/attendanceUtils";
 
+// /**
+//  * Get all dates in a month (limited to today)
+//  */
+// function getDatesUpToToday(year, month) {
+//   const dates = [];
+//   const date = new Date(year, month - 1, 1);
+//   const today = new Date();
+  
+//   while (date.getMonth() === month - 1 && date <= today) {
+//     dates.push(new Date(date));
+//     date.setDate(date.getDate() + 1);
+//   }
+  
+//   return dates;
+// }
+
+// /**
+//  * Format date to readable form
+//  */
+// function formatDate(date) {
+//   return date.toISOString().split("T")[0];
+// }
+
+// /**
+//  * Main API handler
+//  */
 // export async function GET(request) {
 //   try {
 //     await connectDB();
-//     console.log('🔍 Attendance My Route - Started');
-    
-//     // Get token from headers
-//     const authHeader = request.headers.get('authorization');
-//     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-//       console.log('❌ No auth header');
-//       return NextResponse.json({ 
-//         success: false, 
-//         message: "Not authenticated" 
-//       }, { status: 401 });
+//     console.log("📅 Attendance Monthly Route Triggered");
+
+//     const authHeader = request.headers.get("authorization");
+//     if (!authHeader?.startsWith("Bearer ")) {
+//       return NextResponse.json(
+//         { success: false, message: "Unauthorized" },
+//         { status: 401 }
+//       );
 //     }
-    
-//     const token = authHeader.replace('Bearer ', '');
+
+//     const token = authHeader.split(" ")[1];
 //     const decoded = verifyToken(token);
-    
 //     if (!decoded) {
-//       console.log('❌ Invalid token');
-//       return NextResponse.json({ 
-//         success: false, 
-//         message: "Invalid token" 
-//       }, { status: 401 });
+//       return NextResponse.json(
+//         { success: false, message: "Invalid token" },
+//         { status: 401 }
+//       );
 //     }
 
 //     const userId = getUserIdFromToken(decoded);
-//     const userType = decoded.type || 'agent';
-
-//     console.log('👤 User details:', {
-//       userId,
-//       userType,
-//       agentId: decoded.agentId
-//     });
+//     const userType = decoded.type || "agent";
 
 //     const { searchParams } = new URL(request.url);
-//     const month = parseInt(searchParams.get("month") || "", 10);
-//     const year = parseInt(searchParams.get("year") || "", 10);
-//     const limit = parseInt(searchParams.get("limit") || "50", 10);
-//     const page = parseInt(searchParams.get("page") || "1", 10);
-//     const today = searchParams.get("today");
-//     const start = searchParams.get("start");
-//     const end = searchParams.get("end");
+//     const month = parseInt(searchParams.get("month"));
+//     const year = parseInt(searchParams.get("year"));
+//     if (!month || !year) {
+//       return NextResponse.json(
+//         { success: false, message: "Month and Year are required" },
+//         { status: 400 }
+//       );
+//     }
 
-//     console.log('📋 Query parameters:', {
-//       month, year, limit, page, today, start, end
+//     console.log(`🔎 Fetching data for ${month}/${year}`);
+
+//     // Query field based on type
+//     const queryField = userType === "agent" ? "agent" : "user";
+//     const from = new Date(year, month - 1, 1);
+//     const to = new Date(year, month, 1);
+
+//     // Get all attendance records for that month
+//     const attends = await Attendance.find({
+//       [queryField]: userId,
+//       $or: [
+//         { date: { $gte: from, $lt: to } },
+//         { checkInTime: { $gte: from, $lt: to } },
+//       ],
+//     })
+//       .populate("shift", "name startTime endTime hours days")
+//       .sort({ checkInTime: 1 });
+
+//     console.log(`✅ Found ${attends.length} attendance records`);
+
+//     // Create a map for fast lookup
+//     const attendanceMap = {};
+//     attends.forEach((att) => {
+//       const key = new Date(att.date || att.checkInTime).toDateString();
+//       attendanceMap[key] = att;
 //     });
 
-//     // ✅ Determine query field based on user type
-//     const queryField = userType === 'agent' ? 'agent' : 'user';
-//     let query = { [queryField]: userId };
+//     // Build table data
+//     const allDates = getDatesUpToToday(year, month);
+//     const tableData = [];
+//     let stats = {
+//       present: 0,
+//       late: 0,
+//       absent: 0,
+//       holiday: 0,
+//       weeklyOff: 0,
+//       leave: 0,
+//     };
 
-//     // 🎯 SPECIAL CASE: Today's attendance
-//     if (today === 'true') {
-//       console.log('🎯 Fetching today attendance specifically');
-      
-//       const now = new Date();
-//       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-//       const todayEnd = new Date(todayStart);
-//       todayEnd.setDate(todayEnd.getDate() + 1);
+//     for (const date of allDates) {
+//       const dateKey = date.toDateString();
+//       const record = attendanceMap[dateKey];
+//       let status = "absent";
+//       let checkInTime = null;
+//       let checkOutTime = null;
+//       let remarks = "";
 
-//       query.checkInTime = { 
-//         $gte: todayStart, 
-//         $lt: todayEnd 
-//       };
-
-//       const todayAttendance = await Attendance.findOne(query)
-//         .populate("shift", "name startTime endTime hours days")
-//         .populate("user", "firstName lastName email")
-//         .populate("agent", "agentName agentId email")
-//         .sort({ checkInTime: -1 });
-
-//       console.log('📅 Today attendance result:', {
-//         found: !!todayAttendance,
-//         checkInTime: todayAttendance?.checkInTime,
-//         checkOutTime: todayAttendance?.checkOutTime
-//       });
-
-//       return NextResponse.json({
-//         success: true,
-//         data: todayAttendance
-//       });
-//     }
-
-//     // 📅 Date range filter
-//     if (start && end) {
-//       console.log('📅 Applying date range filter');
-//       const startDate = new Date(start);
-//       const endDate = new Date(end);
-      
-//       query.checkInTime = { 
-//         $gte: startDate, 
-//         $lte: endDate 
-//       };
-//     }
-
-//     // 📊 Monthly data request
-//     if (month && year) {
-//       console.log('📊 Fetching monthly data:', { month, year });
-      
-//       const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
-//       const to = new Date(year, month, 1, 0, 0, 0, 0);
-
-//       query.checkInTime = { $gte: from, $lt: to };
-
-//       const attends = await Attendance.find(query)
-//         .populate("shift", "name startTime endTime hours days")
-//         .populate("user", "firstName lastName email")
-//         .populate("agent", "agentName agentId email")
-//         .sort({ checkInTime: -1 });
-
-//       // Calculate statistics
-//       const presentDays = attends.filter(a => a.checkInTime).length;
-//       const completedDays = attends.filter(a => a.checkInTime && a.checkOutTime).length;
-//       const lateDays = attends.filter(a => a.isLate).length;
-//       const overtimeDays = attends.filter(a => a.isOvertime).length;
-      
-//       const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
-//       const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
-
-//       const daysInMonth = new Date(year, month, 0).getDate();
-//       const absentDays = Math.max(0, daysInMonth - presentDays);
-
-//       console.log('📈 Monthly stats calculated:', {
-//         month, year,
-//         present: presentDays,
-//         completed: completedDays,
-//         late: lateDays,
-//         overtime: overtimeDays,
-//         absent: absentDays,
-//         totalRecords: attends.length
-//       });
-
-//       return NextResponse.json({
-//         success: true,
-//         data: {
-//           month,
-//           year,
-//           totalDays: daysInMonth,
-//           present: presentDays,
-//           completed: completedDays,
-//           absent: absentDays,
-//           late: lateDays,
-//           overtime: overtimeDays,
-//           totalLateMinutes,
-//           totalOvertimeMinutes,
-//           records: attends,
-//         },
-//       });
-//     }
-
-//     // 📜 Regular records with pagination
-//     const skip = (page - 1) * limit;
-    
-//     console.log('📜 Fetching regular records:', {
-//       queryField,
-//       userId,
-//       limit,
-//       skip,
-//       page
-//     });
-
-//     const [records, total] = await Promise.all([
-//       Attendance.find(query)
-//         .populate("shift", "name startTime endTime hours days")
-//         .populate("user", "firstName lastName email")
-//         .populate("agent", "agentName agentId email")
-//         .sort({ checkInTime: -1 })
-//         .skip(skip)
-//         .limit(limit),
-//       Attendance.countDocuments(query)
-//     ]);
-
-//     console.log('✅ Records fetched:', {
-//       count: records.length,
-//       total,
-//       page,
-//       totalPages: Math.ceil(total / limit)
-//     });
-
-//     // Debug: Log first few records
-//     if (records.length > 0) {
-//       console.log('📅 Sample records:');
-//       records.slice(0, 3).forEach((record, index) => {
-//         console.log(`Record ${index + 1}:`, {
-//           id: record._id,
-//           checkInTime: record.checkInTime,
-//           checkOutTime: record.checkOutTime,
-//           date: record.checkInTime ? new Date(record.checkInTime).toDateString() : 'No date',
-//           shift: record.shift?.name
-//         });
-//       });
-//     }
-
-//     return NextResponse.json({ 
-//       success: true, 
-//       data: records,
-//       pagination: {
-//         page,
-//         limit,
-//         total,
-//         totalPages: Math.ceil(total / limit),
-//         hasNext: page < Math.ceil(total / limit),
-//         hasPrev: page > 1
+//       if (record) {
+//         status = record.status || "present";
+//         checkInTime = record.checkInTime
+//           ? new Date(record.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+//           : null;
+//         checkOutTime = record.checkOutTime
+//           ? new Date(record.checkOutTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+//           : null;
+//       } else {
+//         const holiday = await isHoliday(date);
+//         const weeklyOff = await isWeeklyOff(date);
+//         if (holiday) {
+//           status = "holiday";
+//           remarks = holiday.name || "Public Holiday";
+//         } else if (weeklyOff) {
+//           status = "weekly_off";
+//           remarks = "Weekly Off";
+//         } else {
+//           status = "absent";
+//           remarks = "No Attendance Record";
+//         }
 //       }
-//     });
 
+//       // Count stats
+//       if (status === "present") stats.present++;
+//       else if (status === "late") stats.late++;
+//       else if (status === "absent") stats.absent++;
+//       else if (status === "holiday") stats.holiday++;
+//       else if (status === "weekly_off") stats.weeklyOff++;
+//       else if (status === "leave") stats.leave++;
+
+//       tableData.push({
+//         date: formatDate(date),
+//         day: date.toLocaleDateString("en-US", { weekday: "short" }),
+//         status,
+//         checkInTime,
+//         checkOutTime,
+//         remarks,
+//       });
+//     }
+
+//     const totalDays = tableData.length;
+//     const workingDays = totalDays - (stats.holiday + stats.weeklyOff);
+
+//     return NextResponse.json({
+//       success: true,
+//       data: {
+//         month,
+//         year,
+//         summary: {
+//           totalDays,
+//           workingDays,
+//           ...stats,
+//           attendanceRate: (
+//             (stats.present / (workingDays || 1)) *
+//             100
+//           ).toFixed(2),
+//         },
+//         records: tableData,
+//       },
+//     });
 //   } catch (error) {
-//     console.error("❌ GET /api/attendance/my error:", error);
-//     return NextResponse.json({ 
-//       success: false, 
-//       message: error.message,
-//       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
-//     }, { status: 500 });
+//     console.error("❌ Attendance GET error:", error);
+//     return NextResponse.json(
+//       {
+//         success: false,
+//         message: "Server error",
+//         error: error.message,
+//       },
+//       { status: 500 }
+//     );
 //   }
 // }
+
 
 // app/api/attendance/my/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
-import { isHoliday, isWeeklyOff } from "@/lib/attendanceUtils";
+import Holiday from "@/Models/Holiday";
+import WeeklyOff from "@/Models/WeeklyOff";
 
 /**
  * Get all dates in a month (limited to today)
  */
 function getDatesUpToToday(year, month) {
   const dates = [];
-  const date = new Date(year, month - 1, 1);
-  const today = new Date();
-  
-  while (date.getMonth() === month - 1 && date <= today) {
+  const date = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+  const todayLocal = new Date();
+  // normalize today's UTC midnight
+  const today = new Date(Date.UTC(todayLocal.getUTCFullYear(), todayLocal.getUTCMonth(), todayLocal.getUTCDate(), 0, 0, 0, 0));
+
+  while (date.getUTCMonth() === month - 1 && date.getTime() <= today.getTime()) {
     dates.push(new Date(date));
-    date.setDate(date.getDate() + 1);
+    date.setUTCDate(date.getUTCDate() + 1);
   }
-  
+
   return dates;
 }
 
-/**
- * Format date to readable form
- */
-function formatDate(date) {
-  return date.toISOString().split("T")[0];
+/** Stable UTC YYYY-MM-DD key */
+function toKeyUTC(d) {
+  const dt = new Date(d);
+  const yyyy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-/**
- * Main API handler
- */
+/** Format date ISO (YYYY-MM-DD) */
+function formatDateISO(date) {
+  return new Date(date).toISOString().split("T")[0];
+}
+
 export async function GET(request) {
   try {
     await connectDB();
@@ -263,19 +235,13 @@ export async function GET(request) {
 
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
     const decoded = verifyToken(token);
     if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: "Invalid token" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
     }
 
     const userId = getUserIdFromToken(decoded);
@@ -285,41 +251,94 @@ export async function GET(request) {
     const month = parseInt(searchParams.get("month"));
     const year = parseInt(searchParams.get("year"));
     if (!month || !year) {
-      return NextResponse.json(
-        { success: false, message: "Month and Year are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: "Month and Year are required" }, { status: 400 });
     }
 
-    console.log(`🔎 Fetching data for ${month}/${year}`);
+    console.log(`🔎 Fetching data for ${month}/${year} for ${userType}:${userId}`);
 
-    // Query field based on type
+    // query field e.g. { agent: userId } or { user: userId }
     const queryField = userType === "agent" ? "agent" : "user";
-    const from = new Date(year, month - 1, 1);
-    const to = new Date(year, month, 1);
 
-    // Get all attendance records for that month
+    // month range (UTC)
+    const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0)); // exclusive
+
+    // Fetch all attendances in month for this user/agent (including future days)
     const attends = await Attendance.find({
       [queryField]: userId,
       $or: [
-        { date: { $gte: from, $lt: to } },
-        { checkInTime: { $gte: from, $lt: to } },
+        { date: { $gte: monthStart, $lt: monthEnd } },
+        { checkInTime: { $gte: monthStart, $lt: monthEnd } },
       ],
     })
       .populate("shift", "name startTime endTime hours days")
-      .sort({ checkInTime: 1 });
+      .sort({ date: 1, checkInTime: 1 });
 
-    console.log(`✅ Found ${attends.length} attendance records`);
+    console.log(`✅ Found ${attends.length} attendance records for month (raw)`);
 
-    // Create a map for fast lookup
+    // Build attendance map keyed by UTC date string
     const attendanceMap = {};
-    attends.forEach((att) => {
-      const key = new Date(att.date || att.checkInTime).toDateString();
-      attendanceMap[key] = att;
+    attends.forEach(att => {
+      // prefer att.date, fallback to checkInTime or createdAt
+      const source = att.date || att.checkInTime || att.createdAt;
+      if (!source) return;
+      const key = toKeyUTC(source);
+      attendanceMap[key] = att; // last one wins; ok for summary
     });
 
-    // Build table data
-    const allDates = getDatesUpToToday(year, month);
+    // Dates up to today for evaluation
+    const datesUpToToday = getDatesUpToToday(year, month);
+
+    // Also include any future attendance records within month (e.g. approved_leave) so they show in table
+    const todayUtc = new Date();
+    const todayKey = toKeyUTC(todayUtc);
+
+    const futureKeys = new Set();
+    attends.forEach(att => {
+      const key = toKeyUTC(att.date || att.checkInTime || att.createdAt);
+      if (key > todayKey) futureKeys.add(key);
+    });
+
+    // mergedDates: start with datesUpToToday, then add futureKeys (sorted)
+    const mergedKeysSet = new Set(datesUpToToday.map(d => toKeyUTC(d)));
+    for (const fk of futureKeys) mergedKeysSet.add(fk);
+    const mergedKeys = Array.from(mergedKeysSet).sort(); // YYYY-MM-DD sorts lexicographically
+
+    // Prefetch weekly offs and holidays for month (to avoid per-day DB calls)
+    const weeklyOffDocs = await WeeklyOff.find({ isActive: true });
+    const weeklyOffSet = new Set(weeklyOffDocs.map(w => w.day.toLowerCase())); // 'sunday', etc.
+
+    // Fetch holidays that are either inside month or recurring (we will match recurring by month/day)
+    const holidayCandidates = await Holiday.find({
+      $or: [
+        { date: { $gte: monthStart, $lt: monthEnd } },
+        { isRecurring: true }
+      ],
+      isActive: true
+    });
+
+    // Build holiday set keys for this month (YYYY-MM-DD)
+    const holidaysSet = new Set();
+    for (const h of holidayCandidates) {
+      if (h.isRecurring) {
+        // recurring holiday: take day/month from holiday's stored date
+        const mon = h.date.getUTCMonth() + 1;
+        const day = h.date.getUTCDate();
+        if (mon === month) {
+          const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          holidaysSet.add(key);
+        } else {
+          // recurring may apply across different years; still add if day/month match
+          const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          holidaysSet.add(key);
+        }
+      } else {
+        const key = toKeyUTC(h.date);
+        holidaysSet.add(key);
+      }
+    }
+
+    // Build tableData and stats
     const tableData = [];
     let stats = {
       present: 0,
@@ -330,57 +349,98 @@ export async function GET(request) {
       leave: 0,
     };
 
-    for (const date of allDates) {
-      const dateKey = date.toDateString();
-      const record = attendanceMap[dateKey];
+    // totals across all attendance records in month
+    const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
+    const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
+
+    // For attendanceRate we should consider only dates up-to-today (workingDays evaluated)
+    const evaluatedKeys = datesUpToToday.map(d => toKeyUTC(d));
+
+    // loop mergedKeys to build full view (includes future attendance keys)
+    for (const key of mergedKeys) {
+      const dateObj = new Date(key + "T00:00:00.000Z");
+      const isFuture = key > todayKey;
+      const record = attendanceMap[key];
       let status = "absent";
       let checkInTime = null;
       let checkOutTime = null;
       let remarks = "";
+      let lateMinutes = 0;
+      let overtimeMinutes = 0;
 
       if (record) {
         status = record.status || "present";
-        checkInTime = record.checkInTime
-          ? new Date(record.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-          : null;
-        checkOutTime = record.checkOutTime
-          ? new Date(record.checkOutTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-          : null;
+        checkInTime = record.checkInTime ? new Date(record.checkInTime).toISOString() : null;
+        checkOutTime = record.checkOutTime ? new Date(record.checkOutTime).toISOString() : null;
+        lateMinutes = record.lateMinutes || 0;
+        overtimeMinutes = record.overtimeMinutes || 0;
       } else {
-        const holiday = await isHoliday(date);
-        const weeklyOff = await isWeeklyOff(date);
-        if (holiday) {
+        // no attendance record
+        // if future date and no attendance -> skip marking absent; show nothing unless record exists
+        if (isFuture) {
+          // We still want to show future date only if there's an attendance record (handled above).
+          // So skip adding this date
+          continue;
+        }
+
+        // For dates up to today, check holiday/weekly off
+        if (holidaysSet.has(key)) {
           status = "holiday";
-          remarks = holiday.name || "Public Holiday";
-        } else if (weeklyOff) {
-          status = "weekly_off";
-          remarks = "Weekly Off";
+          remarks = "Holiday";
         } else {
-          status = "absent";
-          remarks = "No Attendance Record";
+          // weekday name in UTC for consistency
+          const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
+          if (weeklyOffSet.has(weekday)) {
+            status = "weekly_off";
+            remarks = "Weekly Off";
+          } else {
+            status = "absent";
+            remarks = "No Attendance Record";
+          }
         }
       }
 
-      // Count stats
-      if (status === "present") stats.present++;
-      else if (status === "late") stats.late++;
-      else if (status === "absent") stats.absent++;
-      else if (status === "holiday") stats.holiday++;
-      else if (status === "weekly_off") stats.weeklyOff++;
-      else if (status === "leave") stats.leave++;
+      // Count only if date is in evaluatedKeys (up to today)
+      const inEvaluated = evaluatedKeys.includes(key);
+      if (inEvaluated) {
+        if (status === "present") stats.present++;
+        else if (status === "late") stats.late++;
+        else if (status === "absent") stats.absent++;
+        else if (status === "holiday") stats.holiday++;
+        else if (status === "weekly_off") stats.weeklyOff++;
+        else if (status === "approved_leave" || status === "pending_leave" || status === "leave") stats.leave++;
+      }
 
       tableData.push({
-        date: formatDate(date),
-        day: date.toLocaleDateString("en-US", { weekday: "short" }),
+        date: key,
+        day: dateObj.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
         status,
-        checkInTime,
-        checkOutTime,
+        checkInTime: checkInTime ? new Date(checkInTime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : null,
+        checkOutTime: checkOutTime ? new Date(checkOutTime).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : null,
         remarks,
+        lateMinutes,
+        overtimeMinutes,
+        rawRecord: record || null
       });
     }
 
-    const totalDays = tableData.length;
-    const workingDays = totalDays - (stats.holiday + stats.weeklyOff);
+    // evaluated days count and working days (for attendance rate)
+    const evaluatedDays = evaluatedKeys.length;
+    const evaluatedHolidayCount = evaluatedKeys.filter(k => holidaysSet.has(k)).length;
+    const evaluatedWeeklyOffCount = evaluatedKeys.filter(k => {
+      const d = new Date(k + "T00:00:00.000Z");
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
+      return weeklyOffSet.has(weekday);
+    }).length;
+    const evaluatedWorkingDays = evaluatedDays - evaluatedHolidayCount - evaluatedWeeklyOffCount;
+
+    // Attendance Rate: treat late as present
+    const presentCountForRate = stats.present + stats.late;
+    const attendanceRate = evaluatedWorkingDays > 0 ? ((presentCountForRate / evaluatedWorkingDays) * 100).toFixed(2) : "0.00";
+
+    console.log('📈 Monthly stats:', {
+      month, year, evaluatedDays, evaluatedWorkingDays, stats, totalLateMinutes, totalOvertimeMinutes
+    });
 
     return NextResponse.json({
       success: true,
@@ -388,26 +448,28 @@ export async function GET(request) {
         month,
         year,
         summary: {
-          totalDays,
-          workingDays,
-          ...stats,
-          attendanceRate: (
-            (stats.present / (workingDays || 1)) *
-            100
-          ).toFixed(2),
+          totalDaysInMonth: (new Date(Date.UTC(year, month, 0))).getUTCDate(),
+          evaluatedDays,
+          evaluatedWorkingDays,
+          present: stats.present,
+          late: stats.late,
+          absent: stats.absent,
+          holiday: stats.holiday,
+          weeklyOff: stats.weeklyOff,
+          leave: stats.leave,
+          totalLateMinutes,
+          totalOvertimeMinutes,
+          attendanceRate, // present+late / workingDays
         },
-        records: tableData,
-      },
+        records: tableData // includes past up-to-today and any future records that already exist (e.g. approved_leave)
+      }
     });
   } catch (error) {
     console.error("❌ Attendance GET error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Server error",
-        error: error.message,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    }, { status: 500 });
   }
 }
