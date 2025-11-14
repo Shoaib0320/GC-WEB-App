@@ -37,7 +37,7 @@ export async function POST(request) {
     const leaveData = {
       leaveType,
       startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      endDate: endDate ? new Date(endDate) : null,
       reason,
       status: "pending"
     };
