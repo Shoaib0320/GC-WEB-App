@@ -1,3 +1,4 @@
+// src/app/api/agents/forgot-password/route.js
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { sendEmail } from '@/lib/email';

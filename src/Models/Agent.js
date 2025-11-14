@@ -17,12 +17,6 @@ const agentSchema = new mongoose.Schema({
     ref: 'Shift',
     required: true
   },
-  // email: {
-  //   type: String,
-  //   unique: true,
-  //   lowercase: true,
-  //   trim: true
-  // },
   email: {
     type: String,
     unique: true,
