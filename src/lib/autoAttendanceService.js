@@ -20,24 +20,24 @@
 // //  */
 // // function hasShiftEndedSmart(shiftEndTime, currentTime, timezone = DEFAULT_TZ) {
 // //   if (!shiftEndTime) return true;
-  
+
 // //   try {
 // //     const [endHours, endMinutes] = shiftEndTime.split(':').map(Number);
-    
+
 // //     // Convert to target timezone
 // //     const currentInTz = new Date(currentTime.toLocaleString("en-US", { timeZone: timezone }));
 // //     const shiftEnd = new Date(currentInTz);
 // //     shiftEnd.setHours(endHours, endMinutes, 0, 0);
-    
+
 // //     const hasEnded = currentInTz > shiftEnd;
-    
+
 // //     console.log(`⏰ Shift End Check:`, {
 // //       shiftEndTime,
 // //       currentTime: currentInTz.toLocaleTimeString(),
 // //       shiftEnd: shiftEnd.toLocaleTimeString(),
 // //       hasEnded
 // //     });
-    
+
 // //     return hasEnded;
 // //   } catch (error) {
 // //     console.error('Error in shift end check:', error);
@@ -102,7 +102,7 @@
 // //     }
 
 // //     console.log(`✅ Auto Absent Completed: ${totalMarkedAbsent} users marked absent`);
-    
+
 // //     return {
 // //       success: true,
 // //       totalMarkedAbsent,
@@ -279,14 +279,14 @@
 // //     // Calculate overtime
 // //     let isOvertime = false;
 // //     let overtimeMinutes = 0;
-    
+
 // //     if (attendance.shift) {
 // //       const shift = attendance.shift;
 // //       const checkInDate = new Date(attendance.checkInTime);
-      
+
 // //       const shiftStart = parseShiftDateTime(checkInDate, shift.startTime);
 // //       let shiftEnd = parseShiftDateTime(checkInDate, shift.endTime);
-      
+
 // //       // Handle overnight shifts
 // //       if (shiftEnd <= shiftStart) {
 // //         shiftEnd.setDate(shiftEnd.getDate() + 1);
@@ -337,7 +337,7 @@
 // // export async function runAutoAttendanceServices() {
 // //   try {
 // //     console.log('🚀 Starting Combined Auto Attendance Services...');
-    
+
 // //     // Parallel processing for better performance
 // //     const [absentResult, checkoutResult] = await Promise.all([
 // //       markAutoAbsent(),
@@ -390,17 +390,17 @@
 //  */
 // function hasShiftEndedSmart(shiftEndTime, currentTime, timezone = DEFAULT_TZ) {
 //   if (!shiftEndTime) return true;
-  
+
 //   try {
 //     const [endHours, endMinutes] = shiftEndTime.split(':').map(Number);
-    
+
 //     // Convert to target timezone
 //     const currentInTz = new Date(currentTime.toLocaleString("en-US", { timeZone: timezone }));
 //     const shiftEnd = new Date(currentInTz);
 //     shiftEnd.setHours(endHours, endMinutes, 0, 0);
-    
+
 //     const hasEnded = currentInTz > shiftEnd;
-    
+
 //     return hasEnded;
 //   } catch (error) {
 //     console.error('Error in shift end check:', error);
@@ -415,13 +415,13 @@
 //   try {
 //     const shifts = await Shift.find({ isActive: true });
 //     console.log(`🔍 Found ${shifts.length} active shifts`);
-    
+
 //     // Shift ke hisaab se group karega
 //     const shiftMap = {};
 //     shifts.forEach(shift => {
 //       shiftMap[shift._id] = shift;
 //     });
-    
+
 //     return shiftMap;
 //   } catch (error) {
 //     console.error('Error getting shifts:', error);
@@ -514,7 +514,7 @@
 
 //     console.log(`✅ Auto Absent Completed: ${totalMarkedAbsent} users marked absent`);
 //     console.log('📊 Shift-wise Summary:', shiftSummary);
-    
+
 //     return {
 //       success: true,
 //       totalMarkedAbsent,
@@ -657,7 +657,7 @@
 // //       const result = await processAutoCheckoutForAttendance(attendance, now);
 // //       if (result.autoCheckedOut) {
 // //         totalAutoCheckedOut++;
-        
+
 // //         // Shift-wise count rakho
 // //         const shiftName = attendance.shift?.name || 'Unknown';
 // //         shiftCheckoutSummary[shiftName] = (shiftCheckoutSummary[shiftName] || 0) + 1;
@@ -745,13 +745,13 @@
 //  */
 // function hasShiftEnded(shiftEndTime, currentTime, timezone = DEFAULT_TZ) {
 //   if (!shiftEndTime) return true;
-  
+
 //   try {
 //     const [endHours, endMinutes] = shiftEndTime.split(':').map(Number);
 //     const currentInTz = new Date(currentTime.toLocaleString("en-US", { timeZone: timezone }));
 //     const shiftEnd = new Date(currentInTz);
 //     shiftEnd.setHours(endHours, endMinutes, 0, 0);
-    
+
 //     return currentInTz > shiftEnd;
 //   } catch (error) {
 //     return true;
@@ -779,14 +779,14 @@
 //     // Calculate overtime
 //     let isOvertime = false;
 //     let overtimeMinutes = 0;
-    
+
 //     if (attendance.shift) {
 //       const shift = attendance.shift;
 //       const checkInDate = new Date(attendance.checkInTime);
-      
+
 //       const shiftStart = parseShiftDateTime(checkInDate, shift.startTime);
 //       let shiftEnd = parseShiftDateTime(checkInDate, shift.endTime);
-      
+
 //       // Handle overnight shifts
 //       if (shiftEnd <= shiftStart) {
 //         shiftEnd.setDate(shiftEnd.getDate() + 1);
@@ -801,7 +801,7 @@
 
 //     // Update attendance status based on working hours
 //     let finalStatus = attendance.status;
-    
+
 //     // Half day logic
 //     const requiredMinutesForFullDay = 4 * 60;
 //     if (totalWorkingMinutes < requiredMinutesForFullDay && totalWorkingMinutes > 0) {
@@ -881,14 +881,14 @@
 //     // Calculate overtime
 //     let isOvertime = false;
 //     let overtimeMinutes = 0;
-    
+
 //     if (attendance.shift) {
 //       const shift = attendance.shift;
 //       const checkInDate = new Date(attendance.checkInTime);
-      
+
 //       const shiftStart = parseShiftDateTime(checkInDate, shift.startTime);
 //       let shiftEnd = parseShiftDateTime(checkInDate, shift.endTime);
-      
+
 //       // Handle overnight shifts
 //       if (shiftEnd <= shiftStart) {
 //         shiftEnd.setDate(shiftEnd.getDate() + 1);
@@ -941,7 +941,7 @@
 // export async function runAutoAttendanceServices() {
 //   try {
 //     console.log('🚀 Starting Combined Auto Attendance Services...');
-    
+
 //     // Parallel processing for better performance
 //     const [absentResult, checkoutResult] = await Promise.all([
 //       markAutoAbsent(),
@@ -1093,7 +1093,7 @@ export async function isShiftDay(shiftIdOrObj, dateOrNow = new Date()) {
     const dayFull = m.format("dddd"); // Monday, Tuesday...
     // support both full names or short names in shift.days
     const days = (shift.days || []).map(d => String(d).toLowerCase());
-    return days.includes(dayFull.toLowerCase()) || days.includes(dayFull.slice(0,3).toLowerCase());
+    return days.includes(dayFull.toLowerCase()) || days.includes(dayFull.slice(0, 3).toLowerCase());
   } catch (err) {
     console.error("isShiftDay error:", err);
     return false;
@@ -1232,7 +1232,7 @@ export async function markAutoAbsent() {
     console.log("🎯 markAutoAbsent started:", { now: now.toLocaleString("en-PK", { timeZone: APP_TZ }) });
 
     // If holiday or weekly off, skip
-    const [holiday, weeklyOff] = await Promise.all([ isHoliday(now), isWeeklyOff(now) ]);
+    const [holiday, weeklyOff] = await Promise.all([isHoliday(now), isWeeklyOff(now)]);
     if (holiday || weeklyOff) {
       console.log("Skipping Auto Absent - today is holiday/weekly off", holiday?.name || weeklyOff?.day);
       return { success: true, message: "Skipped holiday/weekly off", totalMarkedAbsent: 0, shiftSummary: {} };
@@ -1287,7 +1287,7 @@ export async function markAutoAbsent() {
  * AUTO CHECKOUT (single attendance) - This should only be called when API endpoint is hit.
  * It will update attendance, compute working minutes, overtime, early checkout, half-day, and save.
  */
-export async function performAutoCheckout(attendance, currentTime = new Date()) {
+export async function performAutoCheckout(attendance, currentTime = new Date(), locationData = null) {
   try {
     if (!attendance) throw new Error("No attendance provided");
 
@@ -1301,7 +1301,13 @@ export async function performAutoCheckout(attendance, currentTime = new Date()) 
     }
 
     attendanceDoc.checkOutTime = currentTime;
-    attendanceDoc.checkOutLocation = "Auto-checkout: Frontend Triggered";
+    // attendanceDoc.checkOutLocation = "Auto-checkout: Frontend Triggered";
+    // ✅ After (GeoJSON Object):
+    attendanceDoc.checkOutLocation = {
+      type: "Point",
+      coordinates: [locationData.longitude, locationData.latitude],
+      address: "Auto-checkout location"
+    };
 
     // total working minutes
     const totalWorkingMinutes = getTimeDifferenceInMinutes(attendanceDoc.checkInTime, currentTime);
@@ -1313,8 +1319,8 @@ export async function performAutoCheckout(attendance, currentTime = new Date()) 
     if (attendanceDoc.shift) {
       const shift = attendanceDoc.shift;
       const checkInDate = moment(attendanceDoc.checkInTime).tz(tz);
-      let shiftStart = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.startTime||"00:00").split(":")[0],10)).minute(parseInt((shift.startTime||"00:00").split(":")[1],10));
-      let shiftEnd = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.endTime||"00:00").split(":")[0],10)).minute(parseInt((shift.endTime||"00:00").split(":")[1],10));
+      let shiftStart = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.startTime || "00:00").split(":")[0], 10)).minute(parseInt((shift.startTime || "00:00").split(":")[1], 10));
+      let shiftEnd = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.endTime || "00:00").split(":")[0], 10)).minute(parseInt((shift.endTime || "00:00").split(":")[1], 10));
 
       // overnight handling
       if (!shift.startTime || !shift.endTime) {
