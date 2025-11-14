@@ -998,7 +998,8 @@ import User from "@/Models/User";
 import Holiday from "@/Models/Holiday";
 import moment from "moment-timezone";
 
-export const APP_TZ = process.env.TZ || "Asia/Karachi";
+// export const APP_TZ = process.env.TZ || "Asia/Karachi";
+export const APP_TZ = "Asia/Karachi";
 
 /**
  * Utility: get today start/end/now in app timezone
