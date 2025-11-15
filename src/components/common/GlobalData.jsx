@@ -35,6 +35,7 @@ export default function GlobalData({
   onDataFetched,
 }) {
   const [data, setData] = useState([]);
+  const [allItems, setAllItems] = useState([]); // keep original list for client-side filtering
   const [filters, setFilters] = useState(initialFilters);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,25 +47,50 @@ export default function GlobalData({
       if (!fetcher) return;
       setLoading(true);
       try {
+        // Use filters passed in opts (when calling after a change) or current state
+        const activeFilters = opts.filters ?? filters ?? {};
+
         // build params: flatten filters into top-level for existing services
         // coerce 'true'/'false' string values into booleans for API
+        // and skip "all"/empty values so we don't send no-op filters to API
         const normalizedFilters = {};
-        (filters || {});
-        Object.keys(filters || {}).forEach((k) => {
-          const v = filters[k];
+        Object.keys(activeFilters || {}).forEach((k) => {
+          let v = activeFilters[k];
+          if (v === undefined || v === null) return;
+          if (typeof v === 'string') v = v.trim();
+          if (v === "" || v === "all") return; // skip noop
           if (v === "true") normalizedFilters[k] = true;
           else if (v === "false") normalizedFilters[k] = false;
           else normalizedFilters[k] = v;
         });
 
+        // Only include search when it's non-empty to avoid confusing the API
+        const activeSearch = (opts.search !== undefined) ? opts.search : searchQuery;
+
         const params = serverSide
-          ? { page: opts.page || page, limit: opts.limit || rowsPerPage, ...normalizedFilters, search: opts.search ?? searchQuery }
+          ? {
+              page: opts.page || page,
+              limit: opts.limit || rowsPerPage,
+              ...normalizedFilters,
+              ...(activeSearch ? { search: activeSearch } : {}),
+            }
           : {};
 
-        // If not serverSide, call fetcher without pagination params and expect array
-        const res = serverSide ? await fetcher(params) : await fetcher();
+        // If serverSide -> call fetcher with params.
+        // If client-side and we already have allItems cached, skip re-fetch and reuse cached list.
+        let res;
+        if (serverSide) {
+          res = await fetcher(params);
+        } else {
+          if (allItems && allItems.length > 0 && !(opts.forceFetch)) {
+            // reuse cached items
+            res = allItems;
+          } else {
+            res = await fetcher();
+          }
+        }
 
-        // Normalise response shapes from different fetchers
+  // Normalise response shapes from different fetchers
         let items = [];
         let newMeta = { total: 0, totalPages: 1, page: serverSide ? params.page : 1, limit: serverSide ? params.limit : items.length };
 
@@ -92,10 +118,76 @@ export default function GlobalData({
           newMeta = res.meta || { total: items.length, totalPages: Math.max(1, Math.ceil(items.length / rowsPerPage)), page: 1, limit: rowsPerPage };
         }
 
-        setData(items);
-        setMeta(newMeta);
-        setPage(newMeta.page || 1);
-        onDataFetched?.(items, newMeta);
+        // For client-side mode we store the full list and then apply filters/search
+        if (serverSide) {
+          setData(items);
+          setMeta(newMeta);
+          setPage(newMeta.page || 1);
+        } else {
+          setAllItems(items);
+
+          // apply filters/search immediately for client-side mode
+          const activeFilters = opts.filters ?? filters ?? {};
+          const searchTerm = opts.search !== undefined ? opts.search : searchQuery;
+
+          const filtered = items.filter((item) => {
+            // apply all active filters (skip noop 'all' or empty)
+            for (const k of Object.keys(activeFilters || {})) {
+              let v = activeFilters[k];
+              if (v === undefined || v === null) continue;
+              if (typeof v === 'string') v = v.trim();
+              if (v === '' || v === 'all') continue;
+              // coerce true/false
+              if (v === 'true') v = true;
+              else if (v === 'false') v = false;
+
+              // simple path: check item[k] or nested boolean fields
+              const itemVal = item[k];
+              // if value is boolean, compare directly
+              if (typeof v === 'boolean') {
+                if (Boolean(itemVal) !== v) return false;
+                continue;
+              }
+
+              // string compare (case-insensitive)
+              if (itemVal === undefined || itemVal === null) return false;
+              if (String(itemVal).toLowerCase() !== String(v).toLowerCase()) return false;
+            }
+
+            // apply search if provided
+            if (searchTerm && String(searchTerm).trim()) {
+              const q = String(searchTerm).toLowerCase();
+              // search across columns
+              const found = columns.some((col) => {
+                try {
+                  const value = col.render ? col.render(item) : item[col.key];
+                  return String(value).toLowerCase().includes(q);
+                } catch (e) {
+                  return false;
+                }
+              });
+              if (!found) return false;
+            }
+
+            return true;
+          });
+
+          // compute meta based on filtered length
+          const clientMeta = {
+            total: filtered.length,
+            totalPages: Math.max(1, Math.ceil(filtered.length / rowsPerPage)),
+            page: 1,
+            limit: rowsPerPage,
+          };
+
+          // For client-side mode we pass the full filtered list to DataTable
+          // so DataTable can apply its own search/pagination UI on top.
+          setData(filtered);
+          setMeta(clientMeta);
+          setPage(1);
+          onDataFetched?.(filtered, clientMeta);
+        }
+      
       } catch (err) {
         console.error("GlobalData load error:", err);
         setData([]);
@@ -103,7 +195,7 @@ export default function GlobalData({
         setLoading(false);
       }
     },
-    [fetcher, filters, rowsPerPage, searchQuery, onDataFetched, page, serverSide]
+    [fetcher, filters, rowsPerPage, searchQuery, onDataFetched, page, serverSide, allItems]
   );
 
   useEffect(() => {
@@ -114,20 +206,35 @@ export default function GlobalData({
 
   // Handlers for filters/search coming from DataTable controls
   const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    // reload with new filters (server or client)
-    setTimeout(() => load(serverSide ? { page: 1 } : {}), 0);
+    // compute new filters and set state immediately
+    const newFilters = { ...(filters || {}), [key]: value };
+    setFilters(newFilters);
+
+    // Immediately load with the new filters (avoid race with state updates)
+    if (serverSide) {
+      load({ page: 1, filters: newFilters });
+    } else {
+      // client-side: fetcher may not accept params; just call load so it will
+      // call fetcher() and we will update `data` accordingly
+      load({ filters: newFilters });
+    }
   };
 
   const handleSearchChange = (q) => {
     setSearchQuery(q);
-    setTimeout(() => load(), 0);
+    // call load with the new search term so server receives it right away
+    if (serverSide) {
+      load({ page: 1, search: q, filters });
+    } else {
+      load({ search: q });
+    }
   };
 
   const handlePageChange = (p) => {
     if (!serverSide) return;
     setPage(p);
-    load({ page: p });
+    // ensure current filters are applied when changing page
+    load({ page: p, filters });
   };
 
   // Render filter selects when filterKeys provided

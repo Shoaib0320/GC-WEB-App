@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import DataTable from "@/components/common/DataTable";
-import SummaryCards from "@/components/common/SummaryCards";
+import GlobalData from "@/components/common/GlobalData";
 import PageHeader from "@/components/common/PageHeader";
 import BookingSearchBar from "@/components/SearchBar";
 import SearchResultCard from "@/components/common/SearchResultCard";
@@ -12,6 +12,7 @@ import CreateBookingDialog from "@/components/CreateBookingDialog";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { fetchBookings, addBooking } from "@/action/bookingActions";
 import {
   CalendarDays,
@@ -23,6 +24,7 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // 1. Status configuration lookup map (Optimized logic)
 const STATUS_CONFIG = {
@@ -55,6 +57,7 @@ const STATUS_CONFIG = {
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState([]);
+  const [mobileFilter, setMobileFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -92,7 +95,7 @@ export default function BookingsPage() {
   const handleCreateBooking = async (bookingData) => {
     try {
       const response = await addBooking(bookingData);
-      
+
       if (response.success) {
         toast.success("Booking created successfully!");
         setBookings([response.data, ...bookings]);
@@ -125,8 +128,16 @@ export default function BookingsPage() {
         icon={CalendarDays}
       />
 
+      <Button
+                onClick={() => setCreateDialogOpen(true)}
+                className="flex items-center gap-2 w-full sm:w-auto"
+              >
+                <Plus className="w-4 h-4" />
+                Create Booking
+              </Button>
+
       {/* Search Bar */}
-      <motion.div
+      {/* <motion.div
         initial="hidden"
         animate="visible"
         custom={1}
@@ -136,14 +147,8 @@ export default function BookingsPage() {
         <div className="flex-1 w-full">
           <BookingSearchBar onSearch={handleSearch} />
         </div>
-        <Button
-          onClick={() => setCreateDialogOpen(true)}
-          className="flex items-center gap-2 w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Create Booking
-        </Button>
-      </motion.div>
+
+      </motion.div> */}
 
       <Separator />
 
@@ -177,122 +182,173 @@ export default function BookingsPage() {
         </motion.div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <SummaryCards
-            cards={[
-              {
-                title: "Total Bookings",
-                description: "All bookings to date",
-                value: bookings.length,
-                icon: CalendarDays,
-                color: "from-blue-500/10 to-blue-500/5 text-blue-700",
-              },
-              {
-                title: "Confirmed",
-                description: "Active and approved",
-                value: bookings.filter((b) => b.status === "confirmed").length,
-                icon: CheckCircle,
-                color: "from-green-500/10 to-green-500/5 text-green-700",
-              },
-              {
-                title: "Pending",
-                description: "Awaiting confirmation",
-                value: bookings.filter((b) => b.status === "pending").length,
-                icon: Clock,
-                color: "from-yellow-500/10 to-yellow-500/5 text-yellow-700",
-              },
-              // ✅ ADDED: Completed Card
-              {
-                title: "Completed",
-                description: "Finished bookings",
-                value: bookings.filter((b) => b.status === "completed").length,
-                icon: CheckSquare,
-                color: "from-purple-500/10 to-purple-500/5 text-purple-700",
-              },
-              // ✅ ADDED: Rescheduled Card
-              {
-                title: "Rescheduled",
-                description: "Changed date/time",
-                value: bookings.filter((b) => b.status === "rescheduled")
-                  .length,
-                icon: RefreshCcw,
-                color: "from-blue-500/10 to-blue-500/5 text-blue-700",
-              },
-              {
-                title: "Cancelled",
-                description: "Declined or cancelled",
-                value: bookings.filter((b) => b.status === "cancelled").length,
-                icon: XCircle,
-                color: "from-red-500/10 to-red-500/5 text-red-700",
-              },
-            ]}
-          />
+          {/* Summary Cards (shadcn Card components) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Total Bookings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{bookings.length}</div>
+                <div className="text-xs text-muted-foreground">All bookings to date</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Confirmed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{bookings.filter((b) => b.status === "confirmed").length}</div>
+                <div className="text-xs text-muted-foreground">Active and approved</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Pending</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{bookings.filter((b) => b.status === "pending").length}</div>
+                <div className="text-xs text-muted-foreground">Awaiting confirmation</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Completed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">{bookings.filter((b) => b.status === "completed").length}</div>
+                <div className="text-xs text-muted-foreground">Finished bookings</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Rescheduled</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{bookings.filter((b) => b.status === "rescheduled").length}</div>
+                <div className="text-xs text-muted-foreground">Changed date/time</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Cancelled</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{bookings.filter((b) => b.status === "cancelled").length}</div>
+                <div className="text-xs text-muted-foreground">Declined or cancelled</div>
+              </CardContent>
+            </Card>
+          </div>
 
           <Separator />
 
           {/* Normal Table (only visible when not searching) */}
-          <DataTable
-            title="Recent Bookings"
-            icon={Clock}
-            loading={loading}
-            data={bookings}
-            columns={[
-              { key: "bookingId", label: "Booking ID" },
-              {
-                label: "Customer",
-                render: (b) =>
-                  `${b.formData?.firstName || ""} ${b.formData?.lastName || ""
-                  }`,
-              },
-              { label: "Email", render: (b) => b.formData?.email || "N/A" },
-              {
-                label: "Date",
-                render: (b) => new Date(b.createdAt).toLocaleDateString(),
-              },
-              {
-                label: "Appointment Date",
-                render: (b) => new Date(b.formData?.date).toLocaleDateString(),
-              },
-              // ✅ UPDATED: Status column using STATUS_CONFIG
-              {
-                label: "Status",
-                render: (b) => {
-                  // Look up the configuration based on status, or use default
-                  const config =
-                    STATUS_CONFIG[b.status] || STATUS_CONFIG.default;
-                  const { colorClass, Icon } = config;
+          <Card>
+            <CardHeader className="flex flex-wrap items-center justify-between">
+              <div>
+                <CardTitle>Bookings Management</CardTitle>
+                <CardDescription>
+                  Manage All Bookings in the System
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Desktop: table powered by GlobalData (hidden on small screens) */}
+              <div className="hidden sm:block">
+                <GlobalData
+                  title="Recent Bookings"
+                  icon={Clock}
+                  fetcher={async () => {
+                    const res = await fetchBookings();
+                    return res;
+                  }}
+                  columns={[
+                    { key: "bookingId", label: "Booking ID" },
+                    { label: "Customer", render: (b) => `${b.formData?.firstName || ""} ${b.formData?.lastName || ""}` },
+                    { label: "Email", render: (b) => b.formData?.email || "N/A" },
+                    // { label: "Date", render: (b) => new Date(b.createdAt).toLocaleDateString() },
+                    { label: "Appointment Date", render: (b) => new Date(b.formData?.date).toLocaleDateString() },
+                    { label: "Status", render: (b) => {
+                        const config = STATUS_CONFIG[b.status] || STATUS_CONFIG.default;
+                        const { colorClass, Icon } = config;
+                        return (
+                          <span className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 w-fit ${colorClass}`}>
+                            {Icon && <Icon className="w-3.5 h-3.5" />}
+                            <span className="capitalize">{b.status}</span>
+                          </span>
+                        );
+                      } },
+                    { label: "Action", align: "right", render: (b) => (
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(b); setDialogOpen(true); }}>
+                          View
+                        </Button>
+                      ) },
+                  ]}
+                  serverSide={false}
+                  rowsPerPage={5}
+                  searchEnabled={false}
+                  filterKeys={["status"]}
+                  filterOptionsMap={{ status: Object.keys(STATUS_CONFIG).filter((k) => k !== 'default').map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s })) }}
+                />
+              </div>
 
-                  return (
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 w-fit ${colorClass}`}
-                    >
-                      {/* Render Icon component if it exists */}
-                      {Icon && <Icon className="w-3.5 h-3.5" />}
-                      <span className="capitalize">{b.status}</span>
-                    </span>
-                  );
-                },
-              },
-              {
-                label: "Action",
-                align: "right",
-                render: (b) => (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedBooking(b);
-                      setDialogOpen(true);
-                    }}
-                  // ✅ Disabled logic yahan se hata diya gaya hai
-                  >
-                    {/* Ab yeh hamesha "View" hi dikhayega */}
-                    View
-                  </Button>
-                ),
-              },
-            ]}
+              {/* Mobile: simple cards list with a compact status filter */}
+              <div className="sm:hidden">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm font-medium">Recent Bookings</div>
+                  <div className="w-40">
+                    <Select value={mobileFilter} onValueChange={(v) => setMobileFilter(v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {Object.keys(STATUS_CONFIG).filter(k => k !== 'default').map(s => (
+                          <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {(bookings.filter(b => mobileFilter === 'all' ? true : b.status === mobileFilter)).map(b => (
+                    <Card key={b._id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold">{b.formData?.firstName} {b.formData?.lastName}</div>
+                            <div className="text-xs text-muted-foreground">{new Date(b.createdAt).toLocaleDateString()}</div>
+                          </div>
+                          <div>
+                            <span className="text-xs px-2 py-1 rounded-full bg-gray-100">{b.status}</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-muted-foreground">{b.formData?.email || 'N/A'}</div>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(b); setDialogOpen(true); }}>View</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+                      {/* Create Booking Dialog */}
+          <CreateBookingDialog
+            open={createDialogOpen}
+            onClose={() => setCreateDialogOpen(false)}
+            onSubmit={handleCreateBooking}
           />
+
+          </Card>
         </>
       )}
 
@@ -312,13 +368,13 @@ export default function BookingsPage() {
           setSelectedBooking(updatedBooking);
         }}
       />
+                {/* Create Booking Dialog */}
+          <CreateBookingDialog
+            open={createDialogOpen}
+            onClose={() => setCreateDialogOpen(false)}
+            onSubmit={handleCreateBooking}
+          />
 
-      {/* Create Booking Dialog */}
-      <CreateBookingDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateBooking}
-      />
     </div>
   );
 }

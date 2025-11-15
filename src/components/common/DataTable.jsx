@@ -159,61 +159,73 @@ export default function DataTable({
           {loading ? (
         <p className="text-gray-500 text-center sm:text-left">Loading data...</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-white max-h-96 overflow-y-auto">
-          <table className="min-w-[600px] sm:min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600 sticky top-0">
-              <tr>
-                {columns.map((col, i) => (
-                  <th
-                    key={i}
-                    className={`px-4 py-3 font-medium ${
-                      col.align === "right" ? "text-right" : "text-left"
-                    }`}
-                  >
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {currentData.length === 0 ? (
+        // Outer container keeps horizontal scrolling for wide tables.
+        // Inner container constrains vertical space so vertical scrolling
+        // happens inside the table area (not the whole page). This keeps
+        // the page height stable while allowing the header to be sticky
+        // relative to the inner scroll container.
+        <div className="overflow-x-auto rounded-xl border bg-white">
+          <div
+            className="overflow-y-auto"
+            // constrain table height relative to viewport but also based on rowsPerPage
+            style={{ maxHeight: `min(60vh, ${rowsPerPage * 64 + 160}px)` }}
+          >
+            <table className="min-w-[600px] w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600 sticky top-0">
                 <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="text-center py-6 text-gray-800"
-                  >
-                    No data found.
-                  </td>
+                  {columns.map((col, i) => (
+                    <th
+                      key={i}
+                      className={`px-4 py-3 font-medium ${
+                        col.align === "right" ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                currentData.map((row, index) => (
-                  <motion.tr
-                    key={row._id || index}
-                    custom={index}
-                    initial="hidden"
-                    animate="visible"
-                    variants={fadeUp}
-                    className="border-t hover:bg-gray-50 transition"
-                  >
-                    {columns.map((col, colIndex) => (
-                      <td
-                        key={colIndex}
-                        className={`px-4 py-3 ${
-                          col.align === "right" ? "text-right" : "text-left"
-                        }`}
-                      >
-                        {col.render ? col.render(row) : row[col.key]}
-                      </td>
-                    ))}
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {currentData.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="text-center py-6 text-gray-800"
+                    >
+                      No data found.
+                    </td>
+                  </tr>
+                ) : (
+                  currentData.map((row, index) => (
+                    <motion.tr
+                      key={row._id || index}
+                      custom={index}
+                      initial="hidden"
+                      animate="visible"
+                      variants={fadeUp}
+                      className="border-t hover:bg-gray-50 transition"
+                    >
+                      {columns.map((col, colIndex) => (
+                        <td
+                          key={colIndex}
+                          className={`px-4 py-3 break-words ${
+                            col.align === "right" ? "text-right" : "text-left"
+                          }`}
+                        >
+                          {col.render ? col.render(row) : row[col.key]}
+                        </td>
+                      ))}
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination Footer */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t px-4 py-3 bg-gray-50 text-sm gap-2 sticky bottom-0">
+            // Pagination footer — not sticky to avoid layout/scroll issues
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t px-4 py-3 bg-gray-50 text-sm gap-2">
               <span className="text-gray-600 text-center sm:text-left">
                 Page <strong>{serverSide ? propCurrentPage : currentPage}</strong> of {totalPages}
               </span>
