@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { X, Calendar, Clock, User, Phone, Mail, MapPin, Car, Plus, Trash2, Tag, DollarSign, Package } from "lucide-react";
+import { X, Calendar, Clock, User, Phone, Mail, MapPin, Car, Plus, Trash2, Tag, DollarSign, Package, Loader2 } from "lucide-react";
 import { promoCodeService } from "@/services/promocodeService";
 import { serviceTypes, vehicleTypes as allVehicleTypes } from "@/Data/bookingData";
 import { toast } from "sonner";
@@ -78,6 +78,9 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
       fetchPromoCodes();
     }
   }, [open]);
+
+  // ✅ Submitting state for form submission loader
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchPromoCodes = async () => {
     try {
@@ -286,25 +289,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
   }, [vehicleBookings, selectedPromoCode]);
 
   // ✅ Apply Promo Code
-  const applyPromoCode = (promoCode) => {
-    if (!promoCode || promoCode === "none") {
-      setSelectedPromoCode(null);
-      return;
-    }
-
-    const promo = typeof promoCode === 'string' 
-      ? promoCodes.find((p) => p._id === promoCode)
-      : promoCode;
-
-    if (promo) {
-      setSelectedPromoCode(promo);
-      toast.success(`Promo code applied: ${promo.discountPercentage}% off`);
-    }
-  };
-
-  // ✅ Remove manual calculateTotalPrice function (no longer needed)
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // ✅ Validation
@@ -365,9 +350,32 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
       status: "pending",
     };
 
-    onSubmit(bookingData);
-    resetForm();
+    // ✅ Show submitting loader until parent saves the booking
+    try {
+      setSubmitting(true);
+      // Await parent handler which should return the response
+      const res = await onSubmit(bookingData);
+
+      // If parent returns a response object, check success
+      if (res && res.success) {
+        resetForm();
+        // Parent typically closes the dialog; if not, close here
+        if (onClose) onClose();
+      } else if (res && !res.success) {
+        toast.error(res.message || "Failed to create booking");
+      } else {
+        // If parent didn't return anything assume success (backwards compatible)
+        resetForm();
+        if (onClose) onClose();
+      }
+    } catch (err) {
+      console.error("Create booking error:", err);
+      toast.error(err?.message || "Failed to create booking");
+    } finally {
+      setSubmitting(false);
+    }
   };
+  
 
   const resetForm = () => {
     setFormData({
@@ -418,7 +426,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
+    <DialogContent className="relative max-w-[95vw] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <User className="w-6 h-6" />
@@ -433,6 +441,13 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
             <X className="w-4 h-4" />
           </Button>
         </DialogHeader>
+
+        {/* Loading overlay while submitting */}
+        {submitting && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50">
+            <Loader2 className="w-14 h-14 animate-spin text-primary" />
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           {/* 📋 CUSTOMER INFORMATION */}
@@ -1046,8 +1061,15 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="min-w-[150px]">
-              Create Booking
+            <Button type="submit" className="min-w-[150px]" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </span>
+              ) : (
+                "Create Booking"
+              )}
             </Button>
           </div>
         </form>

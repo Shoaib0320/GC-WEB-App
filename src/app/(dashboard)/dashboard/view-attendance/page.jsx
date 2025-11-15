@@ -18,6 +18,7 @@ import { Loader2, Calendar, Users, CheckCircle, XCircle, Clock, Plus, Trash2, Pl
 import { toast } from "sonner";
 import CustomModal from "@/components/ui/customModal";
 import Link from "next/link";
+import GlobalData from "@/components/common/GlobalData";
 
 export default function AdminAttendancePage() {
   // State variables
@@ -780,6 +781,185 @@ export default function AdminAttendancePage() {
         </span>
       </div>
     );
+  };
+
+  // Columns for GlobalData / attendance table
+  const attendanceColumns = [
+    {
+      label: "Type",
+      render: (a) => (
+        <Badge variant={a.user ? "default" : "secondary"}>
+          {a.user ? "User" : "Agent"}
+        </Badge>
+      ),
+    },
+    {
+      label: "Name",
+      render: (a) => (
+        <div>
+          <div className="font-medium">
+            {a.user
+              ? `${a.user?.firstName || ""} ${a.user?.lastName || ""}`
+              : a.agent?.agentName || "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {a.user ? a.user.email : a.agent?.email}
+          </div>
+        </div>
+      ),
+    },
+    { label: "Shift", render: (a) => a.shift?.name || "—" },
+    {
+      label: "Check In",
+      render: (a) => (a.checkInTime ? new Date(a.checkInTime).toLocaleTimeString() : "—"),
+    },
+    {
+      label: "Check Out",
+      render: (a) => (a.checkOutTime ? new Date(a.checkOutTime).toLocaleTimeString() : "—"),
+    },
+    { label: "Status", render: (a) => getStatusBadge(a.status) },
+    {
+      label: "Remarks",
+      render: (a) => (
+        <div>
+          {a.isLate ? (
+            <span className="text-yellow-600 text-sm">Late ({a.lateMinutes}m)</span>
+          ) : a.isOvertime ? (
+            <span className="text-green-600 text-sm">Overtime (+{a.overtimeMinutes}m)</span>
+          ) : a.leaveReason ? (
+            <span className="text-blue-600 text-sm">{a.leaveType}: {a.leaveReason}</span>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+        </div>
+      ),
+    },
+    { label: "Date", render: (a) => new Date(a.date).toLocaleDateString() },
+    {
+      label: "Actions",
+      align: "right",
+      render: (a) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleEditAttendance(a)}
+          disabled={!canEditAttendance(a)}
+          title={
+            !canEditAttendance(a)
+              ? a.status === "holiday" || a.status === "weekly_off"
+                ? "Cannot edit holiday/weekly off records"
+                : "Cannot edit this record"
+              : "Edit attendance"
+          }
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
+
+  // Columns for Holidays
+  const holidayColumns = [
+    { label: "Name", render: (h) => <div className="font-medium">{h.name}</div> },
+    { label: "Date", render: (h) => new Date(h.date).toLocaleDateString() },
+    { label: "Description", render: (h) => <div className="max-w-xs truncate" title={h.description}>{h.description || '—'}</div> },
+    { label: "Recurring", render: (h) => (<Badge variant={h.isRecurring ? 'default' : 'secondary'}>{h.isRecurring ? 'Yes' : 'No'}</Badge>) },
+    { label: "Actions", align: "right", render: (h) => (
+      <Button variant="destructive" size="sm" onClick={() => handleDeleteHoliday(h._id)}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    )},
+  ];
+
+  // Columns for Weekly Offs
+  const weeklyOffColumns = [
+    { label: "Day", render: (w) => <div className="font-medium capitalize">{w.day}</div> },
+    { label: "Name", render: (w) => w.name },
+    { label: "Description", render: (w) => <div className="max-w-xs truncate" title={w.description}>{w.description || '—'}</div> },
+    { label: "Status", render: (w) => (<Badge variant={w.isActive ? 'default' : 'secondary'}>{w.isActive ? 'Active' : 'Inactive'}</Badge>) },
+    { label: "Actions", align: "right", render: (w) => (
+      <div className="flex gap-2">
+        <Button
+          variant={w.isActive ? "outline" : "default"}
+          size="sm"
+          onClick={() => handleToggleWeeklyOff(w._id, !w.isActive)}
+        >
+          {w.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
+          {w.isActive ? "Deactivate" : "Activate"}
+        </Button>
+        <Button variant="destructive" size="sm" onClick={() => handleDeleteWeeklyOff(w._id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    )},
+  ];
+
+  // Columns for Leave Requests
+  const leaveColumns = [
+    { label: "Type", render: (r) => (<Badge variant={r.user ? 'default' : 'secondary'}>{r.user ? 'User' : 'Agent'}</Badge>) },
+    { label: "Name", render: (r) => (
+      <div>
+        <div className="font-medium">{r.user ? `${r.user?.firstName || ''} ${r.user?.lastName || ''}` : r.agent?.agentName || '—'}</div>
+        <div className="text-xs text-muted-foreground">{r.user ? r.user.email : r.agent?.email}</div>
+      </div>
+    )},
+    { label: "Leave Type", render: (r) => <span className="capitalize">{r.leaveType}</span> },
+    { label: "Period", render: (r) => `${new Date(r.startDate).toLocaleDateString()} - ${new Date(r.endDate).toLocaleDateString()}` },
+    { label: "Reason", render: (r) => <div className="max-w-xs truncate" title={r.reason}>{r.reason}</div> },
+    { label: "Status", render: (r) => getLeaveStatusBadge(r.status) },
+    { label: "Actions", align: "right", render: (r) => (
+      <div className="flex gap-2">
+        <Button size="sm" onClick={() => handleLeaveAction(r._id, 'approved')}>
+          Approve
+        </Button>
+        <Button size="sm" variant="destructive" onClick={() => handleLeaveAction(r._id, 'rejected')}>
+          Reject
+        </Button>
+      </div>
+    )},
+  ];
+
+  // Filter option maps for various sections
+  const attendanceFilterOptionsMap = {
+    userType: [
+      { label: "Users", value: "user" },
+      { label: "Agents", value: "agent" },
+    ],
+    status: [
+      { label: "Present", value: "present" },
+      { label: "Absent", value: "absent" },
+      { label: "Leave", value: "leave" },
+      { label: "Late", value: "late" },
+      { label: "Holiday", value: "holiday" },
+      { label: "Weekly Off", value: "weekly_off" },
+      { label: "Approved Leave", value: "approved_leave" },
+    ],
+  };
+
+  const holidayFilterOptionsMap = {
+    isRecurring: [
+      { label: "Yes", value: "true" },
+      { label: "No", value: "false" },
+    ],
+  };
+
+  const weeklyOffFilterOptionsMap = {
+    isActive: [
+      { label: "Active", value: "true" },
+      { label: "Inactive", value: "false" },
+    ],
+  };
+
+  const leaveFilterOptionsMap = {
+    userType: [
+      { label: "Users", value: "user" },
+      { label: "Agents", value: "agent" },
+    ],
+    status: [
+      { label: "Pending", value: "pending" },
+      { label: "Approved", value: "approved" },
+      { label: "Rejected", value: "rejected" },
+    ],
   };
 
   // ✅ MODALS COMPONENTS
@@ -1607,57 +1787,16 @@ export default function AdminAttendancePage() {
         </Button>
       </CardHeader>
       <CardContent>
-        {loading.holidays ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="ml-2">Loading holidays...</span>
-          </div>
-        ) : holidays.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No holidays found.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Recurring</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {holidays.map((holiday) => (
-                <TableRow key={holiday._id}>
-                  <TableCell className="font-medium">{holiday.name}</TableCell>
-                  <TableCell>
-                    {new Date(holiday.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs truncate" title={holiday.description}>
-                      {holiday.description || "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={holiday.isRecurring ? "default" : "secondary"}>
-                      {holiday.isRecurring ? "Yes" : "No"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteHoliday(holiday._id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        <GlobalData
+          title=""
+          fetcher={async () => attendanceService.getHolidays()}
+          columns={holidayColumns}
+          rowsPerPage={5}
+          serverSide={false}
+          searchEnabled={false}
+          filterKeys={["isRecurring"]}
+          filterOptionsMap={holidayFilterOptionsMap}
+        />
       </CardContent>
     </Card>
   );
@@ -1678,65 +1817,16 @@ export default function AdminAttendancePage() {
         </Button>
       </CardHeader>
       <CardContent>
-        {loading.weeklyOff ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="ml-2">Loading weekly off days...</span>
-          </div>
-        ) : weeklyOffs.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No weekly off days configured. Add Sunday, Friday, or other weekly off days.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Day</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {weeklyOffs.map((weeklyOff) => (
-                <TableRow key={weeklyOff._id}>
-                  <TableCell className="font-medium capitalize">{weeklyOff.day}</TableCell>
-                  <TableCell>{weeklyOff.name}</TableCell>
-                  <TableCell>
-                    <div className="max-w-xs truncate" title={weeklyOff.description}>
-                      {weeklyOff.description || "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={weeklyOff.isActive ? "default" : "secondary"}>
-                      {weeklyOff.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={weeklyOff.isActive ? "outline" : "default"}
-                        size="sm"
-                        onClick={() => handleToggleWeeklyOff(weeklyOff._id, !weeklyOff.isActive)}
-                      >
-                        {weeklyOff.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
-                        {weeklyOff.isActive ? "Deactivate" : "Activate"}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteWeeklyOff(weeklyOff._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        <GlobalData
+          title=""
+          fetcher={async () => weeklyOffService.getAll()}
+          columns={weeklyOffColumns}
+          rowsPerPage={5}
+          serverSide={false}
+          searchEnabled={false}
+          filterKeys={["isActive"]}
+          filterOptionsMap={weeklyOffFilterOptionsMap}
+        />
       </CardContent>
     </Card>
   );
@@ -1844,107 +1934,22 @@ export default function AdminAttendancePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading.attendance ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <span className="ml-2">Loading attendance records...</span>
-                </div>
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Shift</TableHead>
-                        <TableHead>Check In</TableHead>
-                        <TableHead>Check Out</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Remarks</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {attendance.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                            No attendance records found.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        attendance.map((a) => (
-                          <TableRow key={a._id}>
-                            <TableCell>
-                              <Badge variant={a.user ? "default" : "secondary"}>
-                                {a.user ? 'User' : 'Agent'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {a.user
-                                ? `${a.user?.firstName || ''} ${a.user?.lastName || ''}`
-                                : a.agent?.agentName || '—'
-                              }
-                            </TableCell>
-                            <TableCell>{a.shift?.name || "—"}</TableCell>
-                            <TableCell>
-                              {a.checkInTime
-                                ? new Date(a.checkInTime).toLocaleTimeString()
-                                : "—"}
-                            </TableCell>
-                            <TableCell>
-                              {a.checkOutTime
-                                ? new Date(a.checkOutTime).toLocaleTimeString()
-                                : "—"}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(a.status)}</TableCell>
-                            <TableCell>
-                              {a.isLate ? (
-                                <span className="text-yellow-600 text-sm">
-                                  Late ({a.lateMinutes}m)
-                                </span>
-                              ) : a.isOvertime ? (
-                                <span className="text-green-600 text-sm">
-                                  Overtime (+{a.overtimeMinutes}m)
-                                </span>
-                              ) : a.leaveReason ? (
-                                <span className="text-blue-600 text-sm">
-                                  {a.leaveType}: {a.leaveReason}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {new Date(a.date).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditAttendance(a)}
-                                disabled={!canEditAttendance(a)}
-                                title={
-                                  !canEditAttendance(a)
-                                    ? a.status === 'holiday' || a.status === 'weekly_off'
-                                      ? 'Cannot edit holiday/weekly off records'
-                                      : 'Cannot edit this record'
-                                    : 'Edit attendance'
-                                }
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-
-                  {/* Pagination */}
-                  {renderPagination()}
-                </>
-              )}
+              <GlobalData
+                title="Attendance Records"
+                fetcher={async ({ page, limit, search, ...rest } = {}) => {
+                  // flatten params to what adminService expects
+                  const params = { page: page || 1, limit: limit || 10, ...rest };
+                  if (search) params.search = search;
+                  return await adminService.getAllAttendance(params);
+                }}
+                columns={attendanceColumns}
+                serverSide={true}
+                rowsPerPage={5}
+                searchEnabled={true}
+                filterKeys={["userType", "status"]}
+                filterOptionsMap={attendanceFilterOptionsMap}
+                initialFilters={{ userType: "all", status: "all" }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1958,90 +1963,16 @@ export default function AdminAttendancePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading.leave ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <span className="ml-2">Loading leave requests...</span>
-                </div>
-              ) : leaveRequests.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No leave requests found.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Leave Type</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leaveRequests.map((request) => (
-                      <TableRow key={request._id}>
-                        <TableCell>
-                          <Badge variant={request.user ? "default" : "secondary"}>
-                            {request.user ? 'User' : 'Agent'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {request.user
-                            ? `${request.user?.firstName || ''} ${request.user?.lastName || ''}`
-                            : request.agent?.agentName || '—'
-                          }
-                          <div className="text-xs text-muted-foreground">
-                            {request.user ? request.user.email : request.agent?.email}
-                          </div>
-                        </TableCell>
-                        <TableCell className="capitalize">{request.leaveType}</TableCell>
-                        <TableCell className="text-sm">
-                          {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-xs" title={request.reason}>
-                            {request.reason}
-                          </div>
-                        </TableCell>
-                        <TableCell>{getLeaveStatusBadge(request.status)}</TableCell>
-                        <TableCell>
-                          {request.status === 'pending' && (
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => handleLeaveAction(request._id, 'approved')}
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  const comments = prompt('Rejection reason:');
-                                  if (comments !== null) {
-                                    handleLeaveAction(request._id, 'rejected', comments);
-                                  }
-                                }}
-                                size="sm"
-                                variant="destructive"
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                          {request.status !== 'pending' && (
-                            <span className="text-sm text-muted-foreground">
-                              Reviewed by {request.reviewedBy?.firstName}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <GlobalData
+                title=""
+                fetcher={async () => attendanceService.getAllLeaveRequests("all")}
+                columns={leaveColumns}
+                rowsPerPage={5}
+                serverSide={false}
+                searchEnabled={true}
+                filterKeys={["userType", "status"]}
+                filterOptionsMap={leaveFilterOptionsMap}
+              />
             </CardContent>
           </Card>
         </TabsContent>

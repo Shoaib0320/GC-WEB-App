@@ -97,12 +97,15 @@ export default function BookingsPage() {
         toast.success("Booking created successfully!");
         setBookings([response.data, ...bookings]);
         setCreateDialogOpen(false);
+        return response;
       } else {
         toast.error(response.message || "Failed to create booking");
+        return response;
       }
     } catch (error) {
       console.error("Error creating booking:", error);
       toast.error("Failed to create booking");
+      return { success: false, message: error?.message || "Failed to create booking" };
     }
   };
 

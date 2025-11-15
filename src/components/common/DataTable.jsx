@@ -21,13 +21,21 @@ export default function DataTable({
   rowsPerPage = 5,
   searchEnabled = false,
   filterOptions = [], // Array of { label, value, filterFn }
+  // Server-side options
+  serverSide = false,
+  currentPage: propCurrentPage = 1,
+  totalPages: propTotalPages = 1,
+  onPageChange,
+  onSearchChange,
+  onFilterChange,
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(propCurrentPage);
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 🧠 Apply Search and Filter
+  // 🧠 Apply Search and Filter (client-side only)
   const filteredData = useMemo(() => {
+    if (serverSide) return data;
     let filtered = data;
 
     // Apply search if enabled
@@ -35,7 +43,11 @@ export default function DataTable({
       filtered = filtered.filter((item) =>
         columns.some((col) => {
           const value = col.render ? col.render(item) : item[col.key];
-          return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+          try {
+            return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+          } catch (e) {
+            return false;
+          }
         })
       );
     }
@@ -49,12 +61,12 @@ export default function DataTable({
     }
 
     return filtered;
-  }, [data, searchQuery, filter, columns, searchEnabled, filterOptions]);
+  }, [data, searchQuery, filter, columns, searchEnabled, filterOptions, serverSide]);
 
-  // 🧮 Pagination logic
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  // 🧮 Pagination logic (client-side)
+  const totalPages = serverSide ? Math.max(1, propTotalPages) : Math.ceil(filteredData.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
-  const currentData = filteredData.slice(startIndex, startIndex + rowsPerPage);
+  const currentData = serverSide ? data : filteredData.slice(startIndex, startIndex + rowsPerPage);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
@@ -66,19 +78,29 @@ export default function DataTable({
   };
 
   const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+    if (currentPage > 1) {
+      const next = currentPage - 1;
+      if (serverSide && onPageChange) onPageChange(next);
+      setCurrentPage(next);
+    }
   };
   const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    if (currentPage < totalPages) {
+      const next = currentPage + 1;
+      if (serverSide && onPageChange) onPageChange(next);
+      setCurrentPage(next);
+    }
   };
 
   const handleFilter = (type) => {
     setFilter(type);
+    if (serverSide && onFilterChange) onFilterChange(type);
     setCurrentPage(1);
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
+    if (serverSide && onSearchChange) onSearchChange(e.target.value);
     setCurrentPage(1);
   };
 
@@ -134,7 +156,7 @@ export default function DataTable({
       </div>
 
       {/* Table Section */}
-      {loading ? (
+          {loading ? (
         <p className="text-gray-500 text-center sm:text-left">Loading data...</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-white max-h-96 overflow-y-auto">
@@ -193,23 +215,31 @@ export default function DataTable({
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t px-4 py-3 bg-gray-50 text-sm gap-2 sticky bottom-0">
               <span className="text-gray-600 text-center sm:text-left">
-                Page <strong>{currentPage}</strong> of {totalPages}
+                Page <strong>{serverSide ? propCurrentPage : currentPage}</strong> of {totalPages}
               </span>
 
               <div className="flex justify-center sm:justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage === 1}
-                  onClick={handlePrev}
+                  disabled={(serverSide ? propCurrentPage : currentPage) === 1}
+                  onClick={() => {
+                    const pageTo = (serverSide ? propCurrentPage : currentPage) - 1;
+                    if (serverSide && onPageChange) onPageChange(pageTo);
+                    setCurrentPage(pageTo);
+                  }}
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={handleNext}
+                  disabled={(serverSide ? propCurrentPage : currentPage) === totalPages}
+                  onClick={() => {
+                    const pageTo = (serverSide ? propCurrentPage : currentPage) + 1;
+                    if (serverSide && onPageChange) onPageChange(pageTo);
+                    setCurrentPage(pageTo);
+                  }}
                 >
                   Next
                 </Button>
