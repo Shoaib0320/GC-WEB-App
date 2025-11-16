@@ -1,3 +1,253 @@
+// // // app/api/attendance/my/route.js
+// // import { NextResponse } from "next/server";
+// // import connectDB from "@/lib/mongodb";
+// // import Attendance from "@/Models/Attendance";
+// // import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
+// // import Holiday from "@/Models/Holiday";
+// // import WeeklyOff from "@/Models/WeeklyOff";
+// // import Shift from "@/Models/Shift";
+// // import Agent from "@/Models/Agent";
+// // import User from "@/Models/User";
+
+// // /** ---------- Pakistan Time Utilities ---------- **/
+
+// // // Convert to Pakistan Time (Asia/Karachi)
+// // function toPakistanDate(date) {
+// //   return new Date(
+// //     new Date(date).toLocaleString("en-US", { timeZone: "Asia/Karachi" })
+// //   );
+// // }
+
+// // // Stable Key in Pakistan Time (YYYY-MM-DD)
+// // function toKeyPKT(date) {
+// //   const d = toPakistanDate(date);
+// //   const yyyy = d.getFullYear();
+// //   const mm = String(d.getMonth() + 1).padStart(2, "0");
+// //   const dd = String(d.getDate()).padStart(2, "0");
+// //   return `${yyyy}-${mm}-${dd}`;
+// // }
+
+// // // Get all month dates up to today (Pakistan)
+// // function getDatesUpToTodayPKT(year, month) {
+// //   const dates = [];
+// //   const today = toPakistanDate(new Date());
+// //   const lastDay =
+// //     today.getFullYear() === year && today.getMonth() + 1 === month
+// //       ? today.getDate()
+// //       : new Date(year, month, 0).getDate();
+// //   for (let d = 1; d <= lastDay; d++) {
+// //     dates.push(new Date(year, month - 1, d));
+// //   }
+// //   return dates;
+// // }
+
+// // /** ---------- Main API ---------- **/
+
+// // export async function GET(request) {
+// //   try {
+// //     await connectDB();
+// //     console.log("📅 Attendance Monthly Route Triggered (Pakistan Time)");
+
+// //     const authHeader = request.headers.get("authorization");
+// //     if (!authHeader?.startsWith("Bearer ")) {
+// //       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+// //     }
+
+// //     const token = authHeader.split(" ")[1];
+// //     const decoded = verifyToken(token);
+// //     if (!decoded) {
+// //       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+// //     }
+
+// //     const userId = getUserIdFromToken(decoded);
+// //     const userType = decoded.type || "agent";
+
+// //     const { searchParams } = new URL(request.url);
+// //     const month = parseInt(searchParams.get("month"));
+// //     const year = parseInt(searchParams.get("year"));
+// //     if (!month || !year) {
+// //       return NextResponse.json({ success: false, message: "Month and Year are required" }, { status: 400 });
+// //     }
+
+// //     const queryField = userType === "agent" ? "agent" : "user";
+
+// //     // Range
+// //     const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+// //     const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+
+// //     // Attendance records for the month
+// //     const attends = await Attendance.find({
+// //       [queryField]: userId,
+// //       $or: [
+// //         { date: { $gte: monthStart, $lt: monthEnd } },
+// //         { checkInTime: { $gte: monthStart, $lt: monthEnd } },
+// //       ],
+// //     })
+// //       .populate("shift", "name startTime endTime hours days")
+// //       .sort({ date: 1, checkInTime: 1 });
+
+// //     const attendanceMap = {};
+// //     attends.forEach(att => {
+// //       const source = att.date || att.checkInTime || att.createdAt;
+// //       if (!source) return;
+// //       const key = toKeyPKT(source);
+// //       attendanceMap[key] = att;
+// //     });
+
+// //     const todayPK = toPakistanDate(new Date());
+// //     const todayKey = toKeyPKT(todayPK);
+
+// //     const datesUpToToday = getDatesUpToTodayPKT(year, month);
+
+// //     // Also include future approved leave etc.
+// //     const futureKeys = new Set();
+// //     attends.forEach(att => {
+// //       const key = toKeyPKT(att.date || att.checkInTime || att.createdAt);
+// //       if (key > todayKey) futureKeys.add(key);
+// //     });
+
+// //     // Combine dates up to today + future records
+// //     const mergedKeysSet = new Set(datesUpToToday.map(d => toKeyPKT(d)));
+// //     for (const fk of futureKeys) mergedKeysSet.add(fk);
+// //     const mergedKeys = Array.from(mergedKeysSet).sort();
+
+// //     // Weekly Offs & Holidays (month-wide)
+// //     const weeklyOffDocs = await WeeklyOff.find({ isActive: true });
+// //     const weeklyOffSet = new Set(weeklyOffDocs.map(w => w.day.toLowerCase()));
+
+// //     const monthStartPK = toPakistanDate(new Date(Date.UTC(year, month - 1, 1)));
+// //     const monthEndPK = toPakistanDate(new Date(Date.UTC(year, month, 0)));
+
+// //     const holidayDocs = await Holiday.find({
+// //       $or: [
+// //         { date: { $gte: monthStart, $lt: monthEnd } },
+// //         { isRecurring: true }
+// //       ],
+// //       isActive: true
+// //     });
+
+// //     const holidaysSet = new Set();
+// //     for (const h of holidayDocs) {
+// //       const dateKey = toKeyPKT(h.date);
+// //       holidaysSet.add(dateKey);
+// //     }
+
+// //     /** ---------------- Build Final Data ---------------- **/
+
+// //     const tableData = [];
+// //     let stats = { present: 0, late: 0, absent: 0, holiday: 0, weeklyOff: 0, leave: 0 };
+
+// //     const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
+// //     const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
+
+// //     for (const key of mergedKeys) {
+// //       const dateObj = new Date(`${key}T00:00:00`);
+// //       const isFuture = key > todayKey;
+// //       const record = attendanceMap[key];
+// //       let status = "absent";
+// //       let remarks = "";
+// //       let checkInTime = null;
+// //       let checkOutTime = null;
+// //       let lateMinutes = 0;
+// //       let overtimeMinutes = 0;
+
+// //       if (record) {
+// //         status = record.status || "present";
+// //         checkInTime = record.checkInTime
+// //           ? toPakistanDate(record.checkInTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
+// //           : null;
+// //         checkOutTime = record.checkOutTime
+// //           ? toPakistanDate(record.checkOutTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
+// //           : null;
+// //         lateMinutes = record.lateMinutes || 0;
+// //         overtimeMinutes = record.overtimeMinutes || 0;
+// //       } else {
+// //         // Future with no record → skip
+// //         if (isFuture) continue;
+
+// //         // Check if holiday or weekly off
+// //         if (holidaysSet.has(key)) {
+// //           status = "holiday";
+// //           remarks = "Holiday";
+// //         } else {
+// //           const weekday = toPakistanDate(dateObj)
+// //             .toLocaleDateString("en-US", { weekday: "long" })
+// //             .toLowerCase();
+// //           if (weeklyOffSet.has(weekday)) {
+// //             status = "weekly_off";
+// //             remarks = "Weekly Off";
+// //           } else {
+// //             status = "absent";
+// //             remarks = "No Attendance Record";
+// //           }
+// //         }
+// //       }
+
+// //       // Stats (up to today)
+// //       if (!isFuture) {
+// //         if (status === "present") stats.present++;
+// //         else if (status === "late") stats.late++;
+// //         else if (status === "absent") stats.absent++;
+// //         else if (status === "holiday") stats.holiday++;
+// //         else if (status === "weekly_off") stats.weeklyOff++;
+// //         else if (["approved_leave", "pending_leave", "leave"].includes(status)) stats.leave++;
+// //       }
+
+// //       tableData.push({
+// //         date: key,
+// //         day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
+// //         status,
+// //         checkInTime,
+// //         checkOutTime,
+// //         remarks,
+// //         lateMinutes,
+// //         overtimeMinutes,
+// //         rawRecord: record || null,
+// //       });
+// //     }
+
+// //     const workingDays = datesUpToToday.length - (stats.holiday + stats.weeklyOff);
+// //     const attendanceRate =
+// //       workingDays > 0
+// //         ? ((stats.present + stats.late) / workingDays * 100).toFixed(2)
+// //         : "0.00";
+
+// //     return NextResponse.json({
+// //       success: true,
+// //       data: {
+// //         month,
+// //         year,
+// //         timezone: "Asia/Karachi",
+// //         generatedAt: toPakistanDate(new Date()).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+// //         summary: {
+// //           present: stats.present,
+// //           late: stats.late,
+// //           absent: stats.absent,
+// //           holiday: stats.holiday,
+// //           weeklyOff: stats.weeklyOff,
+// //           leave: stats.leave,
+// //           totalLateMinutes,
+// //           totalOvertimeMinutes,
+// //           attendanceRate,
+// //         },
+// //         records: tableData,
+// //       },
+// //     });
+// //   } catch (error) {
+// //     console.error("❌ Attendance GET error:", error);
+// //     return NextResponse.json(
+// //       { success: false, message: "Server error", error: error.message },
+// //       { status: 500 }
+// //     );
+// //   }
+// // }
+
+
+
+
+
+
+
 // // app/api/attendance/my/route.js
 // import { NextResponse } from "next/server";
 // import connectDB from "@/lib/mongodb";
@@ -27,15 +277,22 @@
 //   return `${yyyy}-${mm}-${dd}`;
 // }
 
-// // Get all month dates up to today (Pakistan)
-// function getDatesUpToTodayPKT(year, month) {
+// // Get all month dates from user creation to today (Pakistan)
+// function getDatesFromUserCreationPKT(year, month, userCreationDate) {
 //   const dates = [];
 //   const today = toPakistanDate(new Date());
+//   const userCreated = toPakistanDate(userCreationDate);
+  
+//   // Agar user current month ke pehle create hua hai, toh month ke first day se start karo
+//   const startDate = new Date(year, month - 1, 1);
+//   const actualStart = userCreated > startDate ? userCreated : startDate;
+  
 //   const lastDay =
 //     today.getFullYear() === year && today.getMonth() + 1 === month
 //       ? today.getDate()
 //       : new Date(year, month, 0).getDate();
-//   for (let d = 1; d <= lastDay; d++) {
+
+//   for (let d = actualStart.getDate(); d <= lastDay; d++) {
 //     dates.push(new Date(year, month - 1, d));
 //   }
 //   return dates;
@@ -71,6 +328,19 @@
 
 //     const queryField = userType === "agent" ? "agent" : "user";
 
+//     // ✅ User ka creation date fetch karo
+//     let userCreationDate;
+//     if (userType === "agent") {
+//       const agent = await Agent.findById(userId);
+//       userCreationDate = agent?.createdAt || new Date();
+//     } else {
+//       const user = await User.findById(userId);
+//       userCreationDate = user?.createdAt || new Date();
+//     }
+
+//     console.log(`👤 User Creation Date: ${userCreationDate}`);
+//     console.log(`📊 Requested Month: ${month}-${year}`);
+
 //     // Range
 //     const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
 //     const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
@@ -97,7 +367,8 @@
 //     const todayPK = toPakistanDate(new Date());
 //     const todayKey = toKeyPKT(todayPK);
 
-//     const datesUpToToday = getDatesUpToTodayPKT(year, month);
+//     // ✅ User creation date ke hisab se dates generate karo
+//     const datesFromCreation = getDatesFromUserCreationPKT(year, month, userCreationDate);
 
 //     // Also include future approved leave etc.
 //     const futureKeys = new Set();
@@ -106,8 +377,8 @@
 //       if (key > todayKey) futureKeys.add(key);
 //     });
 
-//     // Combine dates up to today + future records
-//     const mergedKeysSet = new Set(datesUpToToday.map(d => toKeyPKT(d)));
+//     // Combine dates from creation + future records
+//     const mergedKeysSet = new Set(datesFromCreation.map(d => toKeyPKT(d)));
 //     for (const fk of futureKeys) mergedKeysSet.add(fk);
 //     const mergedKeys = Array.from(mergedKeysSet).sort();
 
@@ -143,6 +414,28 @@
 //     for (const key of mergedKeys) {
 //       const dateObj = new Date(`${key}T00:00:00`);
 //       const isFuture = key > todayKey;
+      
+//       // ✅ Check if date is before user creation
+//       const userCreatedPK = toPakistanDate(userCreationDate);
+//       const currentDatePK = toPakistanDate(dateObj);
+//       const isBeforeUserCreation = currentDatePK < userCreatedPK;
+
+//       if (isBeforeUserCreation) {
+//         // User creation se pehle ki date hai - skip karo ya "not_applicable" mark karo
+//         tableData.push({
+//           date: key,
+//           day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
+//           status: "not_applicable",
+//           checkInTime: null,
+//           checkOutTime: null,
+//           remarks: "User not created",
+//           lateMinutes: 0,
+//           overtimeMinutes: 0,
+//           rawRecord: null,
+//         });
+//         continue;
+//       }
+
 //       const record = attendanceMap[key];
 //       let status = "absent";
 //       let remarks = "";
@@ -184,7 +477,7 @@
 //       }
 
 //       // Stats (up to today)
-//       if (!isFuture) {
+//       if (!isFuture && !isBeforeUserCreation) {
 //         if (status === "present") stats.present++;
 //         else if (status === "late") stats.late++;
 //         else if (status === "absent") stats.absent++;
@@ -206,7 +499,7 @@
 //       });
 //     }
 
-//     const workingDays = datesUpToToday.length - (stats.holiday + stats.weeklyOff);
+//     const workingDays = datesFromCreation.length - (stats.holiday + stats.weeklyOff);
 //     const attendanceRate =
 //       workingDays > 0
 //         ? ((stats.present + stats.late) / workingDays * 100).toFixed(2)
@@ -218,6 +511,7 @@
 //         month,
 //         year,
 //         timezone: "Asia/Karachi",
+//         userCreated: userCreationDate,
 //         generatedAt: toPakistanDate(new Date()).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
 //         summary: {
 //           present: stats.present,
@@ -241,10 +535,6 @@
 //     );
 //   }
 // }
-
-
-
-
 
 
 
@@ -277,23 +567,23 @@ function toKeyPKT(date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// Get all month dates from user creation to today (Pakistan)
-function getDatesFromUserCreationPKT(year, month, userCreationDate) {
+// Get all month dates (Pakistan Time)
+function getAllMonthDatesPKT(year, month) {
   const dates = [];
   const today = toPakistanDate(new Date());
-  const userCreated = toPakistanDate(userCreationDate);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
   
-  // Agar user current month ke pehle create hua hai, toh month ke first day se start karo
-  const startDate = new Date(year, month - 1, 1);
-  const actualStart = userCreated > startDate ? userCreated : startDate;
+  // Agar current month hai to today tak, nahi to pure month ke dates
+  const endDate = 
+    (today.getFullYear() === year && today.getMonth() + 1 === month) 
+      ? today 
+      : lastDay;
   
-  const lastDay =
-    today.getFullYear() === year && today.getMonth() + 1 === month
-      ? today.getDate()
-      : new Date(year, month, 0).getDate();
-
-  for (let d = actualStart.getDate(); d <= lastDay; d++) {
-    dates.push(new Date(year, month - 1, d));
+  const current = new Date(firstDay);
+  while (current <= endDate) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
   }
   return dates;
 }
@@ -322,28 +612,22 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get("month"));
     const year = parseInt(searchParams.get("year"));
-    if (!month || !year) {
-      return NextResponse.json({ success: false, message: "Month and Year are required" }, { status: 400 });
-    }
+    
+    // Agar month/year nahi diya gaya to current month/year use karo
+    const currentDate = toPakistanDate(new Date());
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    
+    const queryMonth = month || currentMonth;
+    const queryYear = year || currentYear;
+
+    console.log(`📊 Fetching attendance for: ${queryMonth}-${queryYear}, User: ${userId}`);
 
     const queryField = userType === "agent" ? "agent" : "user";
 
-    // ✅ User ka creation date fetch karo
-    let userCreationDate;
-    if (userType === "agent") {
-      const agent = await Agent.findById(userId);
-      userCreationDate = agent?.createdAt || new Date();
-    } else {
-      const user = await User.findById(userId);
-      userCreationDate = user?.createdAt || new Date();
-    }
-
-    console.log(`👤 User Creation Date: ${userCreationDate}`);
-    console.log(`📊 Requested Month: ${month}-${year}`);
-
-    // Range
-    const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-    const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    // Date range calculation
+    const monthStart = new Date(Date.UTC(queryYear, queryMonth - 1, 1, 0, 0, 0, 0));
+    const monthEnd = new Date(Date.UTC(queryYear, queryMonth, 1, 0, 0, 0, 0));
 
     // Attendance records for the month
     const attends = await Attendance.find({
@@ -356,6 +640,8 @@ export async function GET(request) {
       .populate("shift", "name startTime endTime hours days")
       .sort({ date: 1, checkInTime: 1 });
 
+    console.log(`📝 Found ${attends.length} attendance records`);
+
     const attendanceMap = {};
     attends.forEach(att => {
       const source = att.date || att.checkInTime || att.createdAt;
@@ -364,30 +650,13 @@ export async function GET(request) {
       attendanceMap[key] = att;
     });
 
-    const todayPK = toPakistanDate(new Date());
-    const todayKey = toKeyPKT(todayPK);
-
-    // ✅ User creation date ke hisab se dates generate karo
-    const datesFromCreation = getDatesFromUserCreationPKT(year, month, userCreationDate);
-
-    // Also include future approved leave etc.
-    const futureKeys = new Set();
-    attends.forEach(att => {
-      const key = toKeyPKT(att.date || att.checkInTime || att.createdAt);
-      if (key > todayKey) futureKeys.add(key);
-    });
-
-    // Combine dates from creation + future records
-    const mergedKeysSet = new Set(datesFromCreation.map(d => toKeyPKT(d)));
-    for (const fk of futureKeys) mergedKeysSet.add(fk);
-    const mergedKeys = Array.from(mergedKeysSet).sort();
+    // All dates in the month (up to today if current month)
+    const allMonthDates = getAllMonthDatesPKT(queryYear, queryMonth);
+    console.log(`📅 Processing ${allMonthDates.length} dates for month`);
 
     // Weekly Offs & Holidays (month-wide)
     const weeklyOffDocs = await WeeklyOff.find({ isActive: true });
     const weeklyOffSet = new Set(weeklyOffDocs.map(w => w.day.toLowerCase()));
-
-    const monthStartPK = toPakistanDate(new Date(Date.UTC(year, month - 1, 1)));
-    const monthEndPK = toPakistanDate(new Date(Date.UTC(year, month, 0)));
 
     const holidayDocs = await Holiday.find({
       $or: [
@@ -411,32 +680,15 @@ export async function GET(request) {
     const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
     const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
 
-    for (const key of mergedKeys) {
-      const dateObj = new Date(`${key}T00:00:00`);
+    // Today in Pakistan Time
+    const todayPK = toPakistanDate(new Date());
+    const todayKey = toKeyPKT(todayPK);
+
+    for (const dateObj of allMonthDates) {
+      const key = toKeyPKT(dateObj);
       const isFuture = key > todayKey;
-      
-      // ✅ Check if date is before user creation
-      const userCreatedPK = toPakistanDate(userCreationDate);
-      const currentDatePK = toPakistanDate(dateObj);
-      const isBeforeUserCreation = currentDatePK < userCreatedPK;
-
-      if (isBeforeUserCreation) {
-        // User creation se pehle ki date hai - skip karo ya "not_applicable" mark karo
-        tableData.push({
-          date: key,
-          day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
-          status: "not_applicable",
-          checkInTime: null,
-          checkOutTime: null,
-          remarks: "User not created",
-          lateMinutes: 0,
-          overtimeMinutes: 0,
-          rawRecord: null,
-        });
-        continue;
-      }
-
       const record = attendanceMap[key];
+      
       let status = "absent";
       let remarks = "";
       let checkInTime = null;
@@ -445,6 +697,7 @@ export async function GET(request) {
       let overtimeMinutes = 0;
 
       if (record) {
+        // Agar record hai to uski status use karo
         status = record.status || "present";
         checkInTime = record.checkInTime
           ? toPakistanDate(record.checkInTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
@@ -454,11 +707,9 @@ export async function GET(request) {
           : null;
         lateMinutes = record.lateMinutes || 0;
         overtimeMinutes = record.overtimeMinutes || 0;
+        remarks = record.remarks || "";
       } else {
-        // Future with no record → skip
-        if (isFuture) continue;
-
-        // Check if holiday or weekly off
+        // Agar record nahi hai to check karo holiday/weekly off
         if (holidaysSet.has(key)) {
           status = "holiday";
           remarks = "Holiday";
@@ -469,15 +720,18 @@ export async function GET(request) {
           if (weeklyOffSet.has(weekday)) {
             status = "weekly_off";
             remarks = "Weekly Off";
+          } else if (isFuture) {
+            status = "future";
+            remarks = "Future Date";
           } else {
             status = "absent";
-            remarks = "No Attendance Record";
+            remarks = "Absent";
           }
         }
       }
 
-      // Stats (up to today)
-      if (!isFuture && !isBeforeUserCreation) {
+      // Stats (only for past and current dates)
+      if (!isFuture && status !== "future") {
         if (status === "present") stats.present++;
         else if (status === "late") stats.late++;
         else if (status === "absent") stats.absent++;
@@ -496,22 +750,31 @@ export async function GET(request) {
         lateMinutes,
         overtimeMinutes,
         rawRecord: record || null,
+        isFuture: isFuture
       });
     }
 
-    const workingDays = datesFromCreation.length - (stats.holiday + stats.weeklyOff);
-    const attendanceRate =
-      workingDays > 0
-        ? ((stats.present + stats.late) / workingDays * 100).toFixed(2)
-        : "0.00";
+    // Sort table data by date (ascending - month start se)
+    tableData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate working days and attendance rate
+    const totalDays = allMonthDates.length;
+    const nonWorkingDays = stats.holiday + stats.weeklyOff;
+    const workingDays = totalDays - nonWorkingDays;
+    
+    const attendanceRate = workingDays > 0
+      ? ((stats.present + stats.late) / workingDays * 100).toFixed(2)
+      : "0.00";
+
+    console.log(`📊 Final Stats:`, stats);
+    console.log(`📊 Working Days: ${workingDays}, Attendance Rate: ${attendanceRate}%`);
 
     return NextResponse.json({
       success: true,
       data: {
-        month,
-        year,
+        month: queryMonth,
+        year: queryYear,
         timezone: "Asia/Karachi",
-        userCreated: userCreationDate,
         generatedAt: toPakistanDate(new Date()).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
         summary: {
           present: stats.present,
@@ -520,6 +783,8 @@ export async function GET(request) {
           holiday: stats.holiday,
           weeklyOff: stats.weeklyOff,
           leave: stats.leave,
+          workingDays: workingDays,
+          totalDays: totalDays,
           totalLateMinutes,
           totalOvertimeMinutes,
           attendanceRate,
