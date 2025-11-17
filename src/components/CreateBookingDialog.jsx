@@ -72,15 +72,15 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
     discountPercent: 0,
   });
 
+  // ✅ SUBMITTING STATE - YEH ADD KARNA THA
+  const [submitting, setSubmitting] = useState(false);
+
   // ✅ Fetch Promo Codes on mount
   useEffect(() => {
     if (open) {
       fetchPromoCodes();
     }
   }, [open]);
-
-  // ✅ Submitting state for form submission loader
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchPromoCodes = async () => {
     try {
@@ -95,12 +95,27 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
     }
   };
 
+  // ✅ Apply Promo Code function - YEH BHI ADD KARNA THA
+  const applyPromoCode = (promoId) => {
+    if (promoId === "none") {
+      setSelectedPromoCode(null);
+      return;
+    }
+    
+    const promo = promoCodes.find(p => p._id === promoId);
+    if (promo) {
+      setSelectedPromoCode(promo);
+    } else {
+      setSelectedPromoCode(null);
+    }
+  };
+
   // ✅ Add Vehicle
   const addVehicle = () => {
     setVehicleBookings([
       ...vehicleBookings,
       {
-        bookingId: `vehicle-${Date.now()}`,
+        id: `vehicle-${Date.now()}`,
         serviceType: "",
         vehicleType: "",
         variant: "",
@@ -375,7 +390,6 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
       setSubmitting(false);
     }
   };
-  
 
   const resetForm = () => {
     setFormData({
@@ -426,8 +440,9 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-    <DialogContent className="relative max-w-[95vw] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      {/* ✅ FIXED: Remove manual positioning and use proper DialogContent styling */}
+      <DialogContent className="max-w-[95vw] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto mx-auto my-8">
+        <DialogHeader className="relative">
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <User className="w-6 h-6" />
             Create New Booking
@@ -435,7 +450,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-4"
+            className="absolute right-0 top-0"
             onClick={onClose}
           >
             <X className="w-4 h-4" />
@@ -444,7 +459,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
         {/* Loading overlay while submitting */}
         {submitting && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50 rounded-lg">
             <Loader2 className="w-14 h-14 animate-spin text-primary" />
           </div>
         )}
@@ -935,7 +950,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
                 <Label htmlFor="promoCode">Apply Promo Code (Optional)</Label>
                 <Select
                   value={selectedPromoCode?._id || ""}
-                  onValueChange={(value) => applyPromoCode(value)}
+                  onValueChange={applyPromoCode}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select promo code" />
@@ -1079,3 +1094,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 };
 
 export default CreateBookingDialog;
+
+
+
+

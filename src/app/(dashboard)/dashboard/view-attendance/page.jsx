@@ -794,17 +794,17 @@ export default function AdminAttendancePage() {
       ),
     },
     {
-      label: "Name",
+      label: "Agent ID",
       render: (a) => (
         <div>
           <div className="font-medium">
             {a.user
               ? `${a.user?.firstName || ""} ${a.user?.lastName || ""}`
-              : a.agent?.agentName || "—"}
+              : a.agent?.agentId || "—"}
           </div>
-          <div className="text-xs text-muted-foreground">
+          {/* <div className="text-xs text-muted-foreground">
             {a.user ? a.user.email : a.agent?.email}
-          </div>
+          </div> */}
         </div>
       ),
     },
@@ -864,11 +864,13 @@ export default function AdminAttendancePage() {
     { label: "Date", render: (h) => new Date(h.date).toLocaleDateString() },
     { label: "Description", render: (h) => <div className="max-w-xs truncate" title={h.description}>{h.description || '—'}</div> },
     { label: "Recurring", render: (h) => (<Badge variant={h.isRecurring ? 'default' : 'secondary'}>{h.isRecurring ? 'Yes' : 'No'}</Badge>) },
-    { label: "Actions", align: "right", render: (h) => (
-      <Button variant="destructive" size="sm" onClick={() => handleDeleteHoliday(h._id)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    )},
+    {
+      label: "Actions", align: "right", render: (h) => (
+        <Button variant="destructive" size="sm" onClick={() => handleDeleteHoliday(h._id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )
+    },
   ];
 
   // Columns for Weekly Offs
@@ -877,52 +879,68 @@ export default function AdminAttendancePage() {
     { label: "Name", render: (w) => w.name },
     { label: "Description", render: (w) => <div className="max-w-xs truncate" title={w.description}>{w.description || '—'}</div> },
     { label: "Status", render: (w) => (<Badge variant={w.isActive ? 'default' : 'secondary'}>{w.isActive ? 'Active' : 'Inactive'}</Badge>) },
-    { label: "Actions", align: "right", render: (w) => (
-      <div className="flex gap-2">
-        <Button
-          variant={w.isActive ? "outline" : "default"}
-          size="sm"
-          onClick={() => handleToggleWeeklyOff(w._id, !w.isActive)}
-        >
-          {w.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
-          {w.isActive ? "Deactivate" : "Activate"}
-        </Button>
-        <Button variant="destructive" size="sm" onClick={() => handleDeleteWeeklyOff(w._id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    )},
+    {
+      label: "Actions", align: "right", render: (w) => (
+        <div className="flex gap-2">
+          <Button
+            variant={w.isActive ? "outline" : "default"}
+            size="sm"
+            onClick={() => handleToggleWeeklyOff(w._id, !w.isActive)}
+          >
+            {w.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
+            {w.isActive ? "Deactivate" : "Activate"}
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => handleDeleteWeeklyOff(w._id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    },
   ];
 
   // Columns for Leave Requests
   const leaveColumns = [
     { label: "Type", render: (r) => (<Badge variant={r.user ? 'default' : 'secondary'}>{r.user ? 'User' : 'Agent'}</Badge>) },
-    { label: "Name", render: (r) => (
-      <div>
-        <div className="font-medium">{r.user ? `${r.user?.firstName || ''} ${r.user?.lastName || ''}` : r.agent?.agentName || '—'}</div>
-        <div className="text-xs text-muted-foreground">{r.user ? r.user.email : r.agent?.email}</div>
-      </div>
-    )},
+    {
+      label: "Name", render: (r) => (
+        <div>
+          <div className="font-medium">{r.user ? `${r.user?.firstName || ''} ${r.user?.lastName || ''}` : r.agent?.agentName || '—'}</div>
+          <div className="text-xs text-muted-foreground">{r.user ? r.user.email : r.agent?.email}</div>
+        </div>
+      )
+    },
     { label: "Leave Type", render: (r) => <span className="capitalize">{r.leaveType}</span> },
     { label: "Period", render: (r) => `${new Date(r.startDate).toLocaleDateString()} - ${new Date(r.endDate).toLocaleDateString()}` },
     { label: "Reason", render: (r) => <div className="max-w-xs truncate" title={r.reason}>{r.reason}</div> },
     { label: "Status", render: (r) => getLeaveStatusBadge(r.status) },
-    { label: "Actions", align: "right", render: (r) => (
-      <div className="flex gap-2">
-        <Button size="sm" onClick={() => handleLeaveAction(r._id, 'approved')}>
-          Approve
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => handleLeaveAction(r._id, 'rejected')}>
-          Reject
-        </Button>
-      </div>
-    )},
+    {
+      label: "Actions", align: "right", render: (r) => (
+        <div className="flex gap-2">
+          {/* ✅ Show buttons only when status is pending */}
+          {r.status === 'pending' ? (
+            <>
+              <Button size="sm" onClick={() => handleLeaveAction(r._id, 'approved')}>
+                Approve
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => handleLeaveAction(r._id, 'rejected')}>
+                Reject
+              </Button>
+            </>
+          ) : (
+            // ✅ If not pending, show status message
+            <span className="text-sm text-muted-foreground italic">
+              {r.status === 'approved' ? 'Already Approved' :
+                r.status === 'rejected' ? 'Already Rejected' : 'Processed'}
+            </span>
+          )}
+        </div>
+      )
+    },
   ];
-
   // Filter option maps for various sections
   const attendanceFilterOptionsMap = {
     userType: [
-      { label: "Users", value: "user" },
+      // { label: "Users", value: "user" },
       { label: "Agents", value: "agent" },
     ],
     status: [
@@ -951,10 +969,10 @@ export default function AdminAttendancePage() {
   };
 
   const leaveFilterOptionsMap = {
-    userType: [
-      { label: "Users", value: "user" },
-      { label: "Agents", value: "agent" },
-    ],
+    // userType: [
+    //   // { label: "Users", value: "user" },
+    //   { label: "Agents", value: "agent" },
+    // ],
     status: [
       { label: "Pending", value: "pending" },
       { label: "Approved", value: "approved" },
@@ -983,7 +1001,7 @@ export default function AdminAttendancePage() {
               onValueChange={(value) => setManualForm({ ...manualForm, userType: value, userId: "", agentId: "" })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select user type" />
+                <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
                 {/* <SelectItem value="user">User</SelectItem> */}
@@ -1017,7 +1035,7 @@ export default function AdminAttendancePage() {
           </div> */}
           <div className="space-y-2">
             <Label htmlFor="person">
-              {manualForm.userType === 'user' ? 'Select User' : 'Select Agent'}
+              {manualForm.userType === 'Agent' ? 'Select Agent' : 'Select User'}
             </Label>
             <Select
               value={manualForm.userType === 'user' ? manualForm.userId : manualForm.agentId}
@@ -1481,18 +1499,18 @@ export default function AdminAttendancePage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="userType">User Type</Label>
+            <Label htmlFor="userType">Select</Label>
             <Select
               value={shiftAutoForm.userType}
               onValueChange={(value) => setShiftAutoForm({ ...shiftAutoForm, userType: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="All Users" />
+                <SelectValue placeholder="All Agents" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="user">Users Only</SelectItem>
                 <SelectItem value="agent">Agents Only</SelectItem>
+                <SelectItem value="all">All Agents</SelectItem>
+                {/* <SelectItem value="user">Users Only</SelectItem> */}
               </SelectContent>
             </Select>
           </div>
@@ -1924,7 +1942,7 @@ export default function AdminAttendancePage() {
 
         <TabsContent value="attendance" className="space-y-6">
           {/* <FiltersSection /> */}
-          <StatsCards />
+          {/* <StatsCards /> */}
 
           <Card>
             <CardHeader>
@@ -1946,7 +1964,7 @@ export default function AdminAttendancePage() {
                 serverSide={true}
                 rowsPerPage={5}
                 searchEnabled={true}
-                filterKeys={["userType", "status"]}
+                filterKeys={["status"]}
                 filterOptionsMap={attendanceFilterOptionsMap}
                 initialFilters={{ userType: "all", status: "all" }}
               />
@@ -1964,13 +1982,13 @@ export default function AdminAttendancePage() {
             </CardHeader>
             <CardContent>
               <GlobalData
-                title=""
+                title="Leave Requests"
                 fetcher={async () => attendanceService.getAllLeaveRequests("all")}
                 columns={leaveColumns}
                 rowsPerPage={5}
                 serverSide={false}
                 searchEnabled={true}
-                filterKeys={["userType", "status"]}
+                filterKeys={["status"]}
                 filterOptionsMap={leaveFilterOptionsMap}
               />
             </CardContent>
