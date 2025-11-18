@@ -33,6 +33,8 @@ export default function GlobalData({
   // filterOptionsMap: { key: [{ label, value }] }
   filterOptionsMap = {},
   onDataFetched,
+  // customFilters: optional React node or function (filters, onFilterChange) => node
+  customFilters,
 }) {
   const [data, setData] = useState([]);
   const [allItems, setAllItems] = useState([]); // keep original list for client-side filtering
@@ -266,9 +268,23 @@ export default function GlobalData({
     );
   };
 
+  const renderCustomFilters = () => {
+    if (!customFilters) return null;
+    try {
+      // If customFilters is a function, call it with (filters, handleFilterChange)
+      if (typeof customFilters === 'function') return customFilters(filters, handleFilterChange);
+      // Otherwise assume it's a React node
+      return customFilters;
+    } catch (e) {
+      console.error('GlobalData customFilters render error', e);
+      return null;
+    }
+  };
+
   return (
     <div>
       {renderFilters()}
+      {renderCustomFilters()}
       <DataTable
         title={title}
         icon={icon}

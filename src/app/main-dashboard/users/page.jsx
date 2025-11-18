@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/common/PageHeader";
 import {
@@ -13,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Users, UserPlus, Search } from "lucide-react";
+import GlobalData from "@/components/common/GlobalData";
+import { userService } from "@/services/userService";
 
 export default function UsersPage() {
   const fadeUp = {
@@ -50,6 +53,45 @@ export default function UsersPage() {
       status: "Inactive",
     },
   ];
+
+  // Columns for DataTable / GlobalData
+  const columns = [
+    { label: "Name", key: "name" },
+    { label: "Email", key: "email" },
+    { label: "Role", key: "role" },
+    {
+      label: "Status",
+      key: "status",
+      render: (u) => (
+        <span
+          className={`px-2 py-1 text-xs rounded-full ${
+            u.status === "Active"
+              ? "bg-green-100 text-green-700"
+              : u.status === "Pending"
+              ? "bg-yellow-100 text-yellow-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {u.status}
+        </span>
+      ),
+    },
+  ];
+
+  // Tab state: 'all' or 'active'
+  const [activeTab, setActiveTab] = useState("all");
+
+  // Fetchers for GlobalData. GlobalData supports serverSide mode; pass params if needed.
+  const fetchAllUsers = async (params) => {
+    // when GlobalData calls with serverSide true it will pass params; keep them
+    return await userService.getAll(params || {});
+  };
+
+  const fetchActiveUsers = async (params) => {
+    // If your API accepts a status param, adapt accordingly. Here we send { status: 'Active' }
+    const merged = { ...(params || {}), status: "Active" };
+    return await userService.getAll(merged);
+  };
 
   return (
     <div className="space-y-8">
@@ -128,7 +170,7 @@ export default function UsersPage() {
 
       <Separator />
 
-      {/* User List */}
+      {/* User List - Tabs and GlobalData instances */}
       <motion.div
         initial="hidden"
         animate="visible"
@@ -136,89 +178,50 @@ export default function UsersPage() {
         variants={fadeUp}
         className="space-y-4"
       >
-        <h2 className="text-xl font-semibold">All Users</h2>
-
-        {/* Mobile Card View */}
-        <div className="block sm:hidden space-y-4">
-          {users.map((user, index) => (
-            <motion.div
-              key={index}
-              custom={index}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-              className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition"
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Users</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("all")}
+              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                activeTab === "all" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+              }`}
             >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium text-gray-900">{user.name}</h3>
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${
-                    user.status === "Active"
-                      ? "bg-green-100 text-green-700"
-                      : user.status === "Pending"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {user.status}
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 mb-1">{user.email}</p>
-              <p className="text-sm text-gray-500 mb-3">{user.role}</p>
-              <Button variant="ghost" size="sm">
-                Edit
-              </Button>
-            </motion.div>
-          ))}
+              All Users
+            </button>
+            <button
+              onClick={() => setActiveTab("active")}
+              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                activeTab === "active" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              Active Users
+            </button>
+          </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto rounded-xl border">
-          <table className="min-w-full bg-white text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">Name</th>
-                <th className="text-left px-4 py-3 font-medium">Email</th>
-                <th className="text-left px-4 py-3 font-medium">Role</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-right px-4 py-3 font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user, index) => (
-                <motion.tr
-                  key={index}
-                  custom={index}
-                  initial="hidden"
-                  animate="visible"
-                  variants={fadeUp}
-                  className="border-t hover:bg-gray-50 transition"
-                >
-                  <td className="px-4 py-3 font-medium">{user.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{user.email}</td>
-                  <td className="px-4 py-3">{user.role}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        user.status === "Active"
-                          ? "bg-green-100 text-green-700"
-                          : user.status === "Pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="sm">
-                      Edit
-                    </Button>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          {activeTab === "all" ? (
+            <GlobalData
+              title="All Users"
+              icon={Users}
+              fetcher={fetchAllUsers}
+              columns={columns}
+              serverSide={true}
+              rowsPerPage={10}
+              searchEnabled={true}
+            />
+          ) : (
+            <GlobalData
+              title="Active Users"
+              icon={Users}
+              fetcher={fetchActiveUsers}
+              columns={columns}
+              serverSide={true}
+              rowsPerPage={10}
+              searchEnabled={true}
+            />
+          )}
         </div>
       </motion.div>
     </div>

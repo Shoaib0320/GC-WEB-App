@@ -35,10 +35,10 @@ export const adminService = {
     return response.data;
   },
   // Get all attendance records for admin
-getAllAttendance: async (params = {}) => {
-  const response = await api.get('/attendance', { params });
-  return response.data;
-},
+  getAllAttendance: async (params = {}) => {
+    const response = await api.get('/attendance', { params });
+    return response.data;
+  },
   updateAttendance: async (data) => {
     const response = await api.put('/attendance/update', data);
     return response.data;

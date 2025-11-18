@@ -9,6 +9,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert.jsx";
 import { Input } from "@/components/ui/input.jsx";
 import { Label } from "@/components/ui/label.jsx";
 import { User, Shield, CheckSquare, Square, Plus, Trash2, Power, Edit, X } from "lucide-react";
+import GlobalData from "@/components/common/GlobalData";
+import { userService } from '@/services/userService';
+import { roleService } from '@/services/roleService';
 import {
   Select,
   SelectContent,
@@ -91,6 +94,7 @@ export default function Users() {
     try {
       const response = await fetch('/api/users');
       const data = await response.json();
+            console.log('User Data', data);
       if (data.success) {
         setUsers(data.data.users || []);
       }
@@ -143,6 +147,9 @@ export default function Users() {
       });
 
       const data = await response.json();
+
+      console.log('User Data', data);
+      
 
       if (data.success) {
         showMessage('success', 'User created successfully');
@@ -472,11 +479,69 @@ export default function Users() {
     }
   ];
 
+  // Columns for GlobalData / DataTable
+  const userColumns = [
+    {
+      label: 'Name',
+      key: 'name',
+      render: (u) => (
+        <div className="flex items-center gap-4">
+          <div className="flex-shrink-0">
+            <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white font-semibold text-sm">{u.firstName?.charAt(0)}{u.lastName?.charAt(0)}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-gray-900">{u.firstName} {u.lastName}</div>
+            <div className="text-xs text-gray-500">{u.department} {u.position ? `• ${u.position}` : ''}</div>
+          </div>
+        </div>
+      ),
+    },
+    { label: 'Email', key: 'email', render: (u) => <div className="text-sm text-gray-700">{u.email}</div> },
+    { label: 'Role', key: 'role', render: (u) => <span className="capitalize text-sm">{u.role?.name}</span> },
+    { label: 'Status', key: 'status', render: (u) => (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        {u.isActive ? 'Active' : 'Inactive'}
+      </span>
+    ) },
+    {
+      label: 'Actions',
+      key: 'actions',
+      align: 'right',
+      render: (u) => (
+        <div className="flex items-center justify-end gap-2">
+          <button onClick={() => handleEditUser(u)} className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200">
+            <Edit className="h-4 w-4 mr-1" /> Edit
+          </button>
+          <button onClick={() => handleToggleUserStatus(u._id, u.isActive)} className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${u.isActive ? 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}>
+            <Power className="h-4 w-4 mr-1" /> {u.isActive ? 'Deactivate' : 'Activate'}
+          </button>
+          {hasPermission('user', 'delete') && (
+            <button onClick={() => handleDeleteUser(u._id)} className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200">
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const roleColumns = [
+    { label: 'Role', key: 'name', render: (r) => <div className="text-sm font-semibold capitalize">{r.name.replace(/_/g, ' ')}</div> },
+    { label: 'Description', key: 'description', render: (r) => <div className="text-sm text-gray-600">{r.description}</div> },
+    { label: 'Status', key: 'isActive', render: (r) => (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        {r.isActive ? 'Active' : 'Inactive'}
+      </span>
+    ) },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-scree bg-white p-4 md:p-6">
+      <div className="max-w-7xl overflow-auto mx-auto space-y-6">
         {/* Header Card */}
-        <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-600 to-purple-700 text-white">
+        <Card className="shadow-lg border-0 bg-white text-black">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -484,7 +549,7 @@ export default function Users() {
               </div>
               <div>
                 <CardTitle className="text-2xl font-bold">Users & Roles Management</CardTitle>
-                <CardDescription className="text-blue-100">
+                <CardDescription className="text-black">
                   Manage users and roles for the admin panel with granular permissions
                 </CardDescription>
               </div>
@@ -562,77 +627,27 @@ export default function Users() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6">
-                      <div className="space-y-4">
-                        {users.map((userItem) => (
-                          <div
-                            key={userItem._id}
-                            className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200"
-                          >
-                            <div className="flex items-center space-x-4">
-                              <div className="flex-shrink-0">
-                                <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
-                                  <span className="text-white font-semibold text-sm">
-                                    {userItem.firstName?.charAt(0)}{userItem.lastName?.charAt(0)}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="text-lg font-semibold text-gray-900 truncate">
-                                    {userItem.firstName} {userItem.lastName}
-                                  </p>
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${userItem.isActive
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-red-100 text-red-800'
-                                    }`}>
-                                    {userItem.isActive ? 'Active' : 'Inactive'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600 mb-1">{userItem.email}</p>
-                                <div className="flex items-center gap-3 text-xs text-gray-500">
-                                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md capitalize">
-                                    {userItem.role?.name}
-                                  </span>
-                                  {userItem.department && (
-                                    <span>{userItem.department}</span>
-                                  )}
-                                  {userItem.position && (
-                                    <span>• {userItem.position}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                              <button
-                                onClick={() => handleEditUser(userItem)}
-                                className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200"
-                              >
-                                <Edit className="h-4 w-4 mr-1" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleToggleUserStatus(userItem._id, userItem.isActive)}
-                                className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${userItem.isActive
-                                    ? 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
-                                    : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
-                                  }`}
-                              >
-                                <Power className="h-4 w-4 mr-1" />
-                                {userItem.isActive ? 'Deactivate' : 'Activate'}
-                              </button>
-                              {hasPermission('user', 'delete') && (
-                                <button
-                                  onClick={() => handleDeleteUser(userItem._id)}
-                                  className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Delete
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <GlobalData
+                        title="All Users"
+                        icon={User}
+                        // unwrap API response which returns { success, data: { pagination, users } }
+                        fetcher={async (params) => {
+                          const res = await userService.getAll(params);
+                          // If API uses res.data.users and res.data.pagination
+                          const users = res?.data?.users ?? res?.users ?? [];
+                          const pagination = res?.data?.pagination ?? res?.pagination ?? null;
+                          if (pagination) {
+                            return { data: users, meta: pagination };
+                          }
+                          // fallback: return array directly
+                          return users;
+                        }}
+                        columns={userColumns}
+                        serverSide={true}
+                        rowsPerPage={10}
+                        searchEnabled={true}
+                        onDataFetched={(items, meta) => setUsers(items)}
+                      />
                     </CardContent>
                   </Card>
                 </div>
@@ -661,52 +676,16 @@ export default function Users() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {roles.map((role) => (
-                          <Card key={role._id} className="border border-gray-200 hover:shadow-lg transition-all duration-200">
-                            <CardHeader className="pb-3">
-                              <div className="flex justify-between items-start">
-                                <CardTitle className="text-lg font-bold capitalize text-gray-900">
-                                  {role.name}
-                                </CardTitle>
-                                <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${role.isActive
-                                    ? 'bg-green-100 text-green-800 border border-green-200'
-                                    : 'bg-red-100 text-red-800 border border-red-200'
-                                  }`}>
-                                  {role.isActive ? 'Active' : 'Inactive'}
-                                </span>
-                              </div>
-                              <CardDescription className="text-sm">{role.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-3">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Permissions:</h4>
-                                {Object.entries(role.permissions).slice(0, 4).map(([module, permissions]) => (
-                                  <div key={module} className="text-sm">
-                                    <div className="font-medium capitalize text-gray-900 mb-1 flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                      {module.replace(/_/g, ' ')}
-                                    </div>
-                                    <div className="text-gray-600 text-xs pl-4">
-                                      {Object.entries(permissions)
-                                        .filter(([_, value]) => value)
-                                        .slice(0, 3)
-                                        .map(([action]) => action.replace(/_/g, ' '))
-                                        .join(', ') || 'No permissions'}
-                                      {Object.entries(permissions).filter(([_, value]) => value).length > 3 && '...'}
-                                    </div>
-                                  </div>
-                                ))}
-                                {Object.keys(role.permissions).length > 4 && (
-                                  <div className="text-xs text-blue-600 font-medium pt-2">
-                                    +{Object.keys(role.permissions).length - 4} more modules
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
+                      <GlobalData
+                        title="All Roles"
+                        icon={Shield}
+                        fetcher={async (params) => await roleService.getAll(params)}
+                        columns={roleColumns}
+                        serverSide={true}
+                        rowsPerPage={12}
+                        searchEnabled={true}
+                        onDataFetched={(items, meta) => setRoles(items)}
+                      />
                     </CardContent>
                   </Card>
                 </div>
@@ -1052,3 +1031,10 @@ export default function Users() {
     </div>
   );
 }
+
+
+
+
+
+
+
