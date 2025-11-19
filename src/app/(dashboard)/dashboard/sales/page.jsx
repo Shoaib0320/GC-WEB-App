@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { promoCodeService } from "@/services/promoCodeService";
+import { promoCodeService } from "@/services/promocodeService";
 import GlobalData from "@/components/common/GlobalData";
 import {
 	Card,
