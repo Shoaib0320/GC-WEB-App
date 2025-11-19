@@ -1,9 +1,9 @@
-# TODO: Create Enhanced Global DataView Component
+# TODO: Add View Modal to Contacts Page
 
-## Steps to Complete:
-- [ ] Analyze existing DataView.jsx and DataTable.jsx components
-- [ ] Create enhanced DataView with all features: search, filter, pagination, actions, responsive
-- [ ] Add advanced features: sorting, bulk actions, export, custom renderers
-- [ ] Make it fully props-driven and reusable
-- [ ] Update bookings page to use the new component
-- [ ] Test all features thoroughly
+- [x] Add state for selectedContact and isModalOpen
+- [x] Import Dialog components from "@/components/ui/dialog"
+- [x] Modify View buttons' onClick in mobile card view to open modal
+- [x] Modify View buttons' onClick in desktop table view to open modal
+- [x] Add Dialog component at the end of JSX to display contact details
+- [x] Style the modal with Card components, icons, and improved layout
+- [x] Integrate reply system with form fields and send functionality

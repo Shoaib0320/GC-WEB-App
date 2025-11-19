@@ -1,4 +1,3 @@
-// src/app/api/promo-codes/route.js
 import { NextResponse } from 'next/server';
 import PromoCode from '@/Models/PromoCode';
 import Agent from '@/Models/Agent';
@@ -112,12 +111,22 @@ export async function POST(request) {
       );
     }
 
-    // ✅ FIXED: Create promo code without forcing maxUsage
+    // Validate date
+    // const validUntilDate = new Date(validUntil);
+    // if (validUntilDate <= new Date()) {
+    //   return NextResponse.json(
+    //     { success: false, message: 'Valid until date must be in the future' },
+    //     { status: 400 }
+    //   );
+    // }
+
+    // Create promo code
     const newPromoCode = await PromoCode.create({
       promoCode: promoCode.toUpperCase(),
       discountPercentage,
       agentId,
-      maxUsage: maxUsage || undefined, // ✅ Agar nahi hai toh undefined rahega
+      maxUsage: maxUsage || 1,
+      // validUntil: validUntilDate,
       description
     });
 

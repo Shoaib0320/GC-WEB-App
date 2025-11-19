@@ -332,21 +332,21 @@ function getMonthDatesPKT(year, month) {
 export async function GET(request) {
   try {
     await connectDB();
-    console.log("📅 Attendance Monthly Route Triggered (Pakistan Time)");
-
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    
+    // Get token from headers
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
     }
-
-    const token = authHeader.split(" ")[1];
+    
+    const token = authHeader.replace('Bearer ', '');
     const decoded = verifyToken(token);
+    
     if (!decoded) {
       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
     }
 
     const userId = getUserIdFromToken(decoded);
-    const userType = decoded.type || "agent";
 
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get("month"));
@@ -407,8 +407,7 @@ export async function GET(request) {
       attendanceMap[key] = att;
     });
 
-    const todayPK = toPakistanDate(new Date());
-    const todayKey = toKeyPKT(todayPK);
+    let query = { [queryField]: userId };
 
     // ✅ Get all dates for the month
     const allMonthDates = getMonthDatesPKT(year, month);
@@ -559,11 +558,12 @@ export async function GET(request) {
         records: tableData, // ✅ Already sorted in DESC order
       },
     });
+
   } catch (error) {
-    console.error("❌ Attendance GET error:", error);
-    return NextResponse.json(
-      { success: false, message: "Server error", error: error.message },
-      { status: 500 }
-    );
+    console.error("GET /api/attendance/my error:", error);
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message 
+    }, { status: 500 });
   }
 }

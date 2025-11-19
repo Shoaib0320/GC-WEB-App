@@ -1,10 +1,7 @@
-//src/app/api/attendance/leave/admin/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import LeaveRequest from "@/Models/LeaveRequest";
 import Attendance from "@/Models/Attendance";
-import User from "@/Models/User";
-import Agent from "@/Models/Agent";
 import { verifyToken } from "@/lib/jwt";
 
 export async function GET(request) {
@@ -41,8 +38,6 @@ export async function GET(request) {
   }
 }
 
-// // Admin can approve/reject leave requests
-// src/app/api/attendance/leave/admin/route.js (PUT)
 export async function PUT(request) {
   try {
     await connectDB();
@@ -68,91 +63,69 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, message: "Leave request not found" }, { status: 404 });
     }
 
-    // Update leave request meta
     leaveRequest.status = status;
     leaveRequest.reviewedBy = decoded.userId;
     leaveRequest.reviewedAt = new Date();
     leaveRequest.comments = comments || "";
+
     await leaveRequest.save();
 
-    // Only create attendance records when approved
+    // If approved, create attendance records for each day
     if (status === "approved") {
-      // Ensure start/end exist
-      if (!leaveRequest.startDate || !leaveRequest.endDate) {
-        console.warn("Missing startDate or endDate on leaveRequest");
-      } else {
-        // Normalize to UTC midnight to avoid timezone drift
-        const startRaw = new Date(leaveRequest.startDate);
-        const endRaw = new Date(leaveRequest.endDate);
+      const startDate = new Date(leaveRequest.startDate);
+      const endDate = new Date(leaveRequest.endDate);
+      
+      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        const attendanceData = {
+          shift: null, // You might want to get the user's default shift
+          status: "approved_leave",
+          leaveReason: leaveRequest.reason,
+          leaveType: leaveRequest.leaveType,
+        };
 
-        // If end < start, swap
-        let startMs = startRaw.getTime();
-        let endMs = endRaw.getTime();
-        if (endMs < startMs) {
-          const t = startMs; startMs = endMs; endMs = t;
+        if (leaveRequest.user) {
+          attendanceData.user = leaveRequest.user._id;
+        } else if (leaveRequest.agent) {
+          attendanceData.agent = leaveRequest.agent._id;
         }
 
-        // normalize to UTC midnight
-        const start = new Date(startMs);
-        start.setUTCHours(0, 0, 0, 0);
-        const end = new Date(endMs);
-        end.setUTCHours(0, 0, 0, 0);
+        // Check if attendance record already exists for this date
+        const dateStart = new Date(date);
+        dateStart.setHours(0, 0, 0, 0);
+        const dateEnd = new Date(dateStart);
+        dateEnd.setDate(dateEnd.getDate() + 1);
 
-        const isAgent = !!leaveRequest.agent;
-        const person = isAgent ? leaveRequest.agent : leaveRequest.user;
-        const shiftId = isAgent ? leaveRequest.agent?.shift : leaveRequest.user?.shift;
+        const existingQuery = {
+          createdAt: { $gte: dateStart, $lt: dateEnd }
+        };
 
-        if (!person) {
-          console.warn("No related person (agent/user) on leave request — skipping attendance creation.");
-        } else if (!shiftId) {
-          console.warn("Shift missing for related person — cannot create attendance (shift is required).");
+        if (leaveRequest.user) {
+          existingQuery.user = leaveRequest.user._id;
+        } else if (leaveRequest.agent) {
+          existingQuery.agent = leaveRequest.agent._id;
+        }
+
+        const existingAttendance = await Attendance.findOne(existingQuery);
+
+        if (existingAttendance) {
+          existingAttendance.status = "approved_leave";
+          existingAttendance.leaveReason = leaveRequest.reason;
+          existingAttendance.leaveType = leaveRequest.leaveType;
+          await existingAttendance.save();
         } else {
-          // Iterate day-by-day using ms arithmetic (safer across DST)
-          for (let dayMs = start.getTime(); dayMs <= end.getTime(); dayMs += 24 * 60 * 60 * 1000) {
-            const dateOnly = new Date(dayMs);
-            dateOnly.setUTCHours(0, 0, 0, 0); // ensure UTC midnight
+          await Attendance.create({
+            ...attendanceData,
+            createdAt: date,
+            updatedAt: date
+          });
+        }
+      }
+    }
 
-            // Build exact-match query on normalized date
-            const query = { date: dateOnly };
-            if (isAgent) query.agent = person._id;
-            else query.user = person._id;
-
-            let attendance = await Attendance.findOne(query);
-
-            if (attendance) {
-              // update existing
-              attendance.status = "approved_leave";
-              attendance.leaveType = leaveRequest.leaveType;
-              attendance.leaveReason = leaveRequest.reason;
-              attendance.approvedBy = decoded.userId;
-              attendance.approvedAt = new Date();
-              attendance.shift = shiftId; // ensure shift is present
-              await attendance.save();
-              console.log(`✔ Updated attendance for ${dateOnly.toISOString().slice(0,10)}`);
-            } else {
-              // create new
-              const newAtt = new Attendance({
-                shift: shiftId,
-                date: dateOnly,
-                status: "approved_leave",
-                leaveType: leaveRequest.leaveType,
-                leaveReason: leaveRequest.reason,
-                approvedBy: decoded.userId,
-                approvedAt: new Date(),
-                ...(isAgent ? { agent: person._id } : { user: person._id }),
-              });
-              await newAtt.save();
-              console.log(`➕ Created attendance for ${dateOnly.toISOString().slice(0,10)}`);
-            }
-          } // end for
-        } // end shift/person checks
-      } // end start/end checks
-    } // end if approved
-
-    return NextResponse.json({
-      success: true,
+    return NextResponse.json({ 
+      success: true, 
       message: `Leave request ${status} successfully`,
-      data: leaveRequest,
+      data: leaveRequest 
     });
   } catch (error) {
     console.error("PUT /api/attendance/leave/admin error:", error);

@@ -1,10 +1,8 @@
-// app/api/attendance/route.js
+//app/api/attendance/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import Shift from "@/Models/Shift";
-import User from "@/Models/User";
-import Agent from "@/Models/Agent";
 import { verifyToken } from "@/lib/jwt";
 
 // app/api/attendance/route.js - Updated GET function
@@ -17,6 +15,12 @@ export async function GET(request) {
 
     const decoded = verifyToken(token);
     if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+
+    // Check if user is admin (you need to implement this based on your user model)
+    // const user = await User.findById(decoded.userId);
+    // if (!user || user.role !== 'admin') {
+    //   return NextResponse.json({ success: false, message: "Admin access required" }, { status: 403 });
+    // }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -46,7 +50,6 @@ export async function GET(request) {
     // Build filter query
     let filter = {};
     
-    // User Type filter
     if (userType !== 'all') {
       if (userType === 'user') {
         filter.user = { $exists: true, $ne: null };
@@ -55,7 +58,6 @@ export async function GET(request) {
       }
     }
 
-    // Status filter
     if (status && status !== 'all') {
       filter.status = status;
     }
@@ -161,9 +163,7 @@ export async function GET(request) {
         total,
         page,
         limit,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
+        totalPages
       }
     });
   } catch (error) {

@@ -67,14 +67,6 @@ export const agentService = {
     return response.data;
   },
 
-    // Admin password reset (direct reset without token)
-  adminResetPassword: async (agentId, newPassword) => {
-    const response = await api.post(`/agents/${agentId}/reset-password`, {
-      newPassword
-    });
-    return response.data;
-  },
-
   // Get all agents (for admin)
   getAllAgents: async (params = {}) => {
     const response = await api.get('/agents', { params });

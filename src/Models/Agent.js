@@ -20,22 +20,12 @@ const agentSchema = new mongoose.Schema({
   email: {
     type: String,
     unique: true,
-    sparse: true, // Allow multiple null values
     lowercase: true,
-    trim: true
-  },
-  phone: {
-    type: String,
     trim: true
   },
   password: {
     type: String,
     required: true
-  },
-  monthlyTarget: {
-    type: Number,
-    default: 0, // default 0 rakho
-    min: 0
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,

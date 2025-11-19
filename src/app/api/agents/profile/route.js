@@ -14,16 +14,16 @@ export async function GET(request) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    
+
     const token = authHeader.replace('Bearer ', '');
     const decoded = verifyToken(token);
-    
+
     if (!decoded || decoded.type !== 'agent') {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
     const agent = await Agent.findById(decoded.id).populate('shift');
-    
+
     if (!agent) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
@@ -58,10 +58,10 @@ export async function PUT(request) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    
+
     const token = authHeader.replace('Bearer ', '');
     const decoded = verifyToken(token);
-    
+
     if (!decoded || decoded.type !== 'agent') {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
@@ -71,21 +71,21 @@ export async function PUT(request) {
 
     // Validation
     if (!agentName || agentName.trim().length < 2) {
-      return NextResponse.json({ 
-        error: "Name is required and must be at least 2 characters" 
+      return NextResponse.json({
+        error: "Name is required and must be at least 2 characters"
       }, { status: 400 });
     }
 
     // Check if email already exists (if provided and different from current)
     if (email) {
-      const existingAgent = await Agent.findOne({ 
+      const existingAgent = await Agent.findOne({
         email: email.toLowerCase().trim(),
         _id: { $ne: decoded.id }
       });
-      
+
       if (existingAgent) {
-        return NextResponse.json({ 
-          error: "Email already exists" 
+        return NextResponse.json({
+          error: "Email already exists"
         }, { status: 400 });
       }
     }
@@ -126,13 +126,13 @@ export async function PUT(request) {
 
   } catch (error) {
     console.error("Profile update error:", error);
-    
+
     if (error.name === 'ValidationError') {
-      return NextResponse.json({ 
-        error: "Validation failed: " + Object.values(error.errors).map(e => e.message).join(', ') 
+      return NextResponse.json({
+        error: "Validation failed: " + Object.values(error.errors).map(e => e.message).join(', ')
       }, { status: 400 });
     }
-    
+
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-//src/app/api/auth/login/route.js
+
 import { NextResponse } from "next/server";
 import connectDB from "../../../../lib/mongodb";
 import User from "@/Models/User";

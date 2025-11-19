@@ -4,19 +4,19 @@ import nodemailer from 'nodemailer';
 // npm install nodemailer
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false, // true for 465, false for other ports
+  host: process.env.EMAIL_SERVER_HOST,
+  port: Number(process.env.EMAIL_SERVER_PORT),
+  secure: process.env.EMAIL_SERVER_PORT == "465", // true for 465, false for other ports
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.EMAIL_SERVER_USER,
+    pass: process.env.EMAIL_SERVER_PASSWORD,
   },
 });
 
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
-      from: `"Agent System" <${process.env.SMTP_FROM_EMAIL}>`,
+      from: `"${process.env.SMTP_FROM_NAME || 'GC Support'}" <${process.env.EMAIL_SERVER_USER}>`,
       to,
       subject,
       html,
@@ -252,6 +252,68 @@ export const emailTemplates = {
       Phone: +1-234-567-8900
       
       © 2025 Your Company Name. All rights reserved.
+    `
+  }),
+
+  contactReply: (contactName, originalMessage, replySubject, replyMessage, websiteName) => ({
+    subject: replySubject,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #0070f3; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+          .original-message { background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #0070f3; margin: 15px 0; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Contact Reply from ${websiteName}</h1>
+          </div>
+          <div class="content">
+            <h2>Dear ${contactName},</h2>
+            <p>Thank you for your message to ${websiteName}. We have received your inquiry and here is our response:</p>
+
+            <div class="original-message">
+              <h3>Your Original Message:</h3>
+              <p>${originalMessage}</p>
+            </div>
+
+            <p>${replyMessage}</p>
+
+            <p>If you have any further questions, please don't hesitate to contact us.</p>
+            <p>Best regards,<br/>${websiteName} Support Team</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated response from ${websiteName}. Please do not reply to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+      Contact Reply from ${websiteName}
+
+      Dear ${contactName},
+
+      Thank you for your message to ${websiteName}. We have received your inquiry and here is our response:
+
+      Your Original Message:
+      ${originalMessage}
+
+      ${replyMessage}
+
+      If you have any further questions, please don't hesitate to contact us.
+
+      Best regards,
+      ${websiteName} Support Team
+
+      This is an automated response from ${websiteName}.
     `
   })
 };

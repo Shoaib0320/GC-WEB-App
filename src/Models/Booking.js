@@ -91,11 +91,7 @@ const BookingSchema = new mongoose.Schema(
     discountedPrice: { type: Number, required: true },
     discountApplied: { type: Boolean, default: false },
     discountPercent: { type: Number },
-    promoCode: { type: String }, // Promo code string
-    promoCodeId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'PromoCode' // Promo code reference
-    },
+    promoCode: { type: String },
     submittedAt: { type: String, required: true },
     vehicleCount: { type: Number, required: true },
     status: {
@@ -105,7 +101,7 @@ const BookingSchema = new mongoose.Schema(
     },
     cancellationReason: {
       type: String,
-      default: null,
+      default: null, // Ya isko bas 'type: String' bhi rakh saktay hain
     },
   },
   { timestamps: true }

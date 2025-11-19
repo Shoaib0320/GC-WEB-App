@@ -1,4 +1,3 @@
-// src/app/api/agents/reset-password/route.js
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';

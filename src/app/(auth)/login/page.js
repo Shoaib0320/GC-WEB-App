@@ -62,6 +62,7 @@ export default function LoginPage() {
             width={74}
             height={74}
             // className="rounded-lg shadow-sm"
+            className="rounded-lg shadow-sm"
             priority
           />
         </div>

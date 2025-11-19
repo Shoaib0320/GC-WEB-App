@@ -3,12 +3,13 @@ import bcrypt from 'bcryptjs';
 import Shift from '@/Models/Shift';
 import { sendEmail, emailTemplates } from '@/lib/email';
 import connectDB from '@/lib/mongodb';
-import Agent from '../../../Models/Agent';
+import Agent from '@/Models/Agent';
 
 // GET - Get all agents
 export async function GET(request) {
   try {
     await connectDB();
+
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page')) || 1;

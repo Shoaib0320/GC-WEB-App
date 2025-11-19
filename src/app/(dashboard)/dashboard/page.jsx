@@ -8,11 +8,10 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Users, CalendarDays, BarChart3, DollarSign, LayoutDashboard, Activity } from "lucide-react";
+import { Users, CalendarDays, BarChart3, DollarSign,LayoutDashboard  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/common/PageHeader";
-import DataTable from "@/components/common/DataTable";
 
 export default function DashboardPage() {
   // animation variant
@@ -124,96 +123,78 @@ export default function DashboardPage() {
       <Separator />
 
       {/* Recent Activity */}
-      <DataTable
-        title="Recent Activity"
-        icon={Activity}
-        data={[
-          {
-            user: "Ali",
-            action: "Booked Appointment",
-            date: "Oct 8, 2025",
-            status: "Completed",
-          },
-          {
-            user: "Sarah Smith",
-            action: "Created Account",
-            date: "Oct 7, 2025",
-            status: "New",
-          },
-          {
-            user: "Mike Johnson",
-            action: "Updated Profile",
-            date: "Oct 6, 2025",
-            status: "Pending",
-          },
-          {
-            user: "John Doe",
-            action: "Cancelled Booking",
-            date: "Oct 5, 2025",
-            status: "Cancelled",
-          },
-          {
-            user: "Jane Smith",
-            action: "Updated Payment",
-            date: "Oct 4, 2025",
-            status: "Completed",
-          },
-          {
-            user: "Bob Wilson",
-            action: "Requested Refund",
-            date: "Oct 3, 2025",
-            status: "Pending",
-          },
-        ]}
-        columns={[
-          { key: "user", label: "User" },
-          { key: "action", label: "Activity" },
-          { key: "date", label: "Date" },
-          {
-            key: "status",
-            label: "Status",
-            render: (row) => (
-              <span
-                className={`px-2 py-1 text-xs rounded-full ${
-                  row.status === "Completed"
-                    ? "bg-green-100 text-green-700"
-                    : row.status === "Pending"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : row.status === "Cancelled"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-blue-100 text-blue-700"
-                }`}
-              >
-                {row.status}
-              </span>
-            ),
-          },
-        ]}
-        searchEnabled={true}
-        filterOptions={[
-          {
-            label: "Completed",
-            value: "completed",
-            filterFn: (item) => item.status === "Completed",
-          },
-          {
-            label: "Pending",
-            value: "pending",
-            filterFn: (item) => item.status === "Pending",
-          },
-          {
-            label: "Cancelled",
-            value: "cancelled",
-            filterFn: (item) => item.status === "Cancelled",
-          },
-          {
-            label: "New",
-            value: "new",
-            filterFn: (item) => item.status === "New",
-          },
-        ]}
-        rowsPerPage={5}
-      />
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        className="space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-xl font-semibold">Recent Activity</h2>
+          <Button variant="outline" size="sm">View All</Button>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="min-w-full bg-white text-sm">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">User</th>
+                <th className="text-left px-4 py-3 font-medium">Activity</th>
+                <th className="text-left px-4 py-3 font-medium">Date</th>
+                <th className="text-left px-4 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                {
+                  user: "Ali",
+                  action: "Booked Appointment",
+                  date: "Oct 8, 2025",
+                  status: "Completed",
+                },
+                {
+                  user: "Sarah Smith",
+                  action: "Created Account",
+                  date: "Oct 7, 2025",
+                  status: "New",
+                },
+                {
+                  user: "Mike Johnson",
+                  action: "Updated Profile",
+                  date: "Oct 6, 2025",
+                  status: "Pending",
+                },
+              ].map((item, index) => (
+                <motion.tr
+                  key={index}
+                  custom={index}
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeUp}
+                  className="border-t hover:bg-gray-50 transition"
+                >
+                  <td className="px-4 py-3 font-medium">{item.user}</td>
+                  <td className="px-4 py-3 text-gray-700">{item.action}</td>
+                  <td className="px-4 py-3 text-gray-500">{item.date}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        item.status === "Completed"
+                          ? "bg-green-100 text-green-700"
+                          : item.status === "Pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
     </div>
   );
 }

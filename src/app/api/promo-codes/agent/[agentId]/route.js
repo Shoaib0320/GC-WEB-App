@@ -1,4 +1,3 @@
-// src/app/api/promo-codes/agent/[agentId]/route.js
 import { NextResponse } from 'next/server';
 import PromoCode from '@/Models/PromoCode';
 import connectDB from '@/lib/mongodb';
@@ -7,7 +6,7 @@ export async function GET(request, { params }) {
   try {
     await connectDB();
     
-    const { agentId } = await params;
+    const { agentId } = params;
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page')) || 1;
