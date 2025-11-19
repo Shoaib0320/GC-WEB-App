@@ -11,6 +11,13 @@ import {
   CalendarDays,
   User,
   Code2Icon,
+  ShoppingCart,
+  TrendingUp,
+  Bell,
+  Clock,
+  Calendar,
+  DollarSign,
+  ClipboardList,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
@@ -26,7 +33,6 @@ import {
 } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-
 
 export default function Sidebar({ collapsed, setCollapsed }) {
   const [openMobile, setOpenMobile] = useState(false);
@@ -44,10 +50,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { label: "Bookings", href: "/dashboard/bookings", icon: CalendarDays },
     { label: "Agents", href: "/dashboard/agents", icon: User },
     { label: "Promo Code", href: "/dashboard/promo-codes", icon: Code2Icon },
-    { label: "Attedance", href: "/dashboard/view-attendance", icon: BarChart3 },
-    { label: "Shfit Panel", href: "/dashboard/shift-pannel", icon: BarChart3 },
-        { label: "Notifications", href: "/dashboard/notifications", icon: BarChart3 },
-    { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    { label: "Sales", href: "/dashboard/sales", icon: DollarSign },
+    { label: "Attedance", href: "/dashboard/view-attendance", icon: ClipboardList },
+    { label: "Shfit Panel", href: "/dashboard/shift-pannel", icon: Clock },
+    { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+    { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp },
     { label: "Setting", href: "/dashboard/settings", icon: Settings },
   ];
 
@@ -98,7 +105,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   >
                     <item.icon
                       size={20}
-                      className={cn("shrink-0", collapsed ? "mr-2" : "mr-0")}
+                      className={cn("shrink-0", collapsed ? "mr-0" : "mr-3")}
                     />
                     {(isMobile || !collapsed) && (
                       <span className="inline">{item.label}</span>
@@ -111,8 +118,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               </Tooltip>
             );
           })}
-
-
         </nav>
 
         <Separator />
@@ -120,7 +125,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         {/* Footer */}
         <div className="p-3">
           <button className="flex items-center justify-center w-full text-sm text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 py-2 transition">
-            <LogOut size={18} className={cn("mr-2", collapsed && "mr-0")} />
+            <LogOut size={18} className={cn("shrink-0", collapsed ? "mr-0" : "mr-3")} />
             {(isMobile || !collapsed) && <span className="inline">Logout</span>}
           </button>
         </div>

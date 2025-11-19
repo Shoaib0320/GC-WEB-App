@@ -1,5 +1,5 @@
 // src/app/agents/page.js
-'use client';
+"use client";
 import { useState, useEffect } from 'react';
 import { agentService } from '@/services/agentService';
 import { shiftService } from '@/services/shiftService';
@@ -18,14 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import GlobalData from '@/components/common/GlobalData';
 import {
   Card,
   CardContent,
@@ -49,6 +42,7 @@ export default function AgentsPage() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [pagination, setPagination] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -87,23 +81,12 @@ export default function AgentsPage() {
     }
   };
 
-  // Fetch agents
+  // Fetch agents - replaced by GlobalData server-side fetcher.
+  // We keep a lightweight fetchAgents that simply triggers a reload
+  // so existing handlers that call fetchAgents() still work.
   const fetchAgents = async (page = 1, search = '') => {
-    setLoading(true);
-    try {
-      const response = await agentService.getAllAgents({
-        page,
-        limit: 10,
-        search
-      });
-      setAgents(response.agents);
-      setPagination(response.pagination);
-    } catch (error) {
-      console.error('Error fetching agents:', error);
-      toast.error('Error fetching agents');
-    } finally {
-      setLoading(false);
-    }
+    // bump reload key to force GlobalData to re-fetch
+    setReloadKey((k) => k + 1);
   };
 
   useEffect(() => {
@@ -441,175 +424,80 @@ export default function AgentsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Loading agents...</p>
-            </div>
-          ) : agents.length === 0 ? (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No agents found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Get started by creating a new agent.
-              </p>
-            </div>
-          ) : (
-            <div className="border rounded-lg overflow-hidden">
-              {/* Table container with horizontal scroll */}
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-gray-50">
-                    <TableRow>
-                      <TableHead className="font-semibold text-gray-800 whitespace-nowrap">Agent Details</TableHead>
-                      <TableHead className="font-semibold text-gray-800 whitespace-nowrap">Shift</TableHead>
-                      <TableHead className="font-semibold text-gray-800 whitespace-nowrap">Monthly Target</TableHead>
-                      <TableHead className="font-semibold text-gray-800 whitespace-nowrap">Status</TableHead>
-                      <TableHead className="font-semibold text-gray-800 text-right whitespace-nowrap">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agents.map((agent) => (
-                      <TableRow key={agent._id} className="hover:bg-gray-50">
-                        {/* Agent Details - Combined in one column like before */}
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="font-medium text-gray-900">
-                              {agent.agentName}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              ID: {agent.agentId}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {agent.email}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              Created: {new Date(agent.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </TableCell>
-
-                        {/* Shift */}
-                        <TableCell>
-                          {agent.shift ? (
-                            <div className="space-y-1">
-                              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                {agent.shift.name}
-                              </Badge>
-                              <div className="text-xs text-gray-500">
-                                {agent.shift.startTime} - {agent.shift.endTime}
-                              </div>
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                              No Shift
-                            </Badge>
-                          )}
-                        </TableCell>
-
-                        {/* Monthly Target */}
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="font-semibold text-gray-800">
-                              {agent.monthlyTarget ? `${agent.monthlyTarget}` : '—'}
-                            </div>
-                            <div className="text-xs text-gray-500">Target / Month</div>
-                          </div>
-                        </TableCell>
-
-                        {/* Status */}
-                        <TableCell>
-                          <Badge
-                            variant={agent.isActive ? "default" : "secondary"}
-                            className={agent.isActive
-                              ? "bg-green-100 text-green-800 hover:bg-green-100"
-                              : "bg-red-100 text-red-800 hover:bg-red-100"
-                            }
-                          >
-                            {agent.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-
-                        {/* Actions */}
-                        <TableCell>
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenEdit(agent)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              Edit
-                            </Button>
-                            
-                            <ResetPasswordDialog 
-                              agent={agent} 
-                              onSuccess={fetchAgents}
-                            />
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleStatus(agent._id, agent.isActive)}
-                              className={
-                                agent.isActive
-                                  ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
-                                  : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                              }
-                            >
-                              {agent.isActive ? 'Deactivate' : 'Activate'}
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteAgent(agent._id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(pagination.currentPage - 1) * 10 + 1}</span> to{' '}
-                <span className="font-medium">
-                  {Math.min(pagination.currentPage * 10, pagination.totalAgents)}
-                </span> of{' '}
-                <span className="font-medium">{pagination.totalAgents}</span> agents
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchAgents(pagination.currentPage - 1, searchTerm)}
-                  disabled={!pagination.hasPrev}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchAgents(pagination.currentPage + 1, searchTerm)}
-                  disabled={!pagination.hasNext}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <GlobalData
+            key={reloadKey}
+            title="Agents"
+            serverSide={true}
+            fetcher={async (params = {}) => {
+              const p = { page: params.page || 1, limit: params.limit || 10, search: params.search || '' };
+              const res = await agentService.getAllAgents(p);
+              return { data: res.agents || [], meta: res.pagination || { total: res.totalAgents || 0, page: res.pagination?.currentPage || p.page, limit: p.limit } };
+            }}
+            columns={[
+              {
+                label: 'Agent Details',
+                key: 'agentDetails',
+                render: (agent) => (
+                  <div className="space-y-1">
+                    <div className="font-medium text-gray-900">{agent.agentName}</div>
+                    <div className="text-sm text-gray-500">ID: {agent.agentId}</div>
+                    <div className="text-sm text-gray-500">{agent.email}</div>
+                    <div className="text-xs text-gray-400">Created: {new Date(agent.createdAt).toLocaleDateString()}</div>
+                  </div>
+                )
+              },
+              {
+                label: 'Shift',
+                key: 'shift',
+                render: (agent) => (
+                  agent.shift ? (
+                    <div className="space-y-1">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">{agent.shift.name}</Badge>
+                      <div className="text-xs text-gray-500">{agent.shift.startTime} - {agent.shift.endTime}</div>
+                    </div>
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-100 text-gray-800">No Shift</Badge>
+                  )
+                )
+              },
+              {
+                label: 'Monthly Target',
+                key: 'monthlyTarget',
+                render: (agent) => (
+                  <div className="space-y-1">
+                    <div className="font-semibold text-gray-800">{agent.monthlyTarget ? `${agent.monthlyTarget}` : '—'}</div>
+                    <div className="text-xs text-gray-500">Target / Month</div>
+                  </div>
+                )
+              },
+              {
+                label: 'Status',
+                key: 'status',
+                render: (agent) => (
+                  <Badge variant={agent.isActive ? 'default' : 'secondary'} className={agent.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>{agent.isActive ? 'Active' : 'Inactive'}</Badge>
+                )
+              },
+              {
+                label: 'Actions',
+                key: 'actions',
+                render: (agent) => (
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleOpenEdit(agent)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">Edit</Button>
+                    <ResetPasswordDialog agent={agent} onSuccess={() => setReloadKey(k => k + 1)} />
+                    <Button variant="outline" size="sm" onClick={() => handleToggleStatus(agent._id, agent.isActive)} className={agent.isActive ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}>{agent.isActive ? 'Deactivate' : 'Activate'}</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteAgent(agent._id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">Delete</Button>
+                  </div>
+                )
+              }
+            ]}
+            rowsPerPage={5}
+            searchEnabled={true}
+            filterKeys={['shift', 'isActive']}
+            filterOptionsMap={{
+              shift: shifts.map(s => ({ label: s.name, value: s._id })),
+              isActive: [{ label: 'Active', value: true }, { label: 'Inactive', value: false }]
+            }}
+          />
         </CardContent>
       </Card>
 

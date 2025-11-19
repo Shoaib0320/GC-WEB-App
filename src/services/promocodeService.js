@@ -73,7 +73,7 @@ import api from '@/lib/api';
 
 export const promoCodeService = {
   // 🔥 GENERAL PROMO CODE MANAGEMENT
-  
+
   // Get all promo codes with pagination and search
   getAllPromoCodes: async (params = {}) => {
     const response = await api.get('/promo-codes', { params });
@@ -118,9 +118,14 @@ export const promoCodeService = {
     });
     return response.data;
   },
+  // Update promo code status
+  updatePromoCodeStatus: async (id, isActive) => {
+    const response = await api.patch(`/promo-codes/${id}/status`, { isActive });
+    return response.data;
+  },
 
   // 🔥 GENERAL ANALYTICS (Not agent specific)
-  
+
   // Get overall promo codes analytics
   getPromoCodesAnalytics: async (params = {}) => {
     const response = await api.get('/promo-codes/analytics/overview', { params });

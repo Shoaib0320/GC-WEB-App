@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Calendar, Users, CheckCircle, XCircle, Clock, Plus, Trash2, PlayCircle, ToggleLeft, ToggleRight, Edit, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Loader2, Calendar, Users, CheckCircle, XCircle, Clock, Plus, Trash2, PlayCircle, ToggleLeft, ToggleRight, Edit, ChevronLeft, ChevronRight, Download, X } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/ui/customModal";
 import Link from "next/link";
@@ -22,7 +22,7 @@ import GlobalData from "@/components/common/GlobalData";
 
 export default function AdminAttendancePage() {
   // default current month in YYYY-MM for initial load
-  const currentMonth = new Date().toISOString().slice(0,7);
+  const currentMonth = new Date().toISOString().slice(0, 7);
   // State variables
   const [attendance, setAttendance] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -1942,8 +1942,8 @@ export default function AdminAttendancePage() {
           </TabsTrigger>
         </TabsList>
 
-          {/* <FiltersSection /> */}
-          {/* <StatsCards /> */}
+        {/* <FiltersSection /> */}
+        {/* <StatsCards /> */}
         <TabsContent value="attendance" className="space-y-6">
           <Card>
             <CardHeader>
@@ -1953,30 +1953,26 @@ export default function AdminAttendancePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <GlobalData
+              {/* <GlobalData
                 title="Attendance Records"
                 fetcher={async ({ page, limit, search, ...rest } = {}) => {
-                  // flatten params to what adminService expects
                   const params = { page: page || 1, limit: limit || 10, ...rest };
                   if (search) params.search = search;
 
-                  // Normalize date filters:
-                  // - If `month` is provided (YYYY-MM), convert to fromDate/toDate (YYYY-MM-DD)
-                  // - If fromDate and toDate provided ensure fromDate <= toDate, otherwise swap
+                  // Date normalization logic
                   try {
                     if (params.month) {
-                      const m = params.month; // expected 'YYYY-MM'
+                      const m = params.month;
                       const [y, mm] = String(m).split('-').map(Number);
                       if (!Number.isNaN(y) && !Number.isNaN(mm)) {
                         const year = y;
-                        const monthIndex = mm - 1; // JS months 0-11
+                        const monthIndex = mm - 1;
                         const firstDay = new Date(year, monthIndex, 1);
                         const lastDay = new Date(year, monthIndex + 1, 0);
                         const pad = (n) => String(n).padStart(2, '0');
                         params.fromDate = `${firstDay.getFullYear()}-${pad(firstDay.getMonth() + 1)}-${pad(firstDay.getDate())}`;
                         params.toDate = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
                       }
-                      // remove month param so backend doesn't get duplicate info
                       delete params.month;
                     }
 
@@ -1984,18 +1980,15 @@ export default function AdminAttendancePage() {
                       const d1 = new Date(params.fromDate);
                       const d2 = new Date(params.toDate);
                       if (d1 > d2) {
-                        // swap to keep from <= to
                         const tmp = params.fromDate;
                         params.fromDate = params.toDate;
                         params.toDate = tmp;
                       }
                     }
                   } catch (e) {
-                    // if parsing fails, just continue and send whatever values exist
                     console.warn('Date normalization failed', e);
                   }
 
-                  // Ensure both naming conventions are sent and strip empty values
                   if (params.fromDate) params.startDate = params.fromDate;
                   if (params.toDate) params.endDate = params.toDate;
 
@@ -2012,51 +2005,77 @@ export default function AdminAttendancePage() {
                 filterKeys={["status"]}
                 filterOptionsMap={attendanceFilterOptionsMap}
                 initialFilters={{ userType: "all", status: "all", month: currentMonth }}
+                customFilters={(filters, onFilterChange, { renderDateFilters }) => renderDateFilters()}
+              /> */}
+              <GlobalData
+                title="Attendance Records"
+                fetcher={async ({ page, limit, search, ...rest } = {}) => {
+                  const params = { page: page || 1, limit: limit || 10, ...rest };
+                  if (search) params.search = search;
+
+                  // Sirf monthly filter ka logic rakho
+                  try {
+                    if (params.month) {
+                      const m = params.month;
+                      const [y, mm] = String(m).split('-').map(Number);
+                      if (!Number.isNaN(y) && !Number.isNaN(mm)) {
+                        const year = y;
+                        const monthIndex = mm - 1;
+                        const firstDay = new Date(year, monthIndex, 1);
+                        const lastDay = new Date(year, monthIndex + 1, 0);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        params.fromDate = `${firstDay.getFullYear()}-${pad(firstDay.getMonth() + 1)}-${pad(firstDay.getDate())}`;
+                        params.toDate = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
+                      }
+                      delete params.month;
+                    }
+                  } catch (e) {
+                    console.warn('Date normalization failed', e);
+                  }
+
+                  // fromDate aur toDate ko startDate aur endDate mein convert karo
+                  if (params.fromDate) params.startDate = params.fromDate;
+                  if (params.toDate) params.endDate = params.toDate;
+
+                  // Empty values remove karo
+                  Object.keys(params).forEach((k) => {
+                    if (params[k] === '' || params[k] === null || params[k] === undefined) delete params[k];
+                  });
+
+                  return await adminService.getAllAttendance(params);
+                }}
+                columns={attendanceColumns}
+                serverSide={true}
+                rowsPerPage={5}
+                searchEnabled={true}
+                filterKeys={["status"]}
+                filterOptionsMap={attendanceFilterOptionsMap}
+                initialFilters={{ userType: "all", status: "all", month: currentMonth }}
                 customFilters={(filters, onFilterChange) => (
                   <div className="mb-4 flex flex-wrap gap-3 items-end">
+                    {/* Sirf monthly filter rakho */}
                     <div className="space-y-1">
-                      <Label className="text-sm">Month</Label>
+                      <Label className="text-sm">Select Month</Label>
                       <input
                         type="month"
-                        value={filters.month ?? ''}
+                        value={filters.month || ''}
                         onChange={(e) => onFilterChange('month', e.target.value)}
-                        className="border rounded px-3 py-2"
+                        className="border rounded px-3 py-2 text-sm w-40"
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-sm">From</Label>
-                      <input
-                        type="date"
-                        value={filters.fromDate ?? ''}
-                        onChange={(e) => onFilterChange('fromDate', e.target.value)}
-                        className="border rounded px-3 py-2"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-sm">To</Label>
-                      <input
-                        type="date"
-                        value={filters.toDate ?? ''}
-                        onChange={(e) => onFilterChange('toDate', e.target.value)}
-                        className="border rounded px-3 py-2"
-                      />
-                    </div>
-
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onFilterChange('fromDate', '');
-                          onFilterChange('toDate', '');
-                          onFilterChange('month', '');
-                        }}
-                        className="text-sm text-gray-600 underline"
+                    {/* Clear filter button agar month select kiya hai */}
+                    {filters.month && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onFilterChange('month', '')}
+                        className="h-10"
                       >
-                        Clear Dates
-                      </button>
-                    </div>
+                        <X className="h-4 w-4 mr-1" />
+                        Clear Month
+                      </Button>
+                    )}
                   </div>
                 )}
               />

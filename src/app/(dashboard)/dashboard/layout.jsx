@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }) {
         <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
         {/* Main content area */}
-        <main className={cn("flex-1 pt-16 px-4 lg:px-6 pb-6 transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-60")}>{children}</main>
+        <main className={cn("flex-1 bg-white pt-16 px-4 lg:px-6 pb-6 transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-60")}>{children}</main>
       </div>
       <Toaster/>
     </div>
