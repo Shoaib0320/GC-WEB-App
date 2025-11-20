@@ -973,6 +973,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ResetPasswordDialog } from '@/components/ResetPasswordDialog';
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState([]);
@@ -1187,127 +1188,6 @@ export default function AgentsPage() {
       toast.error('Error updating status');
     }
   };
-
-  // Reset Password Dialog Component
-// import { useState } from 'react';
-// import { agentService } from '@/services/agentService';
-// import { toast } from 'sonner';
-// import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input';
-// import { Label } from '@/components/ui/label';
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogHeader,
-//   DialogTitle,
-//   DialogTrigger,
-// } from '@/components/ui/dialog';
-
-function ResetPasswordDialog({ agent, onSuccess }) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [password, setPassword] = useState('');
-
-  // Generate random password
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
-    let newPassword = '';
-    for (let i = 0; i < 12; i++) {
-      newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setPassword(newPassword);
-  };
-
-  // Reset password function
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    
-    if (!password) {
-      toast.warning('Please generate or enter a password');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Temporary solution - updateAgent use kar rahe hain
-      await agentService.updateAgent(agent._id, { password });
-      toast.success('Password reset successfully!');
-      setOpen(false);
-      setPassword('');
-      onSuccess?.();
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error('Error resetting password');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-        >
-          Reset Password
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>Reset Password</DialogTitle>
-          <DialogDescription>
-            Reset password for {agent.agentName}. A notification email will be sent.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleResetPassword} className="space-y-4">
-          {/* Password */}
-          <div className="space-y-2">
-            <Label htmlFor="reset-password">New Password</Label>
-            <div className="flex gap-2">
-              <Input
-                id="reset-password"
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Generate or enter password"
-              />
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={generatePassword}
-              >
-                Generate
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-purple-600 hover:bg-purple-700"
-            >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -1564,26 +1444,6 @@ function ResetPasswordDialog({ agent, onSuccess }) {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Search Bar */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search agents by name, ID, or email..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="w-full pl-10"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Agents List */}
       <Card>

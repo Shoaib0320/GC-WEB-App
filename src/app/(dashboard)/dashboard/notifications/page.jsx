@@ -207,7 +207,7 @@ export default function NotificationsAdminPage() {
       )}
 
       {/* Notifications Table */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>All Notifications</CardTitle>
           <CardDescription>
@@ -280,7 +280,91 @@ export default function NotificationsAdminPage() {
             </Table>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
+
+<Card>
+  <CardHeader>
+    <CardTitle>All Notifications</CardTitle>
+    <CardDescription>
+      History of all sent notifications in the system
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    {loading ? (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ) : notifications.length === 0 ? (
+      <div className="text-center py-8 text-muted-foreground">
+        <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p>No notifications found</p>
+      </div>
+    ) : (
+      <div className="relative">
+        {/* Horizontal scroll container */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="whitespace-nowrap">Title</TableHead>
+                <TableHead className="whitespace-nowrap">Message</TableHead>
+                <TableHead className="whitespace-nowrap">Target</TableHead>
+                <TableHead className="whitespace-nowrap">Type</TableHead>
+                <TableHead className="whitespace-nowrap">Created</TableHead>
+                <TableHead className="whitespace-nowrap">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {notifications.map((notification) => (
+                <TableRow key={notification._id}>
+                  <TableCell className="font-medium whitespace-nowrap">
+                    {notification.title}
+                  </TableCell>
+                  <TableCell className="max-w-xs">
+                    <div className="truncate" title={notification.message}>
+                      {notification.message}
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge variant={notification.targetType === "all" ? "default" : "secondary"}>
+                      {notification.targetType}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge variant="outline">
+                      {notification.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {new Date(notification.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openModal(notification)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(notification._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    )}
+  </CardContent>
+</Card>
 
       {/* Create/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -340,7 +424,7 @@ export default function NotificationsAdminPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="targetType">Target Audience</Label>
               <Select
                 value={formData.targetType}
@@ -354,7 +438,7 @@ export default function NotificationsAdminPage() {
                   <SelectItem value="specific">Specific Users</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
 
             {formData.targetType === "specific" && (
               <div className="space-y-2">
@@ -392,3 +476,9 @@ export default function NotificationsAdminPage() {
     </div>
   );
 }
+
+
+
+
+
+

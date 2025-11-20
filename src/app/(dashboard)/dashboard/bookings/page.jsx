@@ -100,6 +100,7 @@ export default function BookingsPage() {
         toast.success("Booking created successfully!");
         setBookings([response.data, ...bookings]);
         setCreateDialogOpen(false);
+        fetchBookings();; // Refresh bookings
         return response;
       } else {
         toast.error(response.message || "Failed to create booking");
