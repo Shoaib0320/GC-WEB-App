@@ -6,7 +6,8 @@ import { NextResponse } from "next/server";
 import Booking from "@/Models/Booking";
 import connectDB from "@/lib/mongodb";
 import { googleCalendar } from "@/lib/googleCalendar";
-import { sendEmail } from "@/lib/nodemailer"; 
+import { sendEmail } from "@/lib/mailer";
+
 
 // ✅ Named imports from emailTemplates
 // Make sure 'emailTemplates.js' is saved in 'src/lib/' or 'lib/' correctly
