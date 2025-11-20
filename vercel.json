@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "builds": [
     {
       "src": "package.json",
@@ -15,10 +15,10 @@
       }
     }
   ],
-  "crons": [
-    {
-      "path": "/api/cron/auto-attendance",
-      "schedule": "*/30 * * * *"
-    }
-  ]
+  // "crons": [
+  //   {
+  //     "path": "/api/cron/auto-attendance",
+  //     "schedule": "*/30 * * * *"
+  //   }
+  // ]
 }
