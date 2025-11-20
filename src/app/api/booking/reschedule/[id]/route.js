@@ -9,13 +9,13 @@ import { googleCalendar } from "@/lib/googleCalendar";
 // import { sendEmail } from "@/lib/mailer";
 
 
-// ✅ Named imports from emailTemplates
-// Make sure 'emailTemplates.js' is saved in 'src/lib/' or 'lib/' correctly
-import { 
-  getWebsiteConfig, 
-  getRescheduledEmail, 
-  getOwnerNotificationEmail 
-} from "@/lib/emailTemplates"; 
+// // ✅ Named imports from emailTemplates
+// // Make sure 'emailTemplates.js' is saved in 'src/lib/' or 'lib/' correctly
+// import { 
+//   getWebsiteConfig, 
+//   getRescheduledEmail, 
+//   getOwnerNotificationEmail 
+// } from "@/lib/emailTemplates"; 
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
