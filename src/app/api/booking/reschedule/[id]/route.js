@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import Booking from "@/Models/Booking";
 import connectDB from "@/lib/mongodb";
 import { googleCalendar } from "@/lib/googleCalendar";
-import { sendEmail } from "@/lib/mailer";
+// import { sendEmail } from "@/lib/mailer";
 
 
 // ✅ Named imports from emailTemplates
