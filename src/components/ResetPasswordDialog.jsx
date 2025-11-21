@@ -58,7 +58,7 @@ export function ResetPasswordDialog({ agent, onSuccess }) {
     setLoading(true);
     try {
       // Admin password reset API call
-      await agentService.adminResetPassword(agent._id, formData.newPassword);
+      await agentService.resetPassword(agent._id, formData.newPassword);
       toast.success('Password reset successfully!');
       setOpen(false);
       setFormData({ newPassword: '', confirmPassword: '' });

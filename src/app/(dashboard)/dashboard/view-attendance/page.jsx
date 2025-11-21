@@ -1726,7 +1726,7 @@ export default function AdminAttendancePage() {
           </Button>
 
           {/* Shift Auto */}
-          <Button
+          {/* <Button
             onClick={() => setShowShiftAutoModal(true)}
             variant="outline"
             className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto min-w-[150px]"
@@ -1734,7 +1734,7 @@ export default function AdminAttendancePage() {
           >
             <PlayCircle className="h-4 w-4 mr-2" />
             Shift Auto
-          </Button>
+          </Button> */}
 
           {/* Refresh */}
           <Button
@@ -1856,7 +1856,7 @@ export default function AdminAttendancePage() {
         </div>
 
         <TabsContent value="attendance" className="space-y-6">
-          <StatsCards />
+          {/* <StatsCards /> */}
           <Card>
             <CardHeader>
               <CardTitle>Attendance Records</CardTitle>

@@ -91,7 +91,16 @@ const BookingSchema = new mongoose.Schema(
     discountedPrice: { type: Number, required: true },
     discountApplied: { type: Boolean, default: false },
     discountPercent: { type: Number },
+    // Human-readable promo code string (kept for backward compatibility)
     promoCode: { type: String },
+
+    // Reference to PromoCode document - add this so we can populate promo details directly
+    promoCodeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PromoCode',
+      default: null,
+      index: true,
+    },
     submittedAt: { type: String, required: true },
     vehicleCount: { type: Number, required: true },
     status: {

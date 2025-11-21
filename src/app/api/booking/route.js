@@ -115,8 +115,7 @@ export async function POST(req) {
 
     // ✅ Email sending logic
     const { email } = data.formData;
-
-          // ✅ Fetch correct site configuration
+    // ✅ Fetch correct site configuration
     const websiteConfig = getWebsiteConfig(data.webName);
 
     // ✅ Generate user email using correct branding
@@ -134,19 +133,19 @@ export async function POST(req) {
     // 📧 TEMPLATE-BASED EMAIL SENDING (Updated Logic)
     try {
       const { email } = newBooking.formData;
-      
+
       // 1. Website ki configuration fetch karein
       const websiteConfig = getWebsiteConfig(newBooking.webName);
 
       // 2. User ke liye PENDING email generate karein
       const userHtml = getPendingEmail(newBooking, websiteConfig);
-      
+
       // 3. Owner ke liye NEW BOOKING notification generate karein
       const ownerHtml = getOwnerNotificationEmail(newBooking, websiteConfig);
 
       // Send to user
       await sendEmail({
-        to: email, 
+        to: email,
         subject: `Your Booking is Pending Review - ${newBooking.webName} (#${newBooking.bookingId})`,
         html: userHtml,
       });
@@ -171,9 +170,9 @@ export async function POST(req) {
           ...newBooking.toObject(),
           calendarEvent: calendarEvent
             ? {
-                id: calendarEvent.id,
-                htmlLink: calendarEvent.htmlLink,
-              }
+              id: calendarEvent.id,
+              htmlLink: calendarEvent.htmlLink,
+            }
             : null,
         },
       },
