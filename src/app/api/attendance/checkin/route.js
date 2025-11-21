@@ -108,6 +108,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import Shift from "@/Models/Shift";
+import Agent from "@/Models/Agent";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 
 function parseShiftDateTime(baseDate, timeStr) {

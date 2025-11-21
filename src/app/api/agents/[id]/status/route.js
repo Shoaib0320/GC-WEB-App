@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import Agent from '../../../../../Models/Agent';
+import Agent from '@/Models/Agent';
 import { sendEmail, emailTemplates } from '@/lib/email';
 
 export async function PATCH(request, { params }) {

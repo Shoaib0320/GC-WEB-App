@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import connectDB from '../../../lib/mongodb';
-import User from '../../../Models/User';
-import Agent from '../../../Models/Agent';
-import Booking from '../../../Models/Booking';
-import Attendance from '../../../Models/Attendance';
-import LeaveRequest from '../../../Models/LeaveRequest';
-import PromoCode from '../../../Models/PromoCode';
-import Notification from '../../../Models/Notification';
-import Role from '../../../Models/Role';
-import Shift from '../../../Models/Shift';
-import WeeklyOff from '../../../Models/WeeklyOff';
-import Holiday from '../../../Models/Holiday';
-import ContactMessage from '../../../Models/Contact';
+import connectDB from '@/lib/mongodb';
+import User from '@/Models/User';
+import Agent from '@/Models/Agent';
+import Booking from '@/Models/Booking';
+import Attendance from '@/Models/Attendance';
+import LeaveRequest from '@/Models/LeaveRequest';
+import PromoCode from '@/Models/PromoCode';
+import Notification from '@/Models/Notification';
+import Role from '@/Models/Role';
+import Shift from '@/Models/Shift';
+import WeeklyOff from '@/Models/WeeklyOff';
+import Holiday from '@/Models/Holiday';
+import ContactMessage from '@/Models/Contact';
 
 export async function GET() {
   try {

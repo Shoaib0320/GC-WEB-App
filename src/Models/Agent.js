@@ -23,6 +23,10 @@ const agentSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  monthlyTarget: {
+    type: Number,
+    default: 0
+  },
   password: {
     type: String,
     required: true

@@ -3,14 +3,14 @@ import bcrypt from 'bcryptjs';
 import Shift from '../../../../Models/Shift';
 import { sendEmail, emailTemplates } from '@/lib/email';
 import connectDB from '@/lib/mongodb';
-import Agent from '../../../../Models/Agent';
+import Agent from '@/Models/Agent';
 
 // GET - Get single agent by ID
 export async function GET(request, { params }) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
 
     const agent = await Agent.findById(id)
       .populate('shift')
@@ -37,7 +37,7 @@ export async function PUT(request, { params }) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const updateData = await request.json();
 
     // Find existing agent

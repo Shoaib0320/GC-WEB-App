@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import connectDB from '@/lib/mongodb';
-import Agent from '../../../../Models/Agent';
-import Shift from '../../../../Models/Shift';
+import Agent from '@/Models/Agent';
+import Shift from '@/Models/Shift';
 
 export async function POST(request) {
   console.log('🚀 === LOGIN API STARTED ===');

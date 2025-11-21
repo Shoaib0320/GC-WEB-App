@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { adminService } from "@/services/adminService";
 import { shiftService } from "@/services/shiftService";
@@ -157,6 +158,8 @@ export default function AdminAttendancePage() {
         limit: LIMIT,
         ...filters
       });
+
+      console.log('Attendance Response', response.data);
 
       if (response.success) {
         setAttendance(response.data || []);
@@ -439,16 +442,37 @@ export default function AdminAttendancePage() {
 
   // ✅ Handle Edit Attendance
   const handleEditAttendance = (attendance) => {
+    // Safely parse dates/times — backend may return Date objects or ISO strings, or date may be missing
+    const toISOString = (val) => {
+      if (!val) return null;
+      try {
+        return (typeof val === 'string') ? new Date(val).toISOString() : new Date(val).toISOString();
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const formatDateOnly = (val) => {
+      const iso = toISOString(val);
+      return iso ? iso.split('T')[0] : '';
+    };
+
+    const formatTimeOnly = (val) => {
+      const iso = toISOString(val);
+      return iso ? iso.split('T')[1]?.substring(0, 5) || '' : '';
+    };
+
     setEditingAttendance(attendance);
     setManualForm({
       userType: attendance.user ? "user" : "agent",
       userId: attendance.user?._id || "",
       agentId: attendance.agent?._id || "",
       shiftId: attendance.shift?._id || "",
-      date: attendance.date.split('T')[0],
+      // prefer attendance.date, fallback to checkInTime, then createdAt, then today
+      date: formatDateOnly(attendance.date) || formatDateOnly(attendance.checkInTime) || formatDateOnly(attendance.createdAt) || new Date().toISOString().split('T')[0],
       status: attendance.status,
-      checkInTime: attendance.checkInTime ? attendance.checkInTime.split('T')[1]?.substring(0, 5) : "",
-      checkOutTime: attendance.checkOutTime ? attendance.checkOutTime.split('T')[1]?.substring(0, 5) : "",
+      checkInTime: formatTimeOnly(attendance.checkInTime),
+      checkOutTime: formatTimeOnly(attendance.checkOutTime),
       notes: attendance.notes || ""
     });
     setShowEditModal(true);
@@ -1390,6 +1414,7 @@ export default function AdminAttendancePage() {
                 <SelectItem value="leave">Leave</SelectItem>
                 <SelectItem value="late">Late</SelectItem>
                 <SelectItem value="holiday">Holiday</SelectItem>
+                <SelectItem value="half_day">Half Day</SelectItem>
                 <SelectItem value="weekly_off">Weekly Off</SelectItem>
               </SelectContent>
             </Select>
@@ -1900,7 +1925,18 @@ export default function AdminAttendancePage() {
                     if (params[k] === '' || params[k] === null || params[k] === undefined) delete params[k];
                   });
 
-                  return await adminService.getAllAttendance(params);
+                  // Call API and normalize response for GlobalData
+                  const res = await adminService.getAllAttendance(params);
+                  // Debug log so we can see exactly what GlobalData receives
+                  console.log("GlobalData -> attendance fetcher result:", res);
+
+                  // Normalize shape: if API returned { success, data, meta }, return that;
+                  // if API returned { data: { data: [...] } } handle that too; otherwise return res
+                  if (res && res.success && (Array.isArray(res.data) || res.data == null)) return res;
+                  if (res && res.data && Array.isArray(res.data)) return res;
+                  if (res && res.data && res.data.data && Array.isArray(res.data.data)) return res.data;
+                  // fallback: return res as-is
+                  return res;
                 }}
                 columns={attendanceColumns}
                 serverSide={true}
@@ -1908,7 +1944,8 @@ export default function AdminAttendancePage() {
                 searchEnabled={true}
                 filterKeys={["status"]}
                 filterOptionsMap={attendanceFilterOptionsMap}
-                initialFilters={{ userType: "all", status: "all", month: currentMonth }}
+                // Do not force a month filter by default — let user pick month or use global filters
+                initialFilters={{ userType: "all", status: "all", month: "" }}
                 customFilters={(filters, onFilterChange) => (
                   <div className="mb-4 flex flex-wrap gap-3 items-end">
                     {/* Monthly filter */}
@@ -1975,3 +2012,4 @@ export default function AdminAttendancePage() {
     </div>
   );
 }
+
