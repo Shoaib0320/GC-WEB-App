@@ -11,27 +11,51 @@
 
 //     const { searchParams } = new URL(request.url);
 //     const agentId = searchParams.get('agentId');
-//     const timeFrame = searchParams.get('timeFrame') || 'all'; // today, week, month, all
+//     const timeFrame = searchParams.get('timeFrame') || 'all';
+//     const startDate = searchParams.get('startDate');
+//     const endDate = searchParams.get('endDate');
+//     const month = searchParams.get('month');
+//     const year = searchParams.get('year');
 
 //     // Build time filter
 //     let timeFilter = {};
-//     const now = new Date();
     
-//     switch (timeFrame) {
-//       case 'today':
-//         timeFilter.createdAt = { $gte: new Date(now.setHours(0, 0, 0, 0)) };
-//         break;
-//       case 'week':
-//         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-//         timeFilter.createdAt = { $gte: weekAgo };
-//         break;
-//       case 'month':
-//         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-//         timeFilter.createdAt = { $gte: monthAgo };
-//         break;
+//     if (startDate && endDate) {
+//       // Custom date range
+//       timeFilter.createdAt = { 
+//         $gte: new Date(startDate),
+//         $lte: new Date(endDate)
+//       };
+//     } else if (month && year) {
+//       // Specific month
+//       const start = new Date(year, month - 1, 1);
+//       const end = new Date(year, month, 0);
+//       timeFilter.createdAt = {
+//         $gte: start,
+//         $lte: end
+//       };
+//     } else {
+//       // Predefined time frames
+//       const now = new Date();
+//       switch (timeFrame) {
+//         case 'today':
+//           timeFilter.createdAt = { $gte: new Date(now.setHours(0, 0, 0, 0)) };
+//           break;
+//         case 'week':
+//           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+//           timeFilter.createdAt = { $gte: weekAgo };
+//           break;
+//         case 'month':
+//           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+//           timeFilter.createdAt = { $gte: monthAgo };
+//           break;
+//         case 'custom':
+//           // Already handled above with startDate and endDate
+//           break;
+//       }
 //     }
 
-//     // Build base query
+//     // Rest of your existing code remains same...
 //     let promoCodeQuery = {};
 //     if (agentId) {
 //       promoCodeQuery.agentId = agentId;
@@ -40,7 +64,6 @@
 //     const promoCodes = await PromoCode.find(promoCodeQuery)
 //       .populate('agentId', 'agentName agentId email');
 
-//     // Get analytics for all promo codes
 //     const analytics = await Promise.all(
 //       promoCodes.map(async (promoCode) => {
 //         const bookingQuery = { 
@@ -75,7 +98,6 @@
 //       })
 //     );
 
-//     // Overall statistics
 //     const totalStats = {
 //       totalPromoCodes: promoCodes.length,
 //       activePromoCodes: analytics.filter(a => a.isActive).length,
@@ -106,8 +128,6 @@
 //     );
 //   }
 // }
-
-
 // src/app/api/promo-codes/analytics/overview/route.js
 import { NextResponse } from 'next/server';
 import PromoCode from '@/Models/PromoCode';
@@ -165,7 +185,6 @@ export async function GET(request) {
       }
     }
 
-    // Rest of your existing code remains same...
     let promoCodeQuery = {};
     if (agentId) {
       promoCodeQuery.agentId = agentId;
@@ -208,12 +227,32 @@ export async function GET(request) {
       })
     );
 
+    // Filter out promoCodes with no bookings for top performers
+    const promoCodesWithBookings = analytics.filter(a => a.totalBookings > 0);
+
+    // Top performers logic - only include those with actual bookings
+    const topPerformers = {
+      byRevenue: promoCodesWithBookings
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, 10),
+      
+      byUsage: promoCodesWithBookings
+        .sort((a, b) => b.usedCount - a.usedCount)
+        .slice(0, 10),
+      
+      byBookings: promoCodesWithBookings
+        .sort((a, b) => b.totalBookings - a.totalBookings)
+        .slice(0, 10)
+    };
+
     const totalStats = {
       totalPromoCodes: promoCodes.length,
       activePromoCodes: analytics.filter(a => a.isActive).length,
       totalBookings: analytics.reduce((sum, a) => sum + a.totalBookings, 0),
       totalRevenue: analytics.reduce((sum, a) => sum + a.totalRevenue, 0),
-      totalUsedCount: analytics.reduce((sum, a) => sum + a.usedCount, 0)
+      totalUsedCount: analytics.reduce((sum, a) => sum + a.usedCount, 0),
+      // New stat: promoCodes with actual bookings
+      promoCodesWithBookings: promoCodesWithBookings.length
     };
 
     return NextResponse.json({
@@ -223,11 +262,7 @@ export async function GET(request) {
         agentId,
         totalStats,
         promoCodes: analytics,
-        topPerformers: {
-          byRevenue: analytics.sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 10),
-          byUsage: analytics.sort((a, b) => b.usedCount - a.usedCount).slice(0, 10),
-          byBookings: analytics.sort((a, b) => b.totalBookings - a.totalBookings).slice(0, 10)
-        }
+        topPerformers
       }
     });
   } catch (error) {

@@ -113,6 +113,27 @@ export default function GlobalData({
         }
 
         if (serverSide) {
+          // Ensure meta contains normalized pagination fields so DataTable can compute pages
+          if (newMeta) {
+            // try to fill common alternative keys
+            if ((newMeta.total === undefined || newMeta.total === null) && (res.total || res.totalAgents)) {
+              newMeta.total = res.total || res.totalAgents;
+            }
+            if (!newMeta.limit || newMeta.limit === 0) {
+              newMeta.limit = params.limit || rowsPerPage;
+            }
+            if (!newMeta.page) {
+              newMeta.page = params.page || page || 1;
+            }
+            if (newMeta.totalPages === undefined || newMeta.totalPages === null) {
+              if (typeof newMeta.total === 'number' && typeof newMeta.limit === 'number' && newMeta.limit > 0) {
+                newMeta.totalPages = Math.max(1, Math.ceil(newMeta.total / newMeta.limit));
+              } else {
+                newMeta.totalPages = 1;
+              }
+            }
+          }
+
           setData(items);
           setMeta(newMeta);
           setPage(newMeta.page || 1);

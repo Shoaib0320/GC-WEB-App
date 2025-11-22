@@ -845,6 +845,7 @@ export default function AdminAttendancePage() {
     status: [
       { label: "Present", value: "present" },
       { label: "Absent", value: "absent" },
+      { label: "Half Day", value: "half_day" },
       { label: "Leave", value: "leave" },
       { label: "Late", value: "late" },
       { label: "Holiday", value: "holiday" },
@@ -1880,7 +1881,7 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        <TabsContent value="attendance" className="space-y-6">
+        <TabsContent value="attendance" className="space-y-4">
           {/* <StatsCards /> */}
           <Card>
             <CardHeader>
@@ -1896,29 +1897,21 @@ export default function AdminAttendancePage() {
                   const params = { page: page || 1, limit: limit || 10, ...rest };
                   if (search) params.search = search;
 
-                  // Monthly filter logic
+                  // Date filtering: prefer sending `month` to API (server handles month cleanly).
+                  // Only convert explicit fromDate/toDate to startDate/endDate when provided.
                   try {
-                    if (params.month) {
-                      const m = params.month;
-                      const [y, mm] = String(m).split('-').map(Number);
-                      if (!Number.isNaN(y) && !Number.isNaN(mm)) {
-                        const year = y;
-                        const monthIndex = mm - 1;
-                        const firstDay = new Date(year, monthIndex, 1);
-                        const lastDay = new Date(year, monthIndex + 1, 0);
-                        const pad = (n) => String(n).padStart(2, '0');
-                        params.fromDate = `${firstDay.getFullYear()}-${pad(firstDay.getMonth() + 1)}-${pad(firstDay.getDate())}`;
-                        params.toDate = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
-                      }
+                    if (params.fromDate) params.startDate = params.fromDate;
+                    if (params.toDate) params.endDate = params.toDate;
+
+                    // If both fromDate/toDate are present but month is also provided, prefer month.
+                    // Do NOT convert month into fromDate/toDate here to avoid timezone/off-by-one issues;
+                    // the API already supports a `month` param in YYYY-MM format.
+                    if (params.month && (params.month === '' || params.month === null)) {
                       delete params.month;
                     }
                   } catch (e) {
                     console.warn('Date normalization failed', e);
                   }
-
-                  // Convert fromDate/toDate to startDate/endDate
-                  if (params.fromDate) params.startDate = params.fromDate;
-                  if (params.toDate) params.endDate = params.toDate;
 
                   // Remove empty values
                   Object.keys(params).forEach((k) => {
