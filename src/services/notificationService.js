@@ -110,3 +110,51 @@ export const notificationService = {
     }
   }
 };
+
+// Additional helper: fetch notifications for a specific agent (no new route required)
+// This re-uses the existing GET /notifications and filters client-side by agent id.
+// Useful when the backend does not provide a dedicated endpoint but you want
+// to fetch notifications relevant to a specific agent.
+notificationService.getNotificationsForAgent = async (agentId) => {
+  try {
+    // Call existing endpoint
+    const response = await api.get('/notifications');
+
+    // Normalize different possible response shapes into an array of notifications
+    const normalizeArray = (resp) => {
+      if (!resp) return [];
+      if (Array.isArray(resp)) return resp;
+      if (Array.isArray(resp.data)) return resp.data;
+      if (Array.isArray(resp.notifications)) return resp.notifications;
+      if (Array.isArray(resp.results)) return resp.results;
+      // Some APIs wrap the payload under data.data or data.notifications
+      if (resp.data && Array.isArray(resp.data.notifications)) return resp.data.notifications;
+      return [];
+    };
+
+    const all = normalizeArray(response.data || response);
+
+    // Filter notifications that target this specific agent
+    const filtered = all.filter((n) => {
+      if (!n) return false;
+      // if notification targets specific users, check if agentId exists in targetUsers
+      if (n.targetType === 'specific' && Array.isArray(n.targetUsers)) {
+        // targetUsers may be array of ObjectIds or strings
+        return n.targetUsers.some((tid) => String(tid) === String(agentId));
+      }
+      return false;
+    });
+
+    return {
+      success: true,
+      data: filtered,
+      message: 'Notifications for agent fetched successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Failed to fetch notifications for agent',
+      error: error.response?.data
+    };
+  }
+};

@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { notificationService } from "@/services/notificationService";
+import { agentService } from "@/services/agentService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +22,8 @@ export default function NotificationsAdminPage() {
 
   // States
   const [notifications, setNotifications] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [viewAgent, setViewAgent] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -42,14 +45,21 @@ export default function NotificationsAdminPage() {
   // Fetch notifications on component mount
   useEffect(() => {
     fetchNotifications();
+    fetchAgents();
   }, []);
 
   // Fetch all notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (agentId = null) => {
     setLoading(true);
     setError("");
 
-    const result = await notificationService.getAllNotifications();
+    let result;
+    if (agentId && agentId !== 'all') {
+      // Use helper which reuses existing /notifications route and filters client-side
+      result = await notificationService.getNotificationsForAgent(agentId);
+    } else {
+      result = await notificationService.getAllNotifications();
+    }
 
     if (result.success) {
       setNotifications(result.data);
@@ -58,6 +68,18 @@ export default function NotificationsAdminPage() {
     }
 
     setLoading(false);
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const res = await agentService.getAllAgents();
+      // agentService returns raw data (response.data), ensure array
+      console.log('Agent Response', res);
+      
+      setAgents(res.agents);
+    } catch (err) {
+      console.error('Failed to fetch agents', err);
+    }
   };
 
   // Handle form input changes
@@ -89,7 +111,8 @@ export default function NotificationsAdminPage() {
         title: notification.title,
         message: notification.message,
         targetType: notification.targetType,
-        targetUsers: notification.targetUsers?.join(", ") || "",
+        // set single selected agent id if exists
+        targetUsers: (notification.targetUsers && notification.targetUsers.length > 0) ? String(notification.targetUsers[0]) : "",
         type: notification.type
       });
     } else {
@@ -108,10 +131,11 @@ export default function NotificationsAdminPage() {
 
     try {
       // Prepare data
+      // Prepare data - ensure targetUsers is an array when specific
       const submitData = {
         ...formData,
         targetUsers: formData.targetType === "specific"
-          ? formData.targetUsers.split(',').map(id => id.trim()).filter(id => id)
+          ? (Array.isArray(formData.targetUsers) ? formData.targetUsers : (formData.targetUsers ? [formData.targetUsers] : []))
           : []
       };
 
@@ -132,7 +156,8 @@ export default function NotificationsAdminPage() {
         setSuccess(result.message);
         resetForm();
         setIsModalOpen(false);
-        fetchNotifications(); // Refresh list
+        // Refresh list - respect current viewAgent filter
+        fetchNotifications(viewAgent === 'all' ? null : viewAgent);
 
         // Auto clear success message
         setTimeout(() => setSuccess(""), 3000);
@@ -157,7 +182,7 @@ export default function NotificationsAdminPage() {
 
     if (result.success) {
       setSuccess("Notification deleted successfully");
-      fetchNotifications(); // Refresh list
+      fetchNotifications(viewAgent === 'all' ? null : viewAgent); // Refresh list
       setTimeout(() => setSuccess(""), 3000);
     } else {
       setError(result.message);
@@ -187,10 +212,37 @@ export default function NotificationsAdminPage() {
             Create and manage system notifications
           </p>
         </div>
-        <Button onClick={() => openModal()} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Notification
-        </Button>
+
+        <div className="flex items-center gap-4">
+          {/* Agent filter for viewing notifications */}
+          <div className="w-56">
+            <Label htmlFor="viewAgent" className="sr-only">Filter by agent</Label>
+            <Select
+              value={viewAgent}
+              onValueChange={(val) => {
+                setViewAgent(val);
+                fetchNotifications(val === 'all' ? null : val);
+              }}
+            >
+              <SelectTrigger id="viewAgent">
+                <SelectValue placeholder="View: All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Notifications</SelectItem>
+                {agents.map((a) => (
+                  <SelectItem key={a._id || a.id} value={a._id || a.id}>
+                    {a.agentName || a.name || a.agentId || a.email || a._id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button onClick={() => openModal()} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Notification
+          </Button>
+        </div>
       </div>
 
       {/* Alerts */}
@@ -424,7 +476,7 @@ export default function NotificationsAdminPage() {
               </Select>
             </div>
 
-            {/* <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="targetType">Target Audience</Label>
               <Select
                 value={formData.targetType}
@@ -435,23 +487,31 @@ export default function NotificationsAdminPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Users</SelectItem>
-                  <SelectItem value="specific">Specific Users</SelectItem>
+                  <SelectItem value="specific">Specific Agent</SelectItem>
                 </SelectContent>
               </Select>
-            </div> */}
+            </div>
 
             {formData.targetType === "specific" && (
               <div className="space-y-2">
-                <Label htmlFor="targetUsers">User IDs</Label>
-                <Input
-                  id="targetUsers"
+                <Label htmlFor="targetUsers">Select Agent</Label>
+                <Select
                   value={formData.targetUsers}
-                  onChange={(e) => handleInputChange("targetUsers", e.target.value)}
-                  placeholder="Enter user IDs separated by commas (e.g., 123, 456, 789)"
-                  required
-                />
+                  onValueChange={(val) => handleInputChange('targetUsers', val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {agents.map((a) => (
+                      <SelectItem key={a._id || a.id} value={a._id || a.id}>
+                        {a.agentName}-({a.agentId})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-sm text-muted-foreground">
-                  Enter specific user IDs separated by commas
+                  Choose which agent should receive this notification
                 </p>
               </div>
             )}
