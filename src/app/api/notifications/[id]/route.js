@@ -2,14 +2,14 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Notification from "@/Models/Notification";
-import { verifyAuth } from "@/lib/auth";
+import { verifyToken } from "@/lib/jwt";
 
 // GET single notification
 export async function GET(req, { params }) {
   await connectDB();
 
   try {
-    const authData = await verifyAuth(req);
+    const authData = await verifyToken(req);
     
     if (authData.error) {
       return NextResponse.json(
@@ -43,7 +43,7 @@ export async function PUT(req, { params }) {
   await connectDB();
 
   try {
-    const authData = await verifyAuth(req);
+    const authData = await verifyToken(req);
     
     if (authData.error) {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function DELETE(req, { params }) {
   await connectDB();
 
   try {
-    const authData = await verifyAuth(req);
+    const authData = await verifyToken(req);
     
     if (authData.error) {
       return NextResponse.json(

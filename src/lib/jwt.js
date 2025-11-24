@@ -34,9 +34,64 @@ export const getUserIdFromToken = (decoded) => {
 };
 
 // Verify token
-export const verifyToken = (token) => {
+// Supports two usages:
+// 1) verifyToken(tokenString) -> returns decoded payload or null (backwards compatible)
+// 2) verifyToken(requestObject) -> extracts token from Authorization header or cookies
+//    and returns an object: { user: decodedPayload } on success OR { error: '...', status: 401 }
+export const verifyToken = (input) => {
+  // If input looks like a Request/NextRequest object (has headers or cookies), handle it
+  const isRequestLike = input && (typeof input === 'object') && (input.headers || input.cookies || (typeof input.get === 'function'));
+
+  if (isRequestLike) {
+    try {
+      // Try to get Authorization header first
+      let token = null;
+
+      // Next.js Request headers are accessible via input.headers.get('authorization')
+      try {
+        const authHeader = input.headers?.get ? input.headers.get('authorization') : (input.headers && input.headers.authorization);
+        if (authHeader) token = authHeader;
+      } catch (e) {}
+
+      // If not found in header, try cookies
+      try {
+        // Next.js route handlers can use request.cookies.get('token') returning { value }
+        if (!token && input.cookies?.get) {
+          token = input.cookies.get('token')?.value || null;
+        }
+        // Older shape: input.cookies.token
+        if (!token && input.cookies && input.cookies.token) {
+          token = input.cookies.token;
+        }
+      } catch (e) {}
+
+      if (!token) {
+        return { error: 'Not authenticated', status: 401 };
+      }
+
+      // If header value is like 'Bearer <token>' extract token
+      if (typeof token === 'string' && token.toLowerCase().startsWith('bearer ')) {
+        token = token.split(' ')[1];
+      }
+
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        // Return decoded payload under `user` for route handlers that expect authData.user
+        return { user: decoded };
+      } catch (err) {
+        if (err && err.name === 'TokenExpiredError') {
+          return { error: 'TokenExpiredError: jwt expired', status: 401 };
+        }
+        return { error: 'Invalid token', status: 401 };
+      }
+    } catch (err) {
+      return { error: 'Authentication error', status: 401 };
+    }
+  }
+
+  // Otherwise assume input is a raw token string for backwards compatibility
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(String(input), JWT_SECRET);
   } catch (error) {
     return null;
   }

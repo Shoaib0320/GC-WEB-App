@@ -46,7 +46,6 @@ export async function GET(req) {
 
       return NextResponse.json(notifications, { status: 200 });
     }
-    
 
     // No agentId — fallback to existing behavior
     if (type === "admin") {
