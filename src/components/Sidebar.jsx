@@ -23,6 +23,7 @@ import { useState, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -43,20 +44,36 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     setOpenMobile(false);
   }, [pathname]);
 
+  const { user, hasPermission } = useAuth();
+
+  // Define nav items and attach permission requirements (module/action)
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: Home },
-    { label: "Users", href: "/dashboard/users", icon: Users },
-    { label: "Contacts MSG", href: "/dashboard/contacts", icon: Phone },
-    { label: "Bookings", href: "/dashboard/bookings", icon: CalendarDays },
-    { label: "Shift Panel", href: "/dashboard/shift-pannel", icon: Clock },
-    { label: "Agents", href: "/dashboard/agents", icon: User },
-    { label: "Promo Code", href: "/dashboard/promo-codes", icon: Code2Icon },
-    { label: "Sales", href: "/dashboard/sales", icon: DollarSign },
-    { label: "Attedance", href: "/dashboard/view-attendance", icon: ClipboardList },
-    { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
-    { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp },
-    { label: "Setting", href: "/dashboard/settings", icon: Settings },
+    { label: "Users", href: "/dashboard/users", icon: Users, permission: { module: "user", action: "view" } },
+    { label: "Contacts MSG", href: "/dashboard/contacts", icon: Phone, permission: { module: "contact", action: "view" } },
+    { label: "Bookings", href: "/dashboard/bookings", icon: CalendarDays, permission: { module: "booking", action: "view" } },
+    { label: "Shift Panel", href: "/dashboard/shift-pannel", icon: Clock, permission: { module: "shift", action: "view" } },
+    { label: "Agents", href: "/dashboard/agents", icon: User, permission: { module: "agent", action: "view" } },
+    { label: "Promo Code", href: "/dashboard/promo-codes", icon: Code2Icon, permission: { module: "promoCode", action: "view" } },
+    { label: "Sales", href: "/dashboard/sales", icon: DollarSign, permission: { module: "reports", action: "finance" } },
+    { label: "Attedance", href: "/dashboard/view-attendance", icon: ClipboardList, permission: { module: "attendance", action: "view" } },
+    { label: "Notifications", href: "/dashboard/notifications", icon: Bell, permission: { module: "notification", action: "view" } },
+    { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp, permission: { module: "analytics", action: "view" } },
+    { label: "Setting", href: "/dashboard/settings", icon: Settings, permission: { module: "settings", action: "view" } },
   ];
+
+  // Filter nav items based on permissions. If auth not loaded yet, show minimal items (dashboard)
+  const allowedNavItems = navItems.filter((item) => {
+    if (!item.permission) return true;
+    // if user not loaded yet, hide permissioned items
+    if (!user) return false;
+    const { module, action = "view" } = item.permission;
+    try {
+      return hasPermission(module, action);
+    } catch (e) {
+      return false;
+    }
+  });
 
   return (
     <TooltipProvider>
@@ -88,7 +105,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
-          {navItems.map((item, index) => {
+          {allowedNavItems.map((item, index) => {
             const isActive = pathname === item.href;
             return (
               <Tooltip key={index}>

@@ -58,30 +58,49 @@ export default function Users() {
 
   // Edit user state
   const [editingUser, setEditingUser] = useState(null);
+  // Edit role state
+  const [editingRole, setEditingRole] = useState(null);
+  // Change user role modal state
+  const [roleChangeOpen, setRoleChangeOpen] = useState(false);
+  const [roleChangeUser, setRoleChangeUser] = useState(null);
+  const [roleChangeValue, setRoleChangeValue] = useState('');
 
   // Role form state
+  const DEFAULT_PERMISSIONS = {
+    user: { view: false, create: false, edit: false, delete: false, export: false, approve: false, change_role: false },
+    category: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    product: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    order: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
+    inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    analytics: { view: false, export: false },
+    settings: { view: false, edit: false, manage_roles: false },
+    hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
+    finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
+    crm: {
+      clients: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+      leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+      tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
+    },
+    website_bookings: { view: false, edit: false, manage_status: false, export: false, delete: false },
+    reports: { sales: false, finance: false, hr: false, performance: false, export_all: false },
+    progress: { view_own: false, view_all: false, export: false },
+    agent: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    shift: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    booking: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
+    promoCode: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    notification: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    attendance: { view: false, create: false, edit: false, delete: false, export: false, manage_leave: false },
+    leaveRequest: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    holiday: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    weeklyOff: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    contact: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    role: { view: false, create: false, edit: false, delete: false, manage_roles: false }
+  };
+
   const [roleForm, setRoleForm] = useState({
     name: '',
     description: '',
-    permissions: {
-      user: { view: false, create: false, edit: false, delete: false, export: false, approve: false, change_role: false },
-      category: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-      product: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-      order: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
-      inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-      analytics: { view: false, export: false },
-      settings: { view: false, edit: false, manage_roles: false },
-      hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
-      finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
-      crm: {
-        clients: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-        leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-        tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
-      },
-      website_bookings: { view: false, edit: false, manage_status: false, export: false, delete: false },
-      reports: { sales: false, finance: false, hr: false, performance: false, export_all: false },
-      progress: { view_own: false, view_all: false, export: false }
-    }
+    permissions: JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS))
   });
 
   // Load users and roles
@@ -241,19 +260,37 @@ export default function Users() {
   // Role form handlers
   const handleRoleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-
     if (name.startsWith('permissions.')) {
-      const [, module, action] = name.split('.');
-      setRoleForm(prev => ({
-        ...prev,
-        permissions: {
-          ...prev.permissions,
-          [module]: {
-            ...prev.permissions[module],
-            [action]: type === 'checkbox' ? checked : value
+      const parts = name.split('.');
+      // supports: permissions.module.action  OR permissions.module.action.subaction
+      if (parts.length === 3) {
+        const [, module, action] = parts;
+        setRoleForm(prev => ({
+          ...prev,
+          permissions: {
+            ...prev.permissions,
+            [module]: {
+              ...prev.permissions[module],
+              [action]: type === 'checkbox' ? checked : value
+            }
           }
-        }
-      }));
+        }));
+      } else if (parts.length === 4) {
+        const [, module, action, sub] = parts;
+        setRoleForm(prev => ({
+          ...prev,
+          permissions: {
+            ...prev.permissions,
+            [module]: {
+              ...prev.permissions[module],
+              [action]: {
+                ...(prev.permissions[module]?.[action] || {}),
+                [sub]: type === 'checkbox' ? checked : value
+              }
+            }
+          }
+        }));
+      }
     } else {
       setRoleForm(prev => ({ ...prev, [name]: value }));
     }
@@ -261,91 +298,166 @@ export default function Users() {
 
   // Select all permissions for a module
   const handleSelectAll = (module) => {
-    setRoleForm(prev => ({
-      ...prev,
-      permissions: {
-        ...prev.permissions,
-        [module]: Object.keys(prev.permissions[module]).reduce((acc, action) => {
-          acc[action] = true;
-          return acc;
-        }, {})
+    setRoleForm(prev => {
+      const moduleObj = prev.permissions?.[module] || {};
+      let keys = Object.keys(moduleObj);
+      if (keys.length === 0) {
+        const modDef = permissionModules.find(m => m.name === module);
+        if (modDef && Array.isArray(modDef.permissions)) keys = modDef.permissions;
       }
-    }));
+
+      const newModule = keys.reduce((acc, action) => {
+        const current = prev.permissions?.[module]?.[action];
+        if (current && typeof current === 'object') {
+          // set all nested sub-permissions to true
+          acc[action] = Object.keys(current).reduce((s, k) => { s[k] = true; return s; }, {});
+        } else {
+          acc[action] = true;
+        }
+        return acc;
+      }, {});
+
+      return {
+        ...prev,
+        permissions: {
+          ...prev.permissions,
+          [module]: newModule
+        }
+      };
+    });
   };
 
   // Deselect all permissions for a module
   const handleDeselectAll = (module) => {
-    setRoleForm(prev => ({
-      ...prev,
-      permissions: {
-        ...prev.permissions,
-        [module]: Object.keys(prev.permissions[module]).reduce((acc, action) => {
-          acc[action] = false;
-          return acc;
-        }, {})
+    setRoleForm(prev => {
+      const moduleObj = prev.permissions?.[module] || {};
+      let keys = Object.keys(moduleObj);
+      if (keys.length === 0) {
+        const modDef = permissionModules.find(m => m.name === module);
+        if (modDef && Array.isArray(modDef.permissions)) keys = modDef.permissions;
       }
-    }));
+
+      const newModule = keys.reduce((acc, action) => {
+        const current = prev.permissions?.[module]?.[action];
+        if (current && typeof current === 'object') {
+          acc[action] = Object.keys(current).reduce((s, k) => { s[k] = false; return s; }, {});
+        } else {
+          acc[action] = false;
+        }
+        return acc;
+      }, {});
+
+      return {
+        ...prev,
+        permissions: {
+          ...prev.permissions,
+          [module]: newModule
+        }
+      };
+    });
   };
 
   const handleRoleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const response = await fetch('/api/roles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(roleForm),
-      });
+      let res;
+      // normalize permissions to match DEFAULT_PERMISSIONS shape
+      const normalizePermissions = (input) => {
+        const out = {};
+        for (const modKey of Object.keys(DEFAULT_PERMISSIONS)) {
+          const defaultMod = DEFAULT_PERMISSIONS[modKey];
+          const currentMod = input?.[modKey];
+          if (typeof defaultMod === 'object' && !Array.isArray(defaultMod)) {
+            out[modKey] = {};
+            for (const actionKey of Object.keys(defaultMod)) {
+              const defaultAction = defaultMod[actionKey];
+              const currentAction = currentMod?.[actionKey];
+              if (typeof defaultAction === 'object' && !Array.isArray(defaultAction)) {
+                out[modKey][actionKey] = {};
+                for (const subKey of Object.keys(defaultAction)) {
+                  out[modKey][actionKey][subKey] = !!(currentAction && currentAction[subKey]);
+                }
+              } else {
+                out[modKey][actionKey] = !!currentAction;
+              }
+            }
+          } else {
+            out[modKey] = !!currentMod;
+          }
+        }
+        return out;
+      };
 
-      const data = await response.json();
+      const payload = { ...roleForm, permissions: normalizePermissions(roleForm.permissions) };
+
+      if (editingRole) {
+        res = await fetch(`/api/roles/${editingRole._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch('/api/roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      const data = await res.json();
 
       if (data.success) {
-        showMessage('success', 'Role created successfully');
+        showMessage('success', editingRole ? 'Role updated successfully' : 'Role created successfully');
         resetRoleForm();
         setRoleDialogOpen(false);
+        setEditingRole(null);
         loadRoles();
       } else {
-        showMessage('error', data.error || 'Failed to create role');
+        showMessage('error', data.error || 'Failed to save role');
       }
     } catch (error) {
-      showMessage('error', 'Failed to create role');
+      showMessage('error', 'Failed to save role');
     } finally {
       setLoading(false);
     }
   };
 
   const resetRoleForm = () => {
-    setRoleForm({
-      name: '',
-      description: '',
-      permissions: {
-        user: { view: false, create: false, edit: false, delete: false, export: false, approve: false, change_role: false },
-        category: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-        product: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-        order: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
-        inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-        analytics: { view: false, export: false },
-        settings: { view: false, edit: false, manage_roles: false },
-        hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
-        finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
-        crm: {
-          clients: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-          leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-          tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
-        },
-        website_bookings: { view: false, edit: false, manage_status: false, export: false, delete: false },
-        reports: { sales: false, finance: false, hr: false, performance: false, export_all: false },
-        progress: { view_own: false, view_all: false, export: false }
-      }
-    });
+    setRoleForm({ name: '', description: '', permissions: JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS)) });
   };
 
   const openRoleDialog = () => {
     resetRoleForm();
     setRoleDialogOpen(true);
+  };
+
+  const handleEditRole = (role) => {
+    setEditingRole(role);
+    // populate roleForm from role
+    setRoleForm(prev => ({
+      ...prev,
+      name: role.name || '',
+      description: role.description || '',
+      permissions: role.permissions || prev.permissions
+    }));
+    setRoleDialogOpen(true);
+  };
+
+  const handleDeleteRole = async (roleId) => {
+    if (!window.confirm('Delete this role? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/roles/${roleId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showMessage('success', 'Role deleted');
+        loadRoles();
+      } else {
+        showMessage('error', data.error || 'Failed to delete role');
+      }
+    } catch (err) {
+      showMessage('error', 'Failed to delete role');
+    }
   };
 
   const closeRoleDialog = () => {
@@ -477,6 +589,73 @@ export default function Users() {
       description: 'Track agent and employee progress',
       permissions: ['view_own', 'view_all', 'export']
     }
+    ,
+    {
+      name: 'agent',
+      title: 'Agent Management',
+      description: 'Manage agents and their profiles',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'shift',
+      title: 'Shift Management',
+      description: 'Manage shifts and schedules',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'booking',
+      title: 'Booking Management',
+      description: 'Manage bookings and update status',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'update_status']
+    },
+    {
+      name: 'promoCode',
+      title: 'Promo Codes',
+      description: 'Manage promo codes and discounts',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'notification',
+      title: 'Notifications',
+      description: 'Send and manage notifications',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'attendance',
+      title: 'Attendance',
+      description: 'Manage attendance, leaves and exports',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'manage_leave']
+    },
+    {
+      name: 'leaveRequest',
+      title: 'Leave Requests',
+      description: 'Approve or reject leave requests',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'holiday',
+      title: 'Holidays',
+      description: 'Manage system holidays',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'weeklyOff',
+      title: 'Weekly Offs',
+      description: 'Manage weekly off days',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'contact',
+      title: 'Contacts / Messages',
+      description: 'Manage contact messages',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'role',
+      title: 'Role Management',
+      description: 'Manage roles and permissions',
+      permissions: ['view', 'create', 'edit', 'delete', 'manage_roles']
+    }
   ];
 
   // Columns for GlobalData / DataTable
@@ -522,6 +701,11 @@ export default function Users() {
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </button>
           )}
+          {hasPermission('user', 'edit') && (
+            <button onClick={() => { setRoleChangeUser(u); setRoleChangeValue(u.role?._id || ''); setRoleChangeOpen(true); }} className="inline-flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors border border-indigo-200">
+              <Shield className="h-4 w-4 mr-1" /> Change Role
+            </button>
+          )}
         </div>
       ),
     },
@@ -535,6 +719,20 @@ export default function Users() {
         {r.isActive ? 'Active' : 'Inactive'}
       </span>
     ) },
+    {
+      label: 'Actions',
+      align: 'right',
+      render: (r) => (
+        <div className="flex items-center justify-end gap-2">
+          <button onClick={() => handleEditRole(r)} className="inline-flex items-center px-3 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg text-sm font-medium transition-colors border border-yellow-200">
+            <Edit className="h-4 w-4 mr-1" /> Edit
+          </button>
+          <button onClick={() => handleDeleteRole(r._id)} className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200">
+            <Trash2 className="h-4 w-4 mr-1" /> Delete
+          </button>
+        </div>
+      )
+    }
   ];
 
   return (
@@ -858,16 +1056,79 @@ export default function Users() {
         </DialogContent>
       </Dialog>
 
+      {/* Change User Role Dialog */}
+      <Dialog open={roleChangeOpen} onOpenChange={setRoleChangeOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+            <DialogDescription>Assign a different role to this user</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Select Role</Label>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => loadRoles()} className="px-2 py-1">Refresh</Button>
+                  <Button size="sm" className="px-2 py-1" onClick={() => { setRoleDialogOpen(true); setEditingRole(null); setRoleChangeOpen(false); }}>
+                    Create Role
+                  </Button>
+                </div>
+              </div>
+              <Select value={roleChangeValue} onValueChange={(v) => setRoleChangeValue(v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Available Roles</SelectLabel>
+                    {roles.map((r) => (
+                      <SelectItem key={r._id} value={r._id} disabled={!r.isActive}>
+                        {r.name.replace(/_/g, ' ')}{!r.isActive ? ' (Inactive)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRoleChangeOpen(false)}>Cancel</Button>
+              <Button onClick={async () => {
+                if (!roleChangeUser) return;
+                try {
+                  const res = await fetch(`/api/users/${roleChangeUser._id}/role`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roleId: roleChangeValue })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    showMessage('success', 'Role updated');
+                    setRoleChangeOpen(false);
+                    loadUsers();
+                  } else {
+                    showMessage('error', data.error || 'Failed to update role');
+                  }
+                } catch (err) {
+                  showMessage('error', 'Failed to update role');
+                }
+              }}>Save</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Shield className="h-5 w-5" />
-              Create New Role
+              {editingRole ? 'Edit Role' : 'Create New Role'}
             </DialogTitle>
             <DialogDescription>
-              Define a new role with specific permissions and access levels
+              {editingRole ? 'Update role permissions and settings' : 'Define a new role with specific permissions and access levels'}
             </DialogDescription>
           </DialogHeader>
           
@@ -974,23 +1235,48 @@ export default function Users() {
                     </CardHeader>
                     <CardContent className="pt-3">
                       <div className="grid grid-cols-1 gap-2">
-                        {module.permissions.map((action) => (
-                          <label
-                            key={action}
-                            className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              name={`permissions.${module.name}.${action}`}
-                              checked={roleForm.permissions[module.name][action]}
-                              onChange={handleRoleFormChange}
-                              className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus:ring-2"
-                            />
-                            <span className="text-sm font-medium capitalize text-gray-700">
-                              {action.replace(/_/g, ' ')}
-                            </span>
-                          </label>
-                        ))}
+                        {module.permissions.map((action) => {
+                          const permValue = roleForm.permissions[module.name]?.[action];
+                          // If permValue is an object, render its sub-actions
+                          if (permValue && typeof permValue === 'object') {
+                            return (
+                              <div key={action} className="p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div className="text-sm font-medium text-gray-800 mb-2 capitalize">{action.replace(/_/g, ' ')}</div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {Object.keys(permValue).map((sub) => (
+                                    <label key={sub} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                                      <input
+                                        type="checkbox"
+                                        name={`permissions.${module.name}.${action}.${sub}`}
+                                        checked={!!roleForm.permissions[module.name]?.[action]?.[sub]}
+                                        onChange={handleRoleFormChange}
+                                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus:ring-2"
+                                      />
+                                      <span className="text-sm font-medium capitalize text-gray-700">{sub.replace(/_/g, ' ')}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // fallback: render simple checkbox
+                          return (
+                            <label
+                              key={action}
+                              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                name={`permissions.${module.name}.${action}`}
+                                checked={!!roleForm.permissions[module.name]?.[action]}
+                                onChange={handleRoleFormChange}
+                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus:ring-2"
+                              />
+                              <span className="text-sm font-medium capitalize text-gray-700">{action.replace(/_/g, ' ')}</span>
+                            </label>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
@@ -998,7 +1284,7 @@ export default function Users() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t">
+              <div className="flex justify-end gap-3 pt-6 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -1015,12 +1301,12 @@ export default function Users() {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creating Role...
+                    {editingRole ? 'Updating Role...' : 'Creating Role...'}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4" />
-                    Create Role
+                    {editingRole ? 'Update Role' : 'Create Role'}
                   </div>
                 )}
               </Button>

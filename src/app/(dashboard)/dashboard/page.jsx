@@ -9,10 +9,11 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Users, CalendarDays, BarChart3, DollarSign, LayoutDashboard } from "lucide-react";
+import { Users, CalendarDays, BarChart3, DollarSign, LayoutDashboard, Bell, CheckSquare, UserCheck, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/common/PageHeader";
+import { format } from "date-fns";
 
 export default function DashboardPage() {
   // animation variant
@@ -32,6 +33,9 @@ export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [recent, setRecent] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(true);
+  const [recentError, setRecentError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -48,6 +52,36 @@ export default function DashboardPage() {
         setError(err.message || "Failed to load dashboard");
         setLoading(false);
       });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Fetch recent bookings for Recent Activity
+  useEffect(() => {
+    let mounted = true;
+    async function loadRecent() {
+      setRecentLoading(true);
+      try {
+        const res = await fetch('/api/booking?status=&limit=6', { cache: 'no-store' });
+        const json = await res.json();
+        if (!mounted) return;
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Failed to load bookings');
+        }
+        const items = Array.isArray(json.data) ? json.data.slice(0, 6) : [];
+        setRecent(items);
+      } catch (e) {
+        console.error('Failed to load recent bookings', e);
+        if (!mounted) return;
+        setRecentError(e.message || 'Error');
+        setRecent([]);
+      } finally {
+        if (mounted) setRecentLoading(false);
+      }
+    }
+
+    loadRecent();
     return () => {
       mounted = false;
     };
@@ -220,6 +254,39 @@ export default function DashboardPage() {
 
       <Separator />
 
+      {/* More metrics (small cards) */}
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} className="space-y-4">
+        <h3 className="text-lg font-semibold">More metrics</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {loading ? (
+            [0,1,2,3,4,5].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="rounded-md border bg-gray-50 p-3 h-20" />
+              </div>
+            ))
+          ) : (
+            [
+              { title: 'Confirmed Bookings', value: stats?.confirmedBookings, icon: CheckSquare, color: 'text-green-600' },
+              { title: 'Active Users', value: stats?.activeUsers, icon: UserCheck, color: 'text-blue-600' },
+              { title: 'Total Agents', value: stats?.totalAgents, icon: Users, color: 'text-indigo-600' },
+              { title: 'Pending Leaves', value: stats?.pendingLeaves, icon: Layers, color: 'text-yellow-600' },
+              { title: 'Notifications', value: stats?.totalNotifications, icon: Bell, color: 'text-rose-600' },
+              { title: 'Roles', value: stats?.totalRoles, icon: CheckSquare, color: 'text-purple-600' },
+            ].map((m, idx) => (
+              <div key={idx} className="rounded-md border bg-white p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">{m.title}</div>
+                    <div className="text-lg font-semibold">{m.value !== undefined && m.value !== null ? String(m.value) : '-'}</div>
+                  </div>
+                  <m.icon className={`h-6 w-6 ${m.color}`} />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
+
       {/* Recent Activity */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -229,7 +296,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Desktop table */}
+        {/* Desktop table (live bookings) */}
         <div className="hidden sm:block overflow-x-auto rounded-xl border">
           <table className="min-w-full bg-white text-sm">
             <thead className="bg-gray-50 text-gray-600">
@@ -241,78 +308,78 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {[
-                {
-                  user: "Ali",
-                  action: "Booked Appointment",
-                  date: "Oct 8, 2025",
-                  status: "Completed",
-                },
-                {
-                  user: "Sarah Smith",
-                  action: "Created Account",
-                  date: "Oct 7, 2025",
-                  status: "New",
-                },
-                {
-                  user: "Mike Johnson",
-                  action: "Updated Profile",
-                  date: "Oct 6, 2025",
-                  status: "Pending",
-                },
-              ].map((item, index) => (
-                <motion.tr key={index} custom={index} initial="hidden" animate="visible" variants={fadeUp} className="border-t hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-medium">{item.user}</td>
-                  <td className="px-4 py-3 text-gray-700">{item.action}</td>
-                  <td className="px-4 py-3 text-gray-500">{item.date}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${item.status === "Completed" ? "bg-green-100 text-green-700" : item.status === "Pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                </motion.tr>
-              ))}
+              {recentLoading ? (
+                [0,1,2,3,4,5].map((i) => (
+                  <tr key={i} className="border-t">
+                    <td className="px-4 py-4"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse"/></td>
+                    <td className="px-4 py-4"><div className="h-4 w-40 bg-gray-200 rounded animate-pulse"/></td>
+                    <td className="px-4 py-4"><div className="h-4 w-28 bg-gray-200 rounded animate-pulse"/></td>
+                    <td className="px-4 py-4"><div className="h-4 w-16 bg-gray-200 rounded animate-pulse"/></td>
+                  </tr>
+                ))
+              ) : recentError ? (
+                <tr><td colSpan={4} className="px-4 py-4 text-red-600">{recentError}</td></tr>
+              ) : recent.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-4 text-gray-600">No recent activity</td></tr>
+              ) : (
+                recent.map((item, index) => {
+                  const user = item.formData?.firstName ? `${item.formData.firstName} ${item.formData.lastName || ''}`.trim() : item.formData?.email || 'Unknown';
+                  const action = item.bookingType ? `Booking (${item.bookingType})` : 'Booking';
+                  const dateStr = item.submittedAt ? format(new Date(item.submittedAt), 'PPP p') : item.formData?.date ? format(new Date(item.formData.date), 'PPP') : '-';
+                  return (
+                    <motion.tr key={index} custom={index} initial="hidden" animate="visible" variants={fadeUp} className="border-t hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 font-medium">{user}</td>
+                      <td className="px-4 py-3 text-gray-700">{action}</td>
+                      <td className="px-4 py-3 text-gray-500">{dateStr}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 text-xs rounded-full ${item.status === "confirmed" ? "bg-green-100 text-green-700" : item.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                          {item.status || 'N/A'}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Mobile list */}
+        {/* Mobile list (live bookings) */}
         <div className="sm:hidden space-y-3">
-          {[
-            {
-              user: "Ali",
-              action: "Booked Appointment",
-              date: "Oct 8, 2025",
-              status: "Completed",
-            },
-            {
-              user: "Sarah Smith",
-              action: "Created Account",
-              date: "Oct 7, 2025",
-              status: "New",
-            },
-            {
-              user: "Mike Johnson",
-              action: "Updated Profile",
-              date: "Oct 6, 2025",
-              status: "Pending",
-            },
-          ].map((item, idx) => (
-            <motion.div key={idx} custom={idx} initial="hidden" animate="visible" variants={fadeUp} className="border rounded-lg p-3 bg-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-medium">{item.user}</div>
-                  <div className="text-sm text-gray-600">{item.action}</div>
-                  <div className="text-xs text-gray-400 mt-1">{item.date}</div>
-                </div>
-                <div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${item.status === "Completed" ? "bg-green-100 text-green-700" : item.status === "Pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
-                    {item.status}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+          {recentLoading ? (
+            [0,1,2].map((i) => (
+              <motion.div key={i} custom={i} initial="hidden" animate="visible" variants={fadeUp} className="border rounded-lg p-3 bg-white">
+                <div className="h-4 w-32 bg-gray-200 rounded mb-2 animate-pulse" />
+                <div className="h-3 w-48 bg-gray-100 rounded animate-pulse" />
+              </motion.div>
+            ))
+          ) : recentError ? (
+            <div className="text-red-600">{recentError}</div>
+          ) : recent.length === 0 ? (
+            <div className="text-gray-600">No recent activity</div>
+          ) : (
+            recent.map((item, idx) => {
+              const user = item.formData?.firstName ? `${item.formData.firstName} ${item.formData.lastName || ''}`.trim() : item.formData?.email || 'Unknown';
+              const action = item.bookingType ? `Booking (${item.bookingType})` : 'Booking';
+              const dateStr = item.submittedAt ? format(new Date(item.submittedAt), 'PPP p') : item.formData?.date ? format(new Date(item.formData.date), 'PPP') : '-';
+              return (
+                <motion.div key={idx} custom={idx} initial="hidden" animate="visible" variants={fadeUp} className="border rounded-lg p-3 bg-white">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-medium">{user}</div>
+                      <div className="text-sm text-gray-600">{action}</div>
+                      <div className="text-xs text-gray-400 mt-1">{dateStr}</div>
+                    </div>
+                    <div>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.status === "confirmed" ? "bg-green-100 text-green-700" : item.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                        {item.status || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
         </div>
       </motion.div>
     </div>

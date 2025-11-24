@@ -58,7 +58,15 @@ export default function UsersPage() {
   const columns = [
     { label: "Name", key: "name" },
     { label: "Email", key: "email" },
-    { label: "Role", key: "role" },
+    { label: "Role", render: (u) => (
+      <div>
+        {u.role && typeof u.role === 'object' ? (
+          <span className="font-medium">{u.role.name || u.role.roleName || '—'}</span>
+        ) : (
+          <span>{u.role || '—'}</span>
+        )}
+      </div>
+    ) },
     {
       label: "Status",
       key: "status",

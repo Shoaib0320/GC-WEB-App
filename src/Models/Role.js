@@ -118,6 +118,56 @@ const roleSchema = new mongoose.Schema({
       view_all: { type: Boolean, default: false },
       export: { type: Boolean, default: false }
     }
+    ,
+
+    // 👮 Agent Management
+    agent: permissionGroupSchema,
+
+    // 📅 Shift Management
+    shift: permissionGroupSchema,
+
+    // 🎫 Booking Management (general bookings + update status)
+    booking: {
+      ...permissionGroupSchema.obj,
+      update_status: { type: Boolean, default: false }
+    },
+
+    // 🔖 Promo Codes
+    promoCode: permissionGroupSchema,
+
+    // 🔔 Notifications
+    notification: permissionGroupSchema,
+
+    // 🧾 Attendance & related features
+    attendance: {
+      ...permissionGroupSchema.obj,
+      manage_leave: { type: Boolean, default: false },
+      export: { type: Boolean, default: false }
+    },
+
+    // 📝 Leave Requests (approval flow)
+    leaveRequest: {
+      ...permissionGroupSchema.obj,
+      approve: { type: Boolean, default: false }
+    },
+
+    // 🎉 Holidays
+    holiday: permissionGroupSchema,
+
+    // 🛌 Weekly Offs
+    weeklyOff: permissionGroupSchema,
+
+    // 📞 Contacts / Messages
+    contact: permissionGroupSchema,
+
+    // 🔑 Role Management (manage roles module)
+    role: {
+      view: { type: Boolean, default: false },
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false },
+      manage_roles: { type: Boolean, default: false }
+    }
   },
 
   // 🌟 General Info
