@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "../../../../lib/mongodb";
+import connectDB from "@/lib/mongodb";
 import User from "@/Models/User";
 import Role from "@/Models/Role";
 import { verifyToken } from "@/lib/jwt";
