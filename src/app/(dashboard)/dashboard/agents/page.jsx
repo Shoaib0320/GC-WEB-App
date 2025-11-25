@@ -1,4 +1,3 @@
-
 // src/app/agents/page.js
 "use client";
 import React, { useState, useEffect } from 'react';
@@ -7,7 +6,6 @@ import { agentService } from '@/services/agentService';
 import { shiftService } from '@/services/shiftService';
 import { toast } from 'sonner';
 
-// Shadcn UI Components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,7 +45,6 @@ export default function AgentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Form state
   const [formData, setFormData] = useState({
     agentName: '',
     agentId: '',
@@ -67,11 +64,9 @@ export default function AgentsPage() {
     isActive: true
   });
 
-  // Available shifts (backend se fetch hongi)
   const [shifts, setShifts] = useState([]);
   const [shiftsLoading, setShiftsLoading] = useState(false);
 
-  // Fetch shifts from backend
   const fetchShifts = async () => {
     setShiftsLoading(true);
     try {
@@ -85,11 +80,7 @@ export default function AgentsPage() {
     }
   };
 
-  // Fetch agents - replaced by GlobalData server-side fetcher.
-  // We keep a lightweight fetchAgents that simply triggers a reload
-  // so existing handlers that call fetchAgents() still work.
   const fetchAgents = async (page = 1, search = '') => {
-    // bump reload key to force GlobalData to re-fetch
     setReloadKey((k) => k + 1);
   };
 
@@ -100,13 +91,11 @@ export default function AgentsPage() {
     fetchShifts();
   }, []);
 
-  // Handle search
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     fetchAgents(1, e.target.value);
   };
 
-  // Handle form input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -115,7 +104,6 @@ export default function AgentsPage() {
     });
   };
 
-  // Handle edit form input change
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
     setEditFormData({
@@ -124,7 +112,6 @@ export default function AgentsPage() {
     });
   };
 
-  // Handle select change
   const handleSelectChange = (name, value) => {
     setFormData({
       ...formData,
@@ -132,7 +119,6 @@ export default function AgentsPage() {
     });
   };
 
-  // Handle edit select change
   const handleEditSelectChange = (name, value) => {
     setEditFormData({
       ...editFormData,
@@ -140,7 +126,6 @@ export default function AgentsPage() {
     });
   };
 
-  // Generate random password
   const generatePassword = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
     let password = '';
@@ -150,16 +135,12 @@ export default function AgentsPage() {
     setFormData({ ...formData, password });
   };
 
-  // Create new agent
   const handleCreateAgent = async (e) => {
     e.preventDefault();
-    
-    // Validation
     if (!formData.shift) {
       toast.warning('Please select a shift');
       return;
     }
-
     setLoading(true);
     try {
       await agentService.createAgent({
@@ -185,16 +166,12 @@ export default function AgentsPage() {
     }
   };
 
-  // Edit agent
   const handleEditAgent = async (e) => {
     e.preventDefault();
-    
-    // Validation
     if (!editFormData.shift) {
       toast.warning('Please select a shift');
       return;
     }
-
     setLoading(true);
     try {
       await agentService.updateAgent(editFormData._id, {
@@ -240,26 +217,23 @@ export default function AgentsPage() {
     setShowEditForm(true);
   };
 
-  // Delete agent
   const handleDeleteAgent = async (agentId) => {
     if (!confirm('Are you sure you want to delete this agent?')) return;
-
     try {
       await agentService.deleteAgent(agentId);
       toast.success('Agent deleted successfully');
-      fetchAgents(); // Refresh list
+      fetchAgents();
     } catch (error) {
       console.error('Error deleting agent:', error);
       toast.error('Error deleting agent');
     }
   };
 
-  // Toggle agent status
   const handleToggleStatus = async (agentId, currentStatus) => {
     try {
       await agentService.updateAgentStatus(agentId, !currentStatus);
       toast.success(`Agent ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      fetchAgents(); // Refresh list
+      fetchAgents();
     } catch (error) {
       console.error('Error updating agent status:', error);
       toast.error('Error updating status');
@@ -268,8 +242,9 @@ export default function AgentsPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white shadow rounded-md p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Agent Management</h1>
           <p className="text-gray-600 mt-1">Manage all agents and their shifts</p>
@@ -283,143 +258,102 @@ export default function AgentsPage() {
             </DialogTrigger>
           )}
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Agent</DialogTitle>
-              <DialogDescription>
-                Add a new agent to the system. A welcome email will be sent with login credentials.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleCreateAgent} className="space-y-4">
-              {/* Agent Name */}
-              <div className="space-y-2">
-                <Label htmlFor="agentName">Agent Name</Label>
-                <Input
-                  id="agentName"
-                  name="agentName"
-                  value={formData.agentName}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter agent full name"
-                />
-              </div>
-
-              {/* Agent ID */}
-              <div className="space-y-2">
-                <Label htmlFor="agentId">Agent ID</Label>
-                <Input
-                  id="agentId"
-                  name="agentId"
-                  value={formData.agentId}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter unique agent ID"
-                />
-              </div>
-
-              {/* Shift Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="shift">Shift</Label>
-                <Select 
-                  value={formData.shift} 
-                  onValueChange={(value) => handleSelectChange('shift', value)}
-                  disabled={shiftsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a shift" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shiftsLoading ? (
-                      <SelectItem value="loading" disabled>Loading shifts...</SelectItem>
-                    ) : shifts.length === 0 ? (
-                      <SelectItem value="none" disabled>No shifts available</SelectItem>
-                    ) : (
-                      shifts.map(shift => (
-                        <SelectItem key={shift._id} value={shift._id}>
-                          {shift.name} ({shift.startTime} - {shift.endTime})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {shifts.length === 0 && !shiftsLoading && (
-                  <p className="text-red-500 text-sm">
-                    No shifts available. Please create shifts first.
-                  </p>
-                )}
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter agent email address"
-                />
-              </div>
-
-              {/* Monthly Target */}
-              <div className="space-y-2">
-                <Label htmlFor="monthlyTarget">Monthly Target</Label>
-                <Input
-                  id="monthlyTarget"
-                  name="monthlyTarget"
-                  type="text"
-                  value={formData.monthlyTarget}
-                  onChange={handleInputChange}
-                  placeholder="Enter monthly target (numbers only)"
-                />
-                <p className="text-xs text-gray-500">
-                  Monthly target in numbers (e.g., 1000)
-                </p>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="flex gap-2">
+            <div className="bg-white p-6 rounded-lg shadow">
+              <DialogHeader>
+                <DialogTitle>Create New Agent</DialogTitle>
+                <DialogDescription>
+                  Add a new agent to the system. A welcome email will be sent.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateAgent} className="space-y-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2 space-y-2">
+                  <Label htmlFor="agentName">Agent Name</Label>
                   <Input
-                    id="password"
-                    name="password"
-                    type="text"
-                    value={formData.password}
+                    id="agentName"
+                    name="agentName"
+                    value={formData.agentName}
                     onChange={handleInputChange}
                     required
-                    placeholder="Generate or enter password"
+                    placeholder="Enter agent full name"
                   />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={generatePassword}
-                  >
-                    Generate
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agentId">Agent ID</Label>
+                  <Input
+                    id="agentId"
+                    name="agentId"
+                    value={formData.agentId}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter unique agent ID"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shift">Shift</Label>
+                  <Select value={formData.shift} onValueChange={(v) => handleSelectChange('shift', v)} disabled={shiftsLoading}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shiftsLoading ? (
+                        <SelectItem value="loading" disabled>Loading shifts...</SelectItem>
+                      ) : shifts.length === 0 ? (
+                        <SelectItem value="none" disabled>No shifts available</SelectItem>
+                      ) : (
+                        shifts.map(shift => (
+                          <SelectItem key={shift._id} value={shift._id}>{shift.name} ({shift.startTime}-{shift.endTime})</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter agent email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyTarget">Monthly Target</Label>
+                  <Input
+                    id="monthlyTarget"
+                    name="monthlyTarget"
+                    type="text"
+                    value={formData.monthlyTarget}
+                    onChange={handleInputChange}
+                    placeholder="Enter monthly target"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="password"
+                      name="password"
+                      type="text"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Button type="button" variant="outline" onClick={generatePassword}>Generate</Button>
+                  </div>
+                </div>
+                <div className="col-span-1 sm:col-span-2 flex gap-3 pt-4">
+                  <Button type="submit" disabled={loading || shifts.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                    {loading ? 'Creating...' : 'Create Agent'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)} className="flex-1">
+                    Cancel
                   </Button>
                 </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={loading || shifts.length === 0}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {loading ? 'Creating...' : 'Create Agent'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCreateForm(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
+              </form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -576,12 +510,10 @@ export default function AgentsPage() {
       </Dialog>
 
       {/* Agents List */}
-      <Card>
+      <Card className="overflow-x-auto">
         <CardHeader>
           <CardTitle>Agents</CardTitle>
-          <CardDescription>
-            View and manage all registered agents in the system
-          </CardDescription>
+          <CardDescription>View and manage all registered agents</CardDescription>
         </CardHeader>
         <CardContent>
           <GlobalData
@@ -609,32 +541,26 @@ export default function AgentsPage() {
               {
                 label: 'Shift',
                 key: 'shift',
-                render: (agent) => (
-                  agent.shift ? (
-                    <div className="space-y-1">
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">{agent.shift.name}</Badge>
-                      <div className="text-xs text-gray-500">{agent.shift.startTime} - {agent.shift.endTime}</div>
-                    </div>
-                  ) : (
-                    <Badge variant="outline" className="bg-gray-100 text-gray-800">No Shift</Badge>
-                  )
+                render: (agent) => agent.shift ? (
+                  <Badge className="bg-blue-100 text-blue-800">{agent.shift.name}</Badge>
+                ) : (
+                  <Badge className="bg-gray-100 text-gray-800">No Shift</Badge>
                 )
               },
               {
                 label: 'Monthly Target',
                 key: 'monthlyTarget',
                 render: (agent) => (
-                  <div className="space-y-1">
-                    <div className="font-semibold text-gray-800">{agent.monthlyTarget ? `${agent.monthlyTarget.toLocaleString()}` : '—'}</div>
-                    <div className="text-xs text-gray-500">Target / Month</div>
-                  </div>
+                  <div>{agent.monthlyTarget ? agent.monthlyTarget.toLocaleString() : '—'}</div>
                 )
               },
               {
                 label: 'Status',
                 key: 'status',
                 render: (agent) => (
-                  <Badge variant={agent.isActive ? 'default' : 'secondary'} className={agent.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>{agent.isActive ? 'Active' : 'Inactive'}</Badge>
+                  <Badge className={agent.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                    {agent.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
                 )
               },
               {
@@ -674,4 +600,3 @@ export default function AgentsPage() {
     </div>
   );
 }
-

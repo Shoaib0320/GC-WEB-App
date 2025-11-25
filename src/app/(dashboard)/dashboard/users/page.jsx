@@ -59,6 +59,7 @@ export default function Users() {
 
   // Edit user state
   const [editingUser, setEditingUser] = useState(null);
+  const [viewOnly, setViewOnly] = useState(false);
   // Edit role state
   const [editingRole, setEditingRole] = useState(null);
   // Change user role modal state
@@ -126,8 +127,7 @@ export default function Users() {
 
   const loadRoles = async () => {
     try {
-      const response = await fetch('/api/roles');
-      const data = await response.json();
+      const data = await roleService.getAll();
       if (data.success) {
         setRoles(data.data || []);
       }
@@ -160,15 +160,7 @@ export default function Users() {
         return;
       }
 
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userForm),
-      });
-
-      const data = await response.json();
+      const data = await userService.create(userForm);
 
       console.log('User Data', data);
 
@@ -192,8 +184,9 @@ export default function Users() {
   };
 
   // Edit user handlers
-  const handleEditUser = (user) => {
+  const handleEditUser = (user, mode = 'edit') => {
     setEditingUser(user);
+    setViewOnly(mode === 'view');
     setUserForm({
       firstName: user.firstName,
       lastName: user.lastName,
@@ -213,15 +206,7 @@ export default function Users() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/users/${editingUser._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userForm),
-      });
-
-      const data = await response.json();
+      const data = await userService.update(editingUser._id, userForm);
 
       if (data.success) {
         toast.success('User updated successfully');
@@ -401,20 +386,12 @@ export default function Users() {
       const payload = { ...roleForm, permissions: normalizePermissions(roleForm.permissions) };
 
       if (editingRole) {
-        res = await fetch(`/api/roles/${editingRole._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        // update via roleService
+        var data = await roleService.update(editingRole._id, payload);
       } else {
-        res = await fetch('/api/roles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        // create via roleService
+        var data = await roleService.create(payload);
       }
-
-      const data = await res.json();
 
       if (data.success) {
         toast.success(editingRole ? 'Role updated successfully' : 'Role created successfully');
@@ -459,8 +436,7 @@ export default function Users() {
   const handleDeleteRole = async (roleId) => {
     if (!window.confirm('Delete this role? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/roles/${roleId}`, { method: 'DELETE' });
-      const data = await res.json();
+      const data = await roleService.delete(roleId);
       if (data.success) {
         showMessage('success', 'Role deleted');
         loadRoles();
@@ -481,12 +457,7 @@ export default function Users() {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
 
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
+      const data = await userService.delete(userId);
       if (data.success) {
         showMessage('success', 'User deleted successfully');
         loadUsers();
@@ -500,16 +471,7 @@ export default function Users() {
 
   const handleToggleUserStatus = async (userId, currentStatus) => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ isActive: !currentStatus }),
-      });
-
-      const data = await response.json();
-
+      const data = await userService.updateStatus(userId, !currentStatus);
       if (data.success) {
         showMessage('success', `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
         loadUsers();
@@ -529,30 +491,6 @@ export default function Users() {
       description: 'Manage system users and their roles',
       permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'change_role']
     },
-    // {
-    //   name: 'category',
-    //   title: 'Category Management',
-    //   description: 'Manage product categories',
-    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
-    // },
-    // {
-    //   name: 'product',
-    //   title: 'Product Management',
-    //   description: 'Manage products and inventory',
-    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
-    // },
-    // {
-    //   name: 'order',
-    //   title: 'Order Management',
-    //   description: 'Manage customer orders',
-    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'update_status']
-    // },
-    // {
-    //   name: 'inventory',
-    //   title: 'Inventory Management',
-    //   description: 'Manage stock and inventory',
-    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
-    // },
     {
       name: 'analytics',
       title: 'Analytics',
@@ -565,42 +503,6 @@ export default function Users() {
       description: 'Manage system configuration',
       permissions: ['view', 'edit', 'manage_roles']
     },
-    // {
-    //   name: 'hr',
-    //   title: 'HR Management',
-    //   description: 'Manage human resources',
-    //   permissions: ['view', 'create', 'edit', 'delete', 'payroll', 'attendance', 'leave_approve']
-    // },
-    // {
-    //   name: 'finance',
-    //   title: 'Finance Management',
-    //   description: 'Manage financial operations',
-    //   permissions: ['view', 'create', 'edit', 'delete', 'approve_payments', 'export_reports']
-    // },
-    // {
-    //   name: 'crm',
-    //   title: 'CRM Module',
-    //   description: 'Manage customer relationships',
-    //   permissions: ['clients', 'leads', 'tickets']
-    // },
-    // {
-    //   name: 'website_bookings',
-    //   title: 'Website Bookings',
-    //   description: 'Manage website booking requests',
-    //   permissions: ['view', 'edit', 'manage_status', 'export', 'delete']
-    // },
-    // {
-    //   name: 'reports',
-    //   title: 'Reports',
-    //   description: 'Access various reports',
-    //   permissions: ['sales', 'finance', 'hr', 'performance', 'export_all']
-    // },
-    // {
-    //   name: 'progress',
-    //   title: 'Progress Tracking',
-    //   description: 'Track agent and employee progress',
-    //   permissions: ['view_own', 'view_all', 'export']
-    // },
     {
       name: 'agent',
       title: 'Agent Management',
@@ -676,8 +578,8 @@ export default function Users() {
       key: 'name',
       render: (u) => (
         <div className="flex items-center gap-4">
-          <div className="flex-shrink-0">
-            <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+          <div className="shrink-0">
+            <div className="h-12 w-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white font-semibold text-sm">{u.firstName?.charAt(0)}{u.lastName?.charAt(0)}</span>
             </div>
           </div>
@@ -703,18 +605,29 @@ export default function Users() {
       align: 'right',
       render: (u) => (
         <div className="flex items-center justify-end gap-2">
-          <button onClick={() => handleEditUser(u)} className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200">
-            <Edit className="h-4 w-4 mr-1" /> Edit
-          </button>
-          <button onClick={() => handleToggleUserStatus(u._id, u.isActive)} className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${u.isActive ? 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}>
-            <Power className="h-4 w-4 mr-1" /> {u.isActive ? 'Deactivate' : 'Activate'}
-          </button>
+          {hasPermission('user', 'edit') ? (
+            <button onClick={() => handleEditUser(u, 'edit')} className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200">
+              <Edit className="h-4 w-4 mr-1" /> Edit
+            </button>
+          ) : hasPermission('user', 'view') ? (
+            <button onClick={() => handleEditUser(u, 'view')} className="inline-flex items-center px-3 py-2 bg-white text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors border border-gray-200">
+              <User className="h-4 w-4 mr-1" /> View
+            </button>
+          ) : null}
+
+          {hasPermission('user', 'edit') && (
+            <button onClick={() => handleToggleUserStatus(u._id, u.isActive)} className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${u.isActive ? 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}>
+              <Power className="h-4 w-4 mr-1" /> {u.isActive ? 'Deactivate' : 'Activate'}
+            </button>
+          )}
+
           {hasPermission('user', 'delete') && (
             <button onClick={() => handleDeleteUser(u._id)} className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200">
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </button>
           )}
-          {hasPermission('user', 'edit') && (
+
+          {(hasPermission('user', 'change_role') || hasPermission('role', 'manage_roles') || hasPermission('user', 'edit')) && (
             <button onClick={() => { setRoleChangeUser(u); setRoleChangeValue(u.role?._id || ''); setRoleChangeOpen(true); }} className="inline-flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors border border-indigo-200">
               <Shield className="h-4 w-4 mr-1" /> Change Role
             </button>
@@ -752,7 +665,7 @@ export default function Users() {
 
   return (
     <div className="min-h-scree bg-white p-4 md:p-6">
-      <div className="max-w-7xl overflow-auto mx-auto space-y-6">
+      <div className="max-w-7xl overflow-x-auto mx-auto space-y-6">
         {/* Header Card */}
         <Card className="shadow-lg border-0 bg-white text-black">
           <CardHeader className="pb-4">
@@ -933,6 +846,7 @@ export default function Users() {
                 required
                 value={userForm.firstName}
                 onChange={handleUserFormChange}
+                disabled={viewOnly}
                 className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Enter first name"
               />
@@ -949,6 +863,7 @@ export default function Users() {
                 required
                 value={userForm.lastName}
                 onChange={handleUserFormChange}
+                disabled={viewOnly}
                 className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Enter last name"
               />
@@ -967,7 +882,7 @@ export default function Users() {
                 onChange={handleUserFormChange}
                 className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Enter email address"
-                disabled={editingUser}
+                disabled={editingUser || viewOnly}
               />
             </div>
 
@@ -984,6 +899,7 @@ export default function Users() {
                   minLength="6"
                   value={userForm.password}
                   onChange={handleUserFormChange}
+                  disabled={viewOnly}
                   className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="Enter password"
                 />
@@ -1000,6 +916,7 @@ export default function Users() {
                 id="phone"
                 value={userForm.phone}
                 onChange={handleUserFormChange}
+                disabled={viewOnly}
                 className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Enter phone number"
               />
@@ -1012,6 +929,7 @@ export default function Users() {
               <Select
                 value={userForm.role}
                 onValueChange={(value) => setUserForm(prev => ({ ...prev, role: value }))}
+                disabled={viewOnly}
               >
                 <SelectTrigger className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                   <SelectValue placeholder="Select a role" />
@@ -1040,33 +958,35 @@ export default function Users() {
               </Select>
             </div>
 
-            <div className="sm:col-span-2 lg:col-span-3 pt-4 flex gap-3 justify-end border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeUserDialog}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm"
-              >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    {editingUser ? 'Updating User...' : 'Creating User...'}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {editingUser ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                    {editingUser ? 'Update User' : 'Create User'}
-                  </div>
+              <div className="sm:col-span-2 lg:col-span-3 pt-4 flex gap-3 justify-end border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeUserDialog}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                >
+                  {viewOnly ? 'Close' : 'Cancel'}
+                </Button>
+                {!viewOnly && (
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {editingUser ? 'Updating User...' : 'Creating User...'}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {editingUser ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                        {editingUser ? 'Update User' : 'Create User'}
+                      </div>
+                    )}
+                  </Button>
                 )}
-              </Button>
-            </div>
+              </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -1112,12 +1032,7 @@ export default function Users() {
               <Button onClick={async () => {
                 if (!roleChangeUser) return;
                 try {
-                  const res = await fetch(`/api/users/${roleChangeUser._id}/role`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ roleId: roleChangeValue })
-                  });
-                  const data = await res.json();
+                  const data = await userService.updateRole(roleChangeUser._id, roleChangeValue);
                   if (data.success) {
                     showMessage('success', 'Role updated');
                     setRoleChangeOpen(false);
@@ -1332,10 +1247,4 @@ export default function Users() {
     </div>
   );
 }
-
-
-
-
-
-
 

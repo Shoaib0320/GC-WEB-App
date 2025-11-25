@@ -14,6 +14,7 @@ export default function CustomDialog({ open, onClose, children }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
+        
       />
 
       {/* FULLSCREEN MODAL */}

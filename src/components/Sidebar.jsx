@@ -2,7 +2,6 @@
 
 import {
   Home,
-  BarChart3,
   Settings,
   Users,
   LogOut,
@@ -11,14 +10,13 @@ import {
   CalendarDays,
   User,
   Code2Icon,
-  ShoppingCart,
   TrendingUp,
   Bell,
   Clock,
-  Calendar,
   DollarSign,
   ClipboardList,
 } from "lucide-react";
+
 import { useState, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import Link from "next/link";
@@ -77,73 +75,101 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   return (
     <TooltipProvider>
+      {/* Mobile Overlay */}
       {openMobile && (
         <div
           onClick={() => setOpenMobile(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
-        ></div>
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+        />
       )}
 
+      {/* Sidebar */}
       <motion.aside
         initial={{ width: 80 }}
-        animate={{ width: openMobile ? "80vw" : collapsed ? 80 : 240 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
+        animate={{
+          width: openMobile ? "80vw" : collapsed ? 80 : 260,
+        }}
+        transition={{ duration: 0.28, ease: "easeInOut" }}
         className={cn(
-          "fixed z-40 flex flex-col h-full bg-white border-r shadow-sm text-black",
-          openMobile ? "left-0" : "-left-80",
-          "lg:left-0 lg:top-0 lg:h-screen"
+          "fixed z-50 flex flex-col h-full border-r shadow-xl bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl",
+          "border-gray-200 dark:border-slate-700",
+          // FIXED: On desktop, sidebar always left-0 (NO half-visible issue)
+          openMobile ? "left-0" : "left-0",
+          "lg:left-0 lg:top-0 lg:h-screen rounded-r-2xl"
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-center p-4">
-          <span className="text-xl font-semibold tracking-tight whitespace-nowrap">
-            My<span className="text-blue-600">Dashboard</span>
-          </span>
+        {/* Header (hide when collapsed) */}
+        <div
+          className={cn(
+            "flex items-center justify-center py-6 px-4 border-b border-gray-200 dark:border-slate-700 transition-all duration-200 gap-8",
+            collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+          )}
+        >
+          <h1 className="text-2xl font-semibold tracking-tight text-blue-600 dark:text-blue-400 select-none">
+            My Dashboard
+          </h1>
         </div>
-
-        <Separator />
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
           {allowedNavItems.map((item, index) => {
             const isActive = pathname === item.href;
+
             return (
-              <Tooltip key={index}>
+              <Tooltip key={index}> {/* YAHAN PAR CHANGE KARNA HAI - idx se index */}
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center w-full rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                      collapsed ? "justify-center" : "justify-start",
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium group transition-all duration-200 overflow-hidden",
+
+                      // Active styles
                       isActive
-                        ? "bg-blue-100 text-black"
-                        : "text-black hover:bg-blue-50 hover:text-gray-800"
+                        ? "bg-blue-600/10 text-blue-700 dark:text-blue-300 dark:bg-blue-900/30 border border-blue-600/20 shadow"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-slate-800/70",
+
+                      // Collapsed icon mode
+                      collapsed ? "justify-center px-3" : "justify-start"
                     )}
                   >
                     <item.icon
-                      size={20}
-                      className={cn("shrink-0", collapsed ? "mr-0" : "mr-3")}
+                      size={22}
+                      className={cn(
+                        "transition-all duration-200",
+                        isActive && "text-blue-600 dark:text-blue-300"
+                      )}
                     />
+
                     {(isMobile || !collapsed) && (
-                      <span className="inline">{item.label}</span>
+                      <span className="truncate transition-opacity duration-200">
+                        {item.label}
+                      </span>
                     )}
                   </Link>
                 </TooltipTrigger>
+
+                {/* Tooltip only in collapsed mode */}
                 {collapsed && (
-                  <TooltipContent side="right">{item.label}</TooltipContent>
+                  <TooltipContent side="right" className="text-sm">
+                    {item.label}
+                  </TooltipContent>
                 )}
               </Tooltip>
             );
           })}
         </nav>
 
-        <Separator />
+        <Separator className="dark:border-slate-700" />
 
-        {/* Footer */}
-        <div className="p-3">
-          <button className="flex items-center justify-center w-full text-sm text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 py-2 transition">
-            <LogOut size={18} className={cn("shrink-0", collapsed ? "mr-0" : "mr-3")} />
-            {(isMobile || !collapsed) && <span className="inline">Logout</span>}
+        {/* Footer Logout */}
+        <div className="p-4">
+          <button
+            className="w-full flex items-center gap-3 justify-center md:justify-start 
+            text-[15px] font-medium rounded-xl px-4 py-3 text-red-600 dark:text-red-400 
+            hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+          >
+            <LogOut size={20} />
+            {(isMobile || !collapsed) && <span>Logout</span>}
           </button>
         </div>
       </motion.aside>
@@ -162,7 +188,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       <Button
         variant="outline"
         size="icon"
-        className="fixed top-4 left-4 z-50 hidden lg:flex"
+        className="fixed top-4 left-4 hidden lg:flex z-50"
         onClick={() => setCollapsed(!collapsed)}
       >
         <Menu size={20} />

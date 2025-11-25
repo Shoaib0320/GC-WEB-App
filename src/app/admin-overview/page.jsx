@@ -33,18 +33,17 @@ export default function AdminOverviewPage() {
 
   if (loading)
     return (
-      <div className="p-8 text-center text-gray-500">
+      <div className="flex items-center justify-center min-h-screen p-8 text-gray-500 dark:text-gray-400">
         Loading admin overview...
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
       <Header />
-      <main className="flex flex-col items-center py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 flex flex-col items-center">
         <PreferredAdminOverview bookings={bookings} messages={messages} />
-
-        <footer className="mt-10 text-gray-500 text-sm">
+        <footer className="mt-16 text-gray-400 text-center text-sm select-none">
           Built with Gobium Cloud | Powered by Next.js + MongoDB
         </footer>
       </main>

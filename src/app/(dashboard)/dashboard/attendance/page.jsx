@@ -134,45 +134,84 @@ export default function AttendancePanel() {
   const checkoutAllowed = todayAttendance && !todayAttendance.checkOutTime;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 bg-white dark:bg-gray-900 rounded shadow space-y-4">
-      <h3 className="text-xl font-semibold">Attendance</h3>
+    <div className="max-w-3xl mx-auto p-4 bg-white dark:bg-gray-900 rounded-lg shadow-lg space-y-6">
+      <h3 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Attendance</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Shift & Time */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm mb-1">Select Shift</label>
-          <select className="w-full p-2 border rounded" value={selectedShift} onChange={e => setSelectedShift(e.target.value)}>
+          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Select Shift</label>
+          <select 
+            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={selectedShift} 
+            onChange={e => setSelectedShift(e.target.value)}
+          >
             <option value="">-- Choose shift --</option>
             {shifts.map(s => <option key={s._id} value={s._id}>{s.name} ({s.startTime}-{s.endTime})</option>)}
           </select>
         </div>
-
         <div>
-          <label className="block text-sm mb-1">Current time</label>
-          <div className="p-2 border rounded">{now.toLocaleString()}</div>
+          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Current time</label>
+          <div className="p-2 border border-gray-300 rounded bg-gray-50 dark:bg-gray-800">{now.toLocaleString()}</div>
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <button onClick={handleCheckin} disabled={!checkinAllowed || loading} className={`px-4 py-2 rounded ${checkinAllowed ? "bg-green-600 text-white" : "bg-gray-300"}`}>
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <button 
+          onClick={handleCheckin} 
+          disabled={!checkinAllowed || loading} 
+          className={`flex-1 px-4 py-2 rounded text-white font-medium transition ${checkinAllowed ? "bg-green-600 hover:bg-green-700" : "bg-gray-300 cursor-not-allowed"}`}
+        >
           Check In
         </button>
-        <button onClick={handleCheckout} disabled={!checkoutAllowed || loading} className={`px-4 py-2 rounded ${checkoutAllowed ? "bg-red-500 text-white" : "bg-gray-300"}`}>
+        <button 
+          onClick={handleCheckout} 
+          disabled={!checkoutAllowed || loading} 
+          className={`flex-1 px-4 py-2 rounded text-white font-medium transition ${checkoutAllowed ? "bg-red-500 hover:bg-red-600" : "bg-gray-300 cursor-not-allowed"}`}
+        >
           Check Out
         </button>
-        <button onClick={askLocation} className="px-3 py-2 border rounded">Set Location</button>
-        <a href="/api/attendance/export" target="_blank" rel="noreferrer" className="px-3 py-2 bg-blue-600 text-white rounded">Export CSV</a>
+        <button 
+          onClick={askLocation} 
+          className="flex-1 px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition"
+        >
+          Set Location
+        </button>
+        <a 
+          href="/api/attendance/export" 
+          target="_blank" 
+          rel="noreferrer" 
+          className="flex-1 px-4 py-2 rounded bg-blue-600 text-white font-medium text-center hover:bg-blue-700 transition"
+        >
+          Export CSV
+        </a>
       </div>
 
+      {/* Attendance Info */}
       {todayAttendance ? (
-        <div className="p-3 border rounded">
+        <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-2">
           <p><strong>Checked-in:</strong> {todayAttendance.checkInTime ? new Date(todayAttendance.checkInTime).toLocaleString() : "—"}</p>
           <p><strong>Checked-out:</strong> {todayAttendance.checkOutTime ? new Date(todayAttendance.checkOutTime).toLocaleString() : "—"}</p>
-          <p><strong>Late:</strong> {todayAttendance.isLate ? `${todayAttendance.lateMinutes} min` : "No"}</p>
-          <p><strong>Overtime:</strong> {todayAttendance.isOvertime ? `${todayAttendance.overtimeMinutes} min` : "No"}</p>
+          <p>
+            <strong>Late:</strong>{" "}
+            <span className={`px-2 py-1 rounded text-sm font-medium ${todayAttendance.isLate ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}>
+              {todayAttendance.isLate ? `${todayAttendance.lateMinutes} min` : "No"}
+            </span>
+          </p>
+          <p>
+            <strong>Overtime:</strong>{" "}
+            <span className={`px-2 py-1 rounded text-sm font-medium ${todayAttendance.isOvertime ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
+              {todayAttendance.isOvertime ? `${todayAttendance.overtimeMinutes} min` : "No"}
+            </span>
+          </p>
         </div>
-      ) : <p className="text-sm text-gray-500">No check-in today</p>}
+      ) : (
+        <p className="text-sm text-gray-500 dark:text-gray-400">No check-in today</p>
+      )}
 
-      {message && <p className="text-sm text-red-600">{message}</p>}
+      {/* Message */}
+      {message && <p className="text-sm text-red-600 dark:text-red-400">{message}</p>}
     </div>
   );
 }

@@ -378,28 +378,35 @@ export default function GlobalData({
     return customFilters;
   };
 
-  return (
-    <div>
-      {renderFilters()}
-      {renderCustomFilters()}
-      <DataTable
-        title={title}
-        icon={icon}
-        columns={columns}
-        data={data}
-        loading={loading}
-        rowsPerPage={rowsPerPage}
-        searchEnabled={searchEnabled}
-        filterOptions={serverSide && filterKeys && filterKeys.length > 0 ? [] : filterOptions}
-        serverSide={serverSide}
-        currentPage={meta.page || page}
-        totalPages={meta.totalPages || 1}
-        onPageChange={handlePageChange}
-        onSearchChange={handleSearchChange}
-        onFilterChange={handleFilterChange}
-      />
+ // GlobalData.jsx mein return section modify karein
+return (
+  <div className="w-full">
+    {renderFilters()}
+    {renderCustomFilters()}
+    
+    {/* ✅ Yeh wrapper add karein */}
+    <div className="w-full overflow-x-auto">
+      <div className="min-w-max"> {/* Changed from min-w-[640px] to min-w-max for better shrink to fit */}
+        <DataTable
+          title={title}
+          icon={icon}
+          columns={columns}
+          data={data}
+          loading={loading}
+          rowsPerPage={rowsPerPage}
+          searchEnabled={searchEnabled}
+          filterOptions={serverSide && filterKeys && filterKeys.length > 0 ? [] : filterOptions}
+          serverSide={serverSide}
+          currentPage={meta.page || page}
+          totalPages={meta.totalPages || 1}
+          onPageChange={handlePageChange}
+          onSearchChange={handleSearchChange}
+          onFilterChange={handleFilterChange}
+        />
+      </div>
     </div>
-  );
+  </div>
+);
 }
 
 

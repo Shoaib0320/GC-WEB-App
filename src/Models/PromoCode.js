@@ -1,3 +1,4 @@
+// src/Models/PromoCode.js
 import mongoose from 'mongoose';
 
 const promoCodeSchema = new mongoose.Schema({
@@ -21,7 +22,7 @@ const promoCodeSchema = new mongoose.Schema({
   },
   maxUsage: {
     type: Number,
-    default: 1
+    // Optional - agar nahi hai toh unlimited usage
   },
   usedCount: {
     type: Number,
@@ -37,7 +38,7 @@ const promoCodeSchema = new mongoose.Schema({
   },
   validUntil: {
     type: Date,
-    // required: true
+    // Optional - agar nahi hai toh never expire
   },
   description: {
     type: String,

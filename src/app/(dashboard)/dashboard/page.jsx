@@ -93,7 +93,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 bg-white">
+    <div className="space-y-10 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg">
       {/* Header */}
       <PageHeader
               title=" Dashboard Overview"

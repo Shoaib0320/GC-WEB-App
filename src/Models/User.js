@@ -41,6 +41,13 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+        // ✅ ADD SHIFT FIELD HERE
+    shift: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shift",
+      required: false
+    },
+
     // Role & Permissions
     role: {
       type: mongoose.Schema.Types.ObjectId,

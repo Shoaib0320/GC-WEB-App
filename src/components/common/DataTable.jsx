@@ -195,25 +195,25 @@ export default function DataTable({
           </div>
         </div>
       ) : (
-        <div className="w-full rounded-lg border bg-white shadow-sm overflow-hidden">
+      <div className="w-full rounded-lg border bg-white shadow-sm overflow-hidden">
 
           {/* Main Table Container with Horizontal Scroll */}
           <div className="overflow-x-auto w-full">
-            <div className="min-w-full inline-block align-middle">
-               {/* <div className="inline-block min-w-max align-middle"> */}
-              <Table className="w-full min-w-max">
-                {/* Table Header */}
+          <div className="w-full overflow-x-auto inline-block align-middle">
+             {/* <div className="inline-block min-w-max align-middle"> */}
+              <Table className="w-full">
+                {/* Table Header */} 
                 <TableHeader className="bg-gray-50/80 sticky top-0 backdrop-blur-sm">
                   <TableRow className="hover:bg-transparent">
                     {columns.map((col, i) => (
                       <TableHead 
                         key={i}
-                        className={`px-4 py-3 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap ${
+                        className={`px-4 py-3 text-xs sm:text-sm font-semibold text-gray-700 ${
                           col.align === "right" ? "text-right" : "text-left"
                         } ${col.key === 'actions' ? 'w-20' : ''} ${
-                          // col.minWidth ? `min-w-[${col.minWidth}]` : ''
                           `${col.minWidth ? `min-w-[${col.minWidth}px]` : ''}`
                         }`}
+                        style={{ whiteSpace: 'normal' }}
                       >
                         {col.label}
                       </TableHead>
@@ -254,11 +254,12 @@ export default function DataTable({
                         {columns.map((col, colIndex) => (
                           <TableCell
                             key={colIndex}
-                            className={`px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap ${
+                            className={`px-4 py-3 text-xs sm:text-sm text-gray-600 ${
                               col.align === "right" ? "text-right" : "text-left"
                             } ${col.key === 'actions' ? 'w-20' : ''} ${
                               col.className || ''
                             }`}
+                            style={{ whiteSpace: 'normal' }}
                           >
                             <div className={`flex items-center ${
                               col.align === "right" ? "justify-end" : "justify-start"

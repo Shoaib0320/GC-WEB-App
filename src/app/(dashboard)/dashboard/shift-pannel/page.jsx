@@ -18,16 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import GlobalData from "@/components/common/GlobalData";
 
 const LIMIT = 10;
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function AdminCreateShift() {
-  const [form, setForm] = useState({
-    name: "",
-    startTime: "",
-    endTime: "",
-    days: [],
-  });
-  const [shifts, setShifts] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, totalPages: 0, page: 1, limit: LIMIT });
+  const [form, setForm] = useState({ name: "", startTime: "", endTime: "", days: [] });
   const [reloadKey, setReloadKey] = useState(0);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -46,14 +40,10 @@ export default function AdminCreateShift() {
   };
 
   const toggleDay = (day) => {
-    setForm((prev) => {
-      const currentDays = Array.isArray(prev.days) ? prev.days : [];
-      if (currentDays.includes(day)) {
-        return { ...prev, days: currentDays.filter(d => d !== day) };
-      } else {
-        return { ...prev, days: [...currentDays, day] };
-      }
-    });
+    setForm((prev) => ({
+      ...prev,
+      days: prev.days.includes(day) ? prev.days.filter(d => d !== day) : [...prev.days, day],
+    }));
   };
 
   const resetForm = () => setForm({ name: "", startTime: "", endTime: "", days: [] });
@@ -107,28 +97,12 @@ export default function AdminCreateShift() {
     setMessage("");
 
     try {
-      const payload = {
-        name: form.name,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        days: form.days,
-      };
-
-      let res;
-      if (editingId) {
-        res = await fetch(`/api/shifts/${editingId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch(`/api/shifts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      }
-
+      const payload = { ...form };
+      const res = await fetch(editingId ? `/api/shifts/${editingId}` : `/api/shifts`, {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const json = await res.json();
       setMessage(json.message || (json.success ? "Operation successful" : "Error occurred"));
 
@@ -149,7 +123,6 @@ export default function AdminCreateShift() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    
     try {
       const res = await fetch(`/api/shifts/${deleteId}`, { method: "DELETE" });
       const json = await res.json();
@@ -166,69 +139,23 @@ export default function AdminCreateShift() {
     }
   };
 
-  const dayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-  // Server-side fetcher for GlobalData
   const shiftsFetcher = async (params = {}) => {
     try {
       const url = new URL("/api/shifts", window.location.origin);
-      if (params.page) url.searchParams.set("page", params.page);
-      if (params.limit) url.searchParams.set("limit", params.limit);
-      if (params.search) url.searchParams.set("q", params.search);
-      
-      Object.keys(params).forEach((k) => {
-        if (["page", "limit", "search"].includes(k)) return;
-        const v = params[k];
-        if (v === undefined || v === null) return;
-        url.searchParams.set(k, v);
-      });
-
+      Object.entries(params).forEach(([k, v]) => v !== undefined && url.searchParams.set(k, v));
       const res = await fetch(url.toString());
       const json = await res.json();
-      if (json.success) {
-        return { 
-          data: json.data || [], 
-          meta: json.meta || { 
-            total: 0, 
-            totalPages: 1, 
-            page: params.page || 1, 
-            limit: params.limit || LIMIT 
-          } 
-        };
-      }
-      return { 
-        data: [], 
-        meta: { 
-          total: 0, 
-          totalPages: 1, 
-          page: params.page || 1, 
-          limit: params.limit || LIMIT 
-        } 
-      };
-    } catch (err) {
-      console.error("shiftsFetcher error", err);
-      return { 
-        data: [], 
-        meta: { 
-          total: 0, 
-          totalPages: 1, 
-          page: params.page || 1, 
-          limit: params.limit || LIMIT 
-        } 
-      };
-    }
+      if (json.success) return { data: json.data || [], meta: json.meta || { total: 0, totalPages: 1, page: 1, limit: LIMIT } };
+      return { data: [], meta: { total: 0, totalPages: 1, page: 1, limit: LIMIT } };
+    } catch (err) { console.error(err); return { data: [], meta: { total: 0, totalPages: 1, page: 1, limit: LIMIT } }; }
   };
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <h2 className="text-3xl font-bold text-center text-blue-700">
-        Manage Shifts
-      </h2>
+      <h2 className="text-3xl font-bold text-center text-blue-700">Manage Shifts</h2>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Shifts Management</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Shifts Management</CardTitle></CardHeader>
         <CardContent>
           <div className="flex justify-between items-center mb-4">
               <div className="flex gap-2 items-center">
@@ -239,23 +166,16 @@ export default function AdminCreateShift() {
           </div>
 
           {message && (
-            <p className={`text-sm mb-4 ${
-              message.includes("error") || message.includes("Error") 
-                ? "text-red-600" 
-                : "text-green-600"
-            }`}>
-              {message}
-            </p>
+            <p className={`text-sm mb-4 ${message.toLowerCase().includes("error") ? "text-red-600" : "text-green-600"}`}>{message}</p>
           )}
 
-          {/* Shifts table powered by GlobalData */}
           <GlobalData
             key={reloadKey}
             title="Shifts"
             fetcher={shiftsFetcher}
-            serverSide={true}
+            serverSide
             rowsPerPage={LIMIT}
-            searchEnabled={true}
+            searchEnabled
             columns={[
               { 
                 label: "Name", 
@@ -314,123 +234,64 @@ export default function AdminCreateShift() {
                 align: 'right' 
               },
             ]}
-            onDataFetched={(items, metaData) => {
-              setShifts(items || []);
-              setMeta(metaData || {});
-            }}
           />
         </CardContent>
       </Card>
 
-      {/* Create / Edit Dialog */}
+      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Shift" : "Create Shift"}</DialogTitle>
-            <DialogDescription>
-              {editingId ? "Update the shift details below." : "Fill the details to create a new shift."}
-            </DialogDescription>
+            <DialogDescription>{editingId ? "Update the shift details below." : "Fill the details to create a new shift."}</DialogDescription>
           </DialogHeader>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Shift Name</Label>
-              <Input 
-                id="name"
-                required 
-                name="name" 
-                value={form.name} 
-                onChange={handleChange} 
-                placeholder="Enter shift name"
-              />
+              <Input id="name" required name="name" value={form.name} onChange={handleChange} placeholder="Enter shift name" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time</Label>
-                <Input 
-                  id="startTime"
-                  required 
-                  type="time" 
-                  name="startTime" 
-                  value={form.startTime} 
-                  onChange={handleChange} 
-                />
+                <Input id="startTime" required type="time" name="startTime" value={form.startTime} onChange={handleChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="endTime">End Time</Label>
-                <Input 
-                  id="endTime"
-                  required 
-                  type="time" 
-                  name="endTime" 
-                  value={form.endTime} 
-                  onChange={handleChange} 
-                />
+                <Input id="endTime" required type="time" name="endTime" value={form.endTime} onChange={handleChange} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Days</Label>
               <div className="flex flex-wrap gap-2">
-                {dayOptions.map((day) => (
+                {DAYS.map(day => (
                   <div key={day} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`day-${day}`}
-                      checked={form.days.includes(day)}
-                      onChange={() => toggleDay(day)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <Label htmlFor={`day-${day}`} className="text-sm">
-                      {day}
-                    </Label>
+                    <input type="checkbox" id={`day-${day}`} checked={form.days.includes(day)} onChange={() => toggleDay(day)} className="h-4 w-4 rounded border-gray-300" />
+                    <Label htmlFor={`day-${day}`} className="text-sm">{day}</Label>
                   </div>
                 ))}
               </div>
             </div>
 
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={loading}
-              >
-                {loading ? "Saving..." : editingId ? "Update Shift" : "Create Shift"}
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Saving..." : editingId ? "Update Shift" : "Create Shift"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this shift? This action cannot be undone.
-            </DialogDescription>
+            <DialogDescription>Are you sure you want to delete this shift? This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
