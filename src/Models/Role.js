@@ -1,3 +1,4 @@
+// src/Models/Role.js
 import mongoose from 'mongoose';
 
 const permissionGroupSchema = new mongoose.Schema({
@@ -13,45 +14,16 @@ const roleSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Role name is required'],
-    // unique: true,
-    // trim: true,
-    // enum: [
-    //   'super_admin',
-    //   'admin',
-    //   'manager',
-    //   'sales_manager',
-    //   'support',
-    //   'hr_manager',
-    //   'finance_manager',
-    //   'viewer',
-    //   'agent',
-    //   'employee'
-    // ]
   },
   description: {
     type: String,
     trim: true
   },
 
-  // 🔐 All Permission Modules
+  // 🔐 All Permission Modules - UPDATED
   permissions: {
     // 👤 User Management
     user: permissionGroupSchema,
-
-    // 🏷️ Category Management
-    category: permissionGroupSchema,
-
-    // 🛍️ Product Management
-    product: permissionGroupSchema,
-
-    // 🧾 Order Management
-    order: {
-      ...permissionGroupSchema.obj,
-      update_status: { type: Boolean, default: false }
-    },
-
-    // 📦 Inventory Management
-    inventory: permissionGroupSchema,
 
     // 📈 Analytics & Reports
     analytics: {
@@ -66,35 +38,67 @@ const roleSchema = new mongoose.Schema({
       manage_roles: { type: Boolean, default: false }
     },
 
-    // 🧑‍💼 HR Management
-    hr: {
+    // 🏷️ NEW: Sales Management
+    sales: {
       view: { type: Boolean, default: false },
       create: { type: Boolean, default: false },
       edit: { type: Boolean, default: false },
       delete: { type: Boolean, default: false },
-      payroll: { type: Boolean, default: false },
-      attendance: { type: Boolean, default: false },
-      leave_approve: { type: Boolean, default: false }
+      export: { type: Boolean, default: false },
+      approve: { type: Boolean, default: false },
+      analytics: { type: Boolean, default: false } // Sales-specific analytics
     },
 
-    // 💰 Finance Management
-    finance: {
+    // 🏷️ NEW: Sales Analytics (Separate module for detailed analytics)
+    sales_analytics: {
       view: { type: Boolean, default: false },
-      create: { type: Boolean, default: false },
-      edit: { type: Boolean, default: false },
-      delete: { type: Boolean, default: false },
-      approve_payments: { type: Boolean, default: false },
-      export_reports: { type: Boolean, default: false }
+      export: { type: Boolean, default: false },
+      manage: { type: Boolean, default: false }
     },
 
-    // 🧠 CRM Module
-    crm: {
-      clients: permissionGroupSchema,
-      leads: permissionGroupSchema,
-      tickets: permissionGroupSchema
+    // 👥 Agent Management
+    agent: permissionGroupSchema,
+
+    // 🕐 Shift Management
+    shift: permissionGroupSchema,
+
+    // 📅 Booking Management
+    booking: {
+      ...permissionGroupSchema.obj,
+      update_status: { type: Boolean, default: false }
     },
 
-    // 🌐 Website Bookings (your company’s sites)
+    // 🎫 Promo Code Management
+    promoCode: permissionGroupSchema,
+
+    // 🔔 Notification Management
+    notification: permissionGroupSchema,
+
+    // 📊 Attendance Management
+    attendance: {
+      ...permissionGroupSchema.obj,
+      manage_leave: { type: Boolean, default: false }
+    },
+
+    // 🏖️ Leave Request Management
+    leaveRequest: permissionGroupSchema,
+
+    // 🎄 Holiday Management
+    holiday: permissionGroupSchema,
+
+    // 📅 Weekly Off Management
+    weeklyOff: permissionGroupSchema,
+
+    // 📞 Contact Management
+    contact: permissionGroupSchema,
+
+    // 🛡️ Role Management
+    role: {
+      ...permissionGroupSchema.obj,
+      manage_roles: { type: Boolean, default: false }
+    },
+
+    // 🌐 Website Bookings
     website_bookings: {
       view: { type: Boolean, default: false },
       edit: { type: Boolean, default: false },
@@ -103,7 +107,7 @@ const roleSchema = new mongoose.Schema({
       delete: { type: Boolean, default: false }
     },
 
-    // 📊 Reports (custom module)
+    // 📊 Reports
     reports: {
       sales: { type: Boolean, default: false },
       finance: { type: Boolean, default: false },
@@ -112,7 +116,7 @@ const roleSchema = new mongoose.Schema({
       export_all: { type: Boolean, default: false }
     },
 
-    // 📊 Progress Tracking (for agents and employees)
+    // 📈 Progress Tracking
     progress: {
       view_own: { type: Boolean, default: false },
       view_all: { type: Boolean, default: false },

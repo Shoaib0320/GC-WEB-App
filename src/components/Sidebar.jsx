@@ -23,7 +23,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+  import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -53,7 +53,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { label: "Shift Panel", href: "/dashboard/shift-pannel", icon: Clock, permission: { module: "shift", action: "view" } },
     { label: "Agents", href: "/dashboard/agents", icon: User, permission: { module: "agent", action: "view" } },
     { label: "Promo Code", href: "/dashboard/promo-codes", icon: Code2Icon, permission: { module: "promoCode", action: "view" } },
-    { label: "Sales", href: "/dashboard/sales", icon: DollarSign, permission: { module: "reports", action: "finance" } },
+    { label: "Sales", href: "/dashboard/sales", icon: DollarSign, permission: { module: "sales", action: "view" } },
     { label: "Attedance", href: "/dashboard/view-attendance", icon: ClipboardList, permission: { module: "attendance", action: "view" } },
     { label: "Notifications", href: "/dashboard/notifications", icon: Bell, permission: { module: "notification", action: "view" } },
     { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp, permission: { module: "analytics", action: "view" } },

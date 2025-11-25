@@ -138,7 +138,7 @@ export default function DataTable({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         {title && (
           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate">
-            {Icon && <Icon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            {Icon && <Icon className="h-5 w-5 text-blue-600" />}
             <span className="truncate">{title}</span>
           </h2>
         )}
@@ -248,7 +248,7 @@ export default function DataTable({
                         initial="hidden"
                         animate="visible"
                         variants={fadeUp}
-                        as={TableRow}
+                        // as={TableRow}
                         className="border-b hover:bg-gray-50/50 transition-colors duration-150"
                       >
                         {columns.map((col, colIndex) => (

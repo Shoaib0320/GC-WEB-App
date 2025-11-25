@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import PageHeader from "@/components/common/PageHeader";
 import SummaryCards from "@/components/common/SummaryCards";
 import GlobalData from "@/components/common/GlobalData";
-import { fetchContacts } from "@/action/contactActions";
+import { fetchContacts, deleteContact, replyContact } from "@/action/contactActions";
+import { useAuth } from "@/context/AuthContext";
 import {
   Card,
   CardContent,
@@ -49,6 +50,7 @@ export default function ContactsPage() {
   const [replySubject, setReplySubject] = useState("");
   const [replyMessage, setReplyMessage] = useState("");
   const [isSendingReply, setIsSendingReply] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
@@ -85,31 +87,12 @@ export default function ContactsPage() {
 
     setIsSendingReply(true);
     try {
-      const response = await fetch("/api/contact/reply", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contactId: selectedContact._id,
-          subject: replySubject,
-          message: replyMessage,
-        }),
-      });
+      await replyContact(selectedContact._id, replySubject, replyMessage);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send reply");
-      }
-
-      setContacts(prevContacts =>
-        prevContacts.map(contact =>
-          contact._id === selectedContact._id
-            ? { ...contact, status: "replied" }
-            : contact
-        )
-      );
+      // refresh list to reflect status change (keeps UI consistent with server)
+      await loadContacts();
+      // force GlobalData/table to re-fetch
+      setReloadKey((k) => k + 1);
 
       setReplySubject("");
       setReplyMessage("");
@@ -134,6 +117,38 @@ export default function ContactsPage() {
       setReplyMessage("");
     }
   }, [isModalOpen, selectedContact]);
+
+  // BroadcastChannel listener + polling fallback to keep table in sync across tabs
+  useEffect(() => {
+    let bc;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("contacts-updates");
+        bc.onmessage = (ev) => {
+          const { type } = ev.data || {};
+          if (type === "contacts:update") {
+            // force GlobalData to remount and re-fetch
+            setReloadKey((k) => k + 1);
+            // refresh summary/state too
+            loadContacts();
+          }
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const poll = setInterval(() => {
+      // periodic refresh in case external systems (public site) add contacts
+      setReloadKey((k) => k + 1);
+      loadContacts();
+    }, 15000);
+
+    return () => {
+      try { if (bc) bc.close(); } catch (e) {}
+      clearInterval(poll);
+    };
+  }, []);
 
   const contactsFetcher = async (params = {}) => {
     try {
@@ -209,7 +224,7 @@ export default function ContactsPage() {
       key: "name", 
       render: (contact) => (
         <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+          <div className="shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <User className="h-4 w-4 text-blue-600" />
           </div>
           <div>
@@ -255,38 +270,70 @@ export default function ContactsPage() {
         </div>
       ) 
     },
-    { 
-      label: "Actions", 
-      key: "actions", 
-      render: (contact) => (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSelectedContact(contact);
-              setIsModalOpen(true);
-            }}
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            View
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSelectedContact(contact);
-              setIsModalOpen(true);
-              setIsReplyMode(true);
-            }}
-          >
-            <Reply className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-      align: 'right'
+    {
+      label: "Actions",
+      key: "actions",
+      render: (contact) => {
+        const { hasPermission } = auth;
+        return (
+          <div className="flex gap-2">
+            {hasPermission("contact", "view") && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedContact(contact);
+                  setIsModalOpen(true);
+                }}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View
+              </Button>
+            )}
+
+            {hasPermission("contact", "edit") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedContact(contact);
+                  setIsModalOpen(true);
+                  setIsReplyMode(true);
+                }}
+              >
+                <Reply className="h-4 w-4" />
+              </Button>
+            )}
+
+            {hasPermission("contact", "delete") && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!confirm("Are you sure you want to delete this contact message?")) return;
+                  try {
+                    await deleteContact(contact._id);
+                    toast.success("Contact deleted");
+                    await loadContacts();
+                    setReloadKey((k) => k + 1);
+                  } catch (err) {
+                    console.error("Delete contact error", err);
+                    toast.error("Failed to delete contact");
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+        );
+      },
+      align: "right",
     },
   ];
+
+  // Auth helper for rendering
+  const auth = useAuth();
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-full overflow-x-hidden">
@@ -348,6 +395,7 @@ export default function ContactsPage() {
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
           <GlobalData
+            key={reloadKey}
             title="Contacts"
             fetcher={contactsFetcher}
             columns={columns}
@@ -388,7 +436,7 @@ export default function ContactsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-500">Name</label>
-                        <p className="text-base font-semibold break-words">{selectedContact.name}</p>
+                        <p className="text-base font-semibold break-all">{selectedContact.name}</p>
                       </div>
                       
                       <div className="space-y-2">
@@ -411,7 +459,7 @@ export default function ContactsPage() {
                       {selectedContact.createdAt && (
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-500">Received</label>
-                          <p className="text-base text-sm">
+                          <p className="text-sm">
                             {format(new Date(selectedContact.createdAt), "PPpp")}
                           </p>
                         </div>
@@ -421,7 +469,7 @@ export default function ContactsPage() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-500">Message</label>
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words">
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed break-all">
                           {selectedContact.message}
                         </p>
                       </div>
@@ -429,37 +477,42 @@ export default function ContactsPage() {
                   </CardContent>
                 </Card>
 
-                {/* Reply Section */}
+                {/* Reply Section (permission-protected inside dialog) */}
                 {!isReplyMode ? (
-                  <div className="flex justify-center">
-                    <Button
-                      onClick={() => setIsReplyMode(true)}
-                      className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-                    >
-                      <Reply className="h-4 w-4 mr-2" />
-                      Reply to Contact
-                    </Button>
-                  </div>
+                  // show the reply trigger only if user has edit permission
+                  auth.hasPermission?.("contact", "edit") ? (
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={() => setIsReplyMode(true)}
+                        className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                      >
+                        <Reply className="h-4 w-4 mr-2" />
+                        Reply to Contact
+                      </Button>
+                    </div>
+                  ) : null
                 ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-green-700">
-                        <Mail className="h-5 w-5" />
-                        Reply to {selectedContact.name}
-                      </CardTitle>
-                      <CardDescription>
-                        Send a response to this contact inquiry
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Subject</label>
-                        <Input
-                          value={replySubject}
-                          onChange={(e) => setReplySubject(e.target.value)}
-                          placeholder="Enter subject line"
-                        />
-                      </div>
+                  // if in reply mode but user has no edit permission, show a notice and prevent sending
+                  auth.hasPermission?.("contact", "edit") ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-green-700">
+                          <Mail className="h-5 w-5" />
+                          Reply to {selectedContact.name}
+                        </CardTitle>
+                        <CardDescription>
+                          Send a response to this contact inquiry
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700">Subject</label>
+                          <Input
+                            value={replySubject}
+                            onChange={(e) => setReplySubject(e.target.value)}
+                            placeholder="Enter subject line"
+                          />
+                        </div>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Message</label>
@@ -472,35 +525,40 @@ export default function ContactsPage() {
                         />
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-3 justify-end">
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsReplyMode(false)}
-                          disabled={isSendingReply}
-                          className="w-full sm:w-auto"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleReply}
-                          disabled={isSendingReply || !replySubject.trim() || !replyMessage.trim()}
-                          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                        >
-                          {isSendingReply ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Mail className="h-4 w-4 mr-2" />
-                              Send Reply
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsReplyMode(false)}
+                            disabled={isSendingReply}
+                            className="w-full sm:w-auto"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleReply}
+                            disabled={isSendingReply || !replySubject.trim() || !replyMessage.trim()}
+                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                          >
+                            {isSendingReply ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Send Reply
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="p-4 rounded bg-yellow-50 border border-yellow-100 text-sm text-yellow-800">
+                      You don't have permission to reply to this contact.
+                    </div>
+                  )
                 )}
               </div>
             )}
@@ -510,6 +568,4 @@ export default function ContactsPage() {
     </div>
   );
 }
-
-
 

@@ -8,16 +8,16 @@ import Shift from '@/Models/Shift';
 
 export async function POST(request) {
   console.log('🚀 === LOGIN API STARTED ===');
-  
+
   try {
     // Step 1: Check if request body is valid
     console.log('📥 Step 1: Parsing request body...');
     let body;
     try {
       body = await request.json();
-      console.log('✅ Request body parsed:', { 
-        agentId: body.agentId, 
-        hasPassword: !!body.password 
+      console.log('✅ Request body parsed:', {
+        agentId: body.agentId,
+        hasPassword: !!body.password
       });
     } catch (parseError) {
       console.log('❌ JSON Parse Error:', parseError);
@@ -32,9 +32,9 @@ export async function POST(request) {
     // Step 2: Validate input
     console.log('🔍 Step 2: Validating input...');
     if (!agentId || !password) {
-      console.log('❌ Missing fields:', { 
-        agentId: !!agentId, 
-        password: !!password 
+      console.log('❌ Missing fields:', {
+        agentId: !!agentId,
+        password: !!password
       });
       return NextResponse.json(
         { error: 'Agent ID and password are required' },
@@ -61,7 +61,7 @@ export async function POST(request) {
     try {
       agent = await Agent.findOne({ agentId }).populate('shift');
       console.log('🔎 Agent search result:', agent ? 'FOUND' : 'NOT FOUND');
-      
+
       if (agent) {
         console.log('📋 Agent details:', {
           id: agent._id,
@@ -102,7 +102,7 @@ export async function POST(request) {
       console.log('🔐 Comparing passwords...');
       console.log('📝 Input password length:', password.length);
       console.log('🗃️ Stored password hash:', agent.password ? 'EXISTS' : 'MISSING');
-      
+
       isPasswordValid = await bcrypt.compare(password, agent.password);
       console.log('✅ Password comparison result:', isPasswordValid);
     } catch (bcryptError) {
@@ -136,10 +136,11 @@ export async function POST(request) {
     let token;
     try {
       token = jwt.sign(
-        { 
+        {
           agentId: agent.agentId,
           id: agent._id,
-          email: agent.email
+          email: agent.email,
+          type: 'agent'   // ⭐⭐ MOST IMPORTANT ⭐⭐
         },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
@@ -181,7 +182,7 @@ export async function POST(request) {
     console.error('❌ Error name:', error.name);
     console.error('❌ Error message:', error.message);
     console.error('❌ Error stack:', error.stack);
-    
+
     // Check for specific common errors
     if (error.name === 'MongoServerError') {
       console.log('🔧 MongoDB Error detected');
@@ -190,7 +191,7 @@ export async function POST(request) {
         { status: 500 }
       );
     }
-    
+
     if (error.name === 'TypeError') {
       console.log('🔧 TypeError detected - likely missing import or variable');
       return NextResponse.json(

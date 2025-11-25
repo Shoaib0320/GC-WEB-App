@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['nodemailer'],
-  },
+  turbopack: {},  // 👈 Add this to silence the error
+
+  serverExternalPackages: ['nodemailer'],  // updated field
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

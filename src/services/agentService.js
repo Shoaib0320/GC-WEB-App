@@ -28,6 +28,8 @@ export const agentService = {
 
   // Get current agent profile
   getProfile: async () => {
+    const token = localStorage.getItem('agentToken');
+    console.log('agentService.getProfile token:', token ? 'found' : 'NOT found');
     const response = await api.get('/agents/profile');
     return response.data;
   },

@@ -76,6 +76,10 @@ export default function Users() {
     // inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
     analytics: { view: false, export: false },
     settings: { view: false, edit: false, manage_roles: false },
+
+    // 🆕 NEW: Sales Permissions
+    sales: { view: false, create: false, edit: false, delete: false, export: false, approve: false, analytics: false },
+    sales_analytics: { view: false, export: false, manage: false },
     // hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
     // finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
     // crm: {
@@ -83,6 +87,7 @@ export default function Users() {
     //   leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
     //   tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
     // },
+
     website_bookings: { view: false, edit: false, manage_status: false, export: false, delete: false },
     reports: { sales: false, finance: false, hr: false, performance: false, export_all: false },
     progress: { view_own: false, view_all: false, export: false },
@@ -508,6 +513,21 @@ export default function Users() {
       title: 'Agent Management',
       description: 'Manage agents and their profiles',
       permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    // 🆕 NEW: Sales Management
+    {
+      name: 'sales',
+      title: 'Sales Management',
+      description: 'Manage sales, orders and transactions',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'analytics']
+    },
+
+    // 🆕 NEW: Sales Analytics
+    {
+      name: 'sales_analytics',
+      title: 'Sales Analytics',
+      description: 'View detailed sales analytics and reports',
+      permissions: ['view', 'export', 'manage']
     },
     {
       name: 'shift',
@@ -958,35 +978,35 @@ export default function Users() {
               </Select>
             </div>
 
-              <div className="sm:col-span-2 lg:col-span-3 pt-4 flex gap-3 justify-end border-t">
+            <div className="sm:col-span-2 lg:col-span-3 pt-4 flex gap-3 justify-end border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeUserDialog}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors"
+              >
+                {viewOnly ? 'Close' : 'Cancel'}
+              </Button>
+              {!viewOnly && (
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeUserDialog}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm"
                 >
-                  {viewOnly ? 'Close' : 'Cancel'}
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {editingUser ? 'Updating User...' : 'Creating User...'}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {editingUser ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                      {editingUser ? 'Update User' : 'Create User'}
+                    </div>
+                  )}
                 </Button>
-                {!viewOnly && (
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm"
-                  >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {editingUser ? 'Updating User...' : 'Creating User...'}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {editingUser ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                        {editingUser ? 'Update User' : 'Create User'}
-                      </div>
-                    )}
-                  </Button>
-                )}
-              </div>
+              )}
+            </div>
           </form>
         </DialogContent>
       </Dialog>
