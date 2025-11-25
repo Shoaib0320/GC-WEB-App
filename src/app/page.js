@@ -6,6 +6,7 @@ import PortfolioSection from "@/components/PortfolioSection";
 import TeamSection from "@/components/TeamSection";
 import AboutSection from "@/components/AboutSection";
 import ContactSection from "@/components/ContactSection";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
