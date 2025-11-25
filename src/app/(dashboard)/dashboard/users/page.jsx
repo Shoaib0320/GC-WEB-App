@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function Users() {
   const { user, hasPermission } = useAuth();
@@ -68,19 +69,19 @@ export default function Users() {
   // Role form state
   const DEFAULT_PERMISSIONS = {
     user: { view: false, create: false, edit: false, delete: false, export: false, approve: false, change_role: false },
-    category: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    product: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    order: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
-    inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    // category: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    // product: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    // order: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
+    // inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
     analytics: { view: false, export: false },
     settings: { view: false, edit: false, manage_roles: false },
-    hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
-    finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
-    crm: {
-      clients: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-      leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-      tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
-    },
+    // hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
+    // finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
+    // crm: {
+    //   clients: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    //   leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    //   tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
+    // },
     website_bookings: { view: false, edit: false, manage_status: false, export: false, delete: false },
     reports: { sales: false, finance: false, hr: false, performance: false, export_all: false },
     progress: { view_own: false, view_all: false, export: false },
@@ -113,11 +114,12 @@ export default function Users() {
     try {
       const response = await fetch('/api/users');
       const data = await response.json();
-            console.log('User Data', data);
+      console.log('User Data', data);
       if (data.success) {
         setUsers(data.data.users || []);
       }
     } catch (error) {
+      toast.error('Failed to load users');
       showMessage('error', 'Failed to load users');
     }
   };
@@ -130,6 +132,7 @@ export default function Users() {
         setRoles(data.data || []);
       }
     } catch (error) {
+      toast.error('Failed to load roles');
       showMessage('error', 'Failed to load roles');
     }
   };
@@ -168,17 +171,20 @@ export default function Users() {
       const data = await response.json();
 
       console.log('User Data', data);
-      
+
 
       if (data.success) {
+        toast.success('User created successfully');
         showMessage('success', 'User created successfully');
         resetUserForm();
         setUserDialogOpen(false);
         loadUsers();
       } else {
+        toast.error('Failed to create user');
         showMessage('error', data.error || 'Failed to create user');
       }
     } catch (error) {
+      toast.error('Failed to create user');
       showMessage('error', 'Failed to create user');
     } finally {
       setLoading(false);
@@ -218,14 +224,17 @@ export default function Users() {
       const data = await response.json();
 
       if (data.success) {
+        toast.success('User updated successfully');
         showMessage('success', 'User updated successfully');
         resetUserForm();
         setUserDialogOpen(false);
         loadUsers();
       } else {
+        toast.error('Failed to update user');
         showMessage('error', data.error || 'Failed to update user');
       }
     } catch (error) {
+      toast.error('Failed to update user');
       showMessage('error', 'Failed to update user');
     } finally {
       setLoading(false);
@@ -408,15 +417,18 @@ export default function Users() {
       const data = await res.json();
 
       if (data.success) {
+        toast.success(editingRole ? 'Role updated successfully' : 'Role created successfully');
         showMessage('success', editingRole ? 'Role updated successfully' : 'Role created successfully');
         resetRoleForm();
         setRoleDialogOpen(false);
         setEditingRole(null);
         loadRoles();
       } else {
+        toast.error('Failed to save role');
         showMessage('error', data.error || 'Failed to save role');
       }
     } catch (error) {
+      toast.error('Failed to save role');
       showMessage('error', 'Failed to save role');
     } finally {
       setLoading(false);
@@ -517,30 +529,30 @@ export default function Users() {
       description: 'Manage system users and their roles',
       permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'change_role']
     },
-    {
-      name: 'category',
-      title: 'Category Management',
-      description: 'Manage product categories',
-      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
-    },
-    {
-      name: 'product',
-      title: 'Product Management',
-      description: 'Manage products and inventory',
-      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
-    },
-    {
-      name: 'order',
-      title: 'Order Management',
-      description: 'Manage customer orders',
-      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'update_status']
-    },
-    {
-      name: 'inventory',
-      title: 'Inventory Management',
-      description: 'Manage stock and inventory',
-      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
-    },
+    // {
+    //   name: 'category',
+    //   title: 'Category Management',
+    //   description: 'Manage product categories',
+    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    // },
+    // {
+    //   name: 'product',
+    //   title: 'Product Management',
+    //   description: 'Manage products and inventory',
+    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    // },
+    // {
+    //   name: 'order',
+    //   title: 'Order Management',
+    //   description: 'Manage customer orders',
+    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'update_status']
+    // },
+    // {
+    //   name: 'inventory',
+    //   title: 'Inventory Management',
+    //   description: 'Manage stock and inventory',
+    //   permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    // },
     {
       name: 'analytics',
       title: 'Analytics',
@@ -553,43 +565,42 @@ export default function Users() {
       description: 'Manage system configuration',
       permissions: ['view', 'edit', 'manage_roles']
     },
-    {
-      name: 'hr',
-      title: 'HR Management',
-      description: 'Manage human resources',
-      permissions: ['view', 'create', 'edit', 'delete', 'payroll', 'attendance', 'leave_approve']
-    },
-    {
-      name: 'finance',
-      title: 'Finance Management',
-      description: 'Manage financial operations',
-      permissions: ['view', 'create', 'edit', 'delete', 'approve_payments', 'export_reports']
-    },
-    {
-      name: 'crm',
-      title: 'CRM Module',
-      description: 'Manage customer relationships',
-      permissions: ['clients', 'leads', 'tickets']
-    },
-    {
-      name: 'website_bookings',
-      title: 'Website Bookings',
-      description: 'Manage website booking requests',
-      permissions: ['view', 'edit', 'manage_status', 'export', 'delete']
-    },
-    {
-      name: 'reports',
-      title: 'Reports',
-      description: 'Access various reports',
-      permissions: ['sales', 'finance', 'hr', 'performance', 'export_all']
-    },
-    {
-      name: 'progress',
-      title: 'Progress Tracking',
-      description: 'Track agent and employee progress',
-      permissions: ['view_own', 'view_all', 'export']
-    }
-    ,
+    // {
+    //   name: 'hr',
+    //   title: 'HR Management',
+    //   description: 'Manage human resources',
+    //   permissions: ['view', 'create', 'edit', 'delete', 'payroll', 'attendance', 'leave_approve']
+    // },
+    // {
+    //   name: 'finance',
+    //   title: 'Finance Management',
+    //   description: 'Manage financial operations',
+    //   permissions: ['view', 'create', 'edit', 'delete', 'approve_payments', 'export_reports']
+    // },
+    // {
+    //   name: 'crm',
+    //   title: 'CRM Module',
+    //   description: 'Manage customer relationships',
+    //   permissions: ['clients', 'leads', 'tickets']
+    // },
+    // {
+    //   name: 'website_bookings',
+    //   title: 'Website Bookings',
+    //   description: 'Manage website booking requests',
+    //   permissions: ['view', 'edit', 'manage_status', 'export', 'delete']
+    // },
+    // {
+    //   name: 'reports',
+    //   title: 'Reports',
+    //   description: 'Access various reports',
+    //   permissions: ['sales', 'finance', 'hr', 'performance', 'export_all']
+    // },
+    // {
+    //   name: 'progress',
+    //   title: 'Progress Tracking',
+    //   description: 'Track agent and employee progress',
+    //   permissions: ['view_own', 'view_all', 'export']
+    // },
     {
       name: 'agent',
       title: 'Agent Management',
@@ -679,11 +690,13 @@ export default function Users() {
     },
     { label: 'Email', key: 'email', render: (u) => <div className="text-sm text-gray-700">{u.email}</div> },
     { label: 'Role', key: 'role', render: (u) => <span className="capitalize text-sm">{u.role?.name}</span> },
-    { label: 'Status', key: 'status', render: (u) => (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-        {u.isActive ? 'Active' : 'Inactive'}
-      </span>
-    ) },
+    {
+      label: 'Status', key: 'status', render: (u) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {u.isActive ? 'Active' : 'Inactive'}
+        </span>
+      )
+    },
     {
       label: 'Actions',
       key: 'actions',
@@ -714,11 +727,13 @@ export default function Users() {
   const roleColumns = [
     { label: 'Role', key: 'name', render: (r) => <div className="text-sm font-semibold capitalize">{r.name.replace(/_/g, ' ')}</div> },
     { label: 'Description', key: 'description', render: (r) => <div className="text-sm text-gray-600">{r.description}</div> },
-    { label: 'Status', key: 'isActive', render: (r) => (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-        {r.isActive ? 'Active' : 'Inactive'}
-      </span>
-    ) },
+    {
+      label: 'Status', key: 'isActive', render: (r) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {r.isActive ? 'Active' : 'Inactive'}
+        </span>
+      )
+    },
     {
       label: 'Actions',
       align: 'right',
@@ -905,7 +920,7 @@ export default function Users() {
               {editingUser ? 'Update user information' : 'Add a new user to the system with appropriate role and permissions'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={editingUser ? handleEditUserSubmit : handleUserSubmit} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-4">
             <div className="space-y-2">
               <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
@@ -994,8 +1009,8 @@ export default function Users() {
               <Label htmlFor="role" className="text-sm font-medium text-gray-700">
                 Role *
               </Label>
-              <Select 
-                value={userForm.role} 
+              <Select
+                value={userForm.role}
                 onValueChange={(value) => setUserForm(prev => ({ ...prev, role: value }))}
               >
                 <SelectTrigger className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
@@ -1131,7 +1146,7 @@ export default function Users() {
               {editingRole ? 'Update role permissions and settings' : 'Define a new role with specific permissions and access levels'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleRoleSubmit} className="space-y-6 mt-4">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
@@ -1284,7 +1299,7 @@ export default function Users() {
               </div>
             </div>
 
-              <div className="flex justify-end gap-3 pt-6 border-t">
+            <div className="flex justify-end gap-3 pt-6 border-t">
               <Button
                 type="button"
                 variant="outline"

@@ -2,6 +2,7 @@
 // src/app/agents/page.js
 "use client";
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { agentService } from '@/services/agentService';
 import { shiftService } from '@/services/shiftService';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [pagination, setPagination] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
@@ -90,6 +92,8 @@ export default function AgentsPage() {
     // bump reload key to force GlobalData to re-fetch
     setReloadKey((k) => k + 1);
   };
+
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     fetchAgents();
@@ -172,7 +176,7 @@ export default function AgentsPage() {
         password: '',
         monthlyTarget: ''
       });
-      fetchAgents(); // Refresh list
+  fetchAgents(); // Refresh list
     } catch (error) {
       console.error('Error creating agent:', error);
       toast.error(error.response?.data?.error || 'Error creating agent');
@@ -212,7 +216,7 @@ export default function AgentsPage() {
         monthlyTarget: '',
         isActive: true
       });
-      fetchAgents(); // Refresh list
+  fetchAgents(); // Refresh list
     } catch (error) {
       console.error('Error updating agent:', error);
       toast.error(error.response?.data?.error || 'Error updating agent');
@@ -222,7 +226,7 @@ export default function AgentsPage() {
   };
 
   // Open edit modal
-  const handleOpenEdit = (agent) => {
+  const handleOpenEdit = (agent, mode = 'edit') => {
     setEditFormData({
       _id: agent._id,
       agentName: agent.agentName,
@@ -232,6 +236,7 @@ export default function AgentsPage() {
       monthlyTarget: agent.monthlyTarget?.toString() || '',
       isActive: agent.isActive
     });
+    setViewOnly(mode === 'view');
     setShowEditForm(true);
   };
 
@@ -270,11 +275,13 @@ export default function AgentsPage() {
           <p className="text-gray-600 mt-1">Manage all agents and their shifts</p>
         </div>
         <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Create New Agent
-            </Button>
-          </DialogTrigger>
+          {hasPermission('agent', 'create') && (
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                Create New Agent
+              </Button>
+            </DialogTrigger>
+          )}
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Agent</DialogTitle>
@@ -431,14 +438,15 @@ export default function AgentsPage() {
             {/* Agent Name */}
             <div className="space-y-2">
               <Label htmlFor="edit-agentName">Agent Name</Label>
-              <Input
-                id="edit-agentName"
-                name="agentName"
-                value={editFormData.agentName}
-                onChange={handleEditInputChange}
-                required
-                placeholder="Enter agent full name"
-              />
+                <Input
+                  id="edit-agentName"
+                  name="agentName"
+                  value={editFormData.agentName}
+                  onChange={handleEditInputChange}
+                  required
+                  placeholder="Enter agent full name"
+                  disabled={viewOnly}
+                />
             </div>
 
             {/* Agent ID */}
@@ -451,6 +459,7 @@ export default function AgentsPage() {
                 onChange={handleEditInputChange}
                 required
                 placeholder="Enter unique agent ID"
+                disabled={viewOnly}
               />
             </div>
 
@@ -460,7 +469,7 @@ export default function AgentsPage() {
               <Select 
                 value={editFormData.shift} 
                 onValueChange={(value) => handleEditSelectChange('shift', value)}
-                disabled={shiftsLoading}
+                disabled={shiftsLoading || viewOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a shift" />
@@ -492,6 +501,7 @@ export default function AgentsPage() {
                 onChange={handleEditInputChange}
                 required
                 placeholder="Enter agent email address"
+                disabled={viewOnly}
               />
             </div>
 
@@ -505,6 +515,7 @@ export default function AgentsPage() {
                 value={editFormData.monthlyTarget}
                 onChange={handleEditInputChange}
                 placeholder="Enter monthly target (numbers only)"
+                disabled={viewOnly}
               />
               <p className="text-xs text-gray-500">
                 Monthly target in numbers (e.g., 1000)
@@ -517,6 +528,7 @@ export default function AgentsPage() {
               <Select 
                 value={editFormData.isActive.toString()} 
                 onValueChange={(value) => handleEditSelectChange('isActive', value === 'true')}
+                disabled={viewOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -529,21 +541,35 @@ export default function AgentsPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? 'Updating...' : 'Update Agent'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowEditForm(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
+              {!viewOnly && (
+                <>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {loading ? 'Updating...' : 'Update Agent'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEditForm(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+              {viewOnly && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditForm(false)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              )}
             </div>
           </form>
         </DialogContent>
@@ -616,10 +642,21 @@ export default function AgentsPage() {
                 key: 'actions',
                 render: (agent) => (
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenEdit(agent)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">Edit</Button>
-                    <ResetPasswordDialog agent={agent} onSuccess={() => setReloadKey(k => k + 1)} />
-                    <Button variant="outline" size="sm" onClick={() => handleToggleStatus(agent._id, agent.isActive)} className={agent.isActive ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}>{agent.isActive ? 'Deactivate' : 'Activate'}</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteAgent(agent._id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">Delete</Button>
+                          {hasPermission('agent', 'edit') && (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(agent, 'edit')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">Edit</Button>
+                          )}
+                          {!hasPermission('agent', 'edit') && hasPermission('agent', 'view') && (
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(agent, 'view')} className="text-gray-600 hover:bg-gray-50">View</Button>
+                          )}
+                          {hasPermission('agent', 'edit') && (
+                            <ResetPasswordDialog agent={agent} onSuccess={() => setReloadKey(k => k + 1)} />
+                          )}
+                          {hasPermission('agent', 'edit') && (
+                            <Button variant="outline" size="sm" onClick={() => handleToggleStatus(agent._id, agent.isActive)} className={agent.isActive ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}>{agent.isActive ? 'Deactivate' : 'Activate'}</Button>
+                          )}
+                          {hasPermission('agent', 'delete') && (
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteAgent(agent._id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">Delete</Button>
+                          )}
                   </div>
                 )
               }

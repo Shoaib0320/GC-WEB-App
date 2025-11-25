@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { promoCodeService } from '@/services/promocodeService';
 import { agentService } from '@/services/agentService';
 import { toast } from 'sonner';
@@ -48,6 +49,7 @@ export default function PromoCodesPage() {
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [pagination, setPagination] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -105,6 +107,8 @@ export default function PromoCodesPage() {
     fetchPromoCodes();
     fetchAgents();
   }, []);
+
+  const { hasPermission } = useAuth();
 
   // Handle search
   const handleSearch = (e) => {
@@ -217,7 +221,7 @@ export default function PromoCodesPage() {
   };
 
   // Open edit modal
-  const handleOpenEdit = (promo) => {
+  const handleOpenEdit = (promo, mode = 'edit') => {
     setEditFormData({
       _id: promo._id,
       promoCode: promo.promoCode,
@@ -229,6 +233,7 @@ export default function PromoCodesPage() {
       isActive: promo.isActive
     });
     setShowEditForm(true);
+    setViewOnly(mode === 'view');
   };
 
   // Delete promo code
@@ -237,8 +242,8 @@ export default function PromoCodesPage() {
 
     try {
       await promoCodeService.deletePromoCode(id);
-      toast.success('Promo code deleted successfully');
-      fetchPromoCodes(); // Refresh list
+  toast.success('Promo code deleted successfully');
+  fetchPromoCodes(); // Refresh list
     } catch (error) {
       console.error('Error deleting promo code:', error);
       toast.error('Error deleting promo code');
@@ -276,11 +281,13 @@ export default function PromoCodesPage() {
           <p className="text-gray-600 mt-1">Create and manage promotional codes for agents</p>
         </div>
         <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-          <DialogTrigger asChild>
-            <Button className="bg-green-600 hover:bg-green-700">
-              Create New Promo Code
-            </Button>
-          </DialogTrigger>
+            {hasPermission('promoCode', 'create') && (
+              <DialogTrigger asChild>
+                <Button className="bg-green-600 hover:bg-green-700">
+                  Create New Promo Code
+                </Button>
+              </DialogTrigger>
+            )}
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Promo Code</DialogTitle>
@@ -431,6 +438,7 @@ export default function PromoCodesPage() {
                 required
                 className="uppercase"
                 placeholder="e.g., SUMMER25"
+                disabled={viewOnly}
               />
             </div>
 
@@ -447,6 +455,7 @@ export default function PromoCodesPage() {
                 max="100"
                 required
                 placeholder="Enter discount percentage"
+                disabled={viewOnly}
               />
             </div>
 
@@ -514,6 +523,7 @@ export default function PromoCodesPage() {
               <Select 
                 value={editFormData.isActive.toString()} 
                 onValueChange={(value) => handleEditSelectChange('isActive', value === 'true')}
+                disabled={viewOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -526,21 +536,35 @@ export default function PromoCodesPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-              >
-                {loading ? 'Updating...' : 'Update Promo Code'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowEditForm(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
+              {!viewOnly && (
+                <>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {loading ? 'Updating...' : 'Update Promo Code'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEditForm(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+              {viewOnly && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditForm(false)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              )}
             </div>
           </form>
         </DialogContent>
@@ -671,34 +695,50 @@ export default function PromoCodesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenEdit(promo)}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleStatus(promo._id, promo.isActive)}
-                            className={
-                              promo.isActive 
-                                ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' 
-                                : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                            }
-                          >
-                            {promo.isActive ? 'Deactivate' : 'Activate'}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeletePromoCode(promo._id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            Delete
-                          </Button>
+                          {hasPermission('promoCode', 'edit') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEdit(promo, 'edit')}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          {!hasPermission('promoCode', 'edit') && hasPermission('promoCode', 'view') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEdit(promo, 'view')}
+                              className="text-gray-600 hover:bg-gray-50"
+                            >
+                              View
+                            </Button>
+                          )}
+                          {hasPermission('promoCode', 'edit') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleStatus(promo._id, promo.isActive)}
+                              className={
+                                promo.isActive 
+                                  ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' 
+                                  : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                              }
+                            >
+                              {promo.isActive ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          )}
+                          {hasPermission('promoCode', 'delete') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeletePromoCode(promo._id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

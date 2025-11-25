@@ -9,7 +9,7 @@ export default function CustomDialog({ open, onClose, children }) {
     <AnimatePresence>
       {/* BACKDROP */}
       <motion.div
-        className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center"
+        className="fixed inset-0 bg-black/60 flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -19,8 +19,7 @@ export default function CustomDialog({ open, onClose, children }) {
       {/* FULLSCREEN MODAL */}
       <motion.div
         className="
-          fixed inset-0 z-[2001]
-          w-[100vw] h-[100vh]
+          fixed inset-0
           bg-white
           flex flex-col
           overflow-hidden
