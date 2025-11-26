@@ -115,6 +115,7 @@ export async function PUT(request) {
         } else {
           await Attendance.create({
             ...attendanceData,
+            date: dateStart,
             createdAt: date,
             updatedAt: date
           });

@@ -719,7 +719,7 @@ export default function AdminAttendancePage() {
         </div>
       ),
     },
-    { label: "Date", render: (a) => new Date(a.date).toLocaleDateString() },
+    { label: "Date", render: (a) => new Date(a.createdAt).toLocaleDateString() },
     {
       label: "Actions",
       align: "right",

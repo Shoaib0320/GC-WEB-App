@@ -1,7 +1,6 @@
 //src/app/api/attendance/auto-checkout/route.js
 
 import { NextResponse } from "next/server";
-// import { processAutoCheckout } from "@/lib/autoAttendanceService";
 import { performAutoCheckout } from "@/lib/autoAttendanceService";
 
 export async function POST(request) {
