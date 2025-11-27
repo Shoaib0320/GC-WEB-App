@@ -327,9 +327,9 @@ api.interceptors.response.use(
           document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
           document.cookie = "agentToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
-          setTimeout(() => {
-            window.location.href = "/auth/login";
-          }, 300);
+          // setTimeout(() => {
+          //   window.location.href = "/login";
+          // }, 300);
         }
       }
     }

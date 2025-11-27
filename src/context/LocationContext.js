@@ -155,12 +155,17 @@ import { createContext, useContext, useEffect, useState } from 'react';
 export const LocationContext = createContext();
 
 export const LocationProvider = ({ children }) => {
-  const [officeLocation, setOfficeLocation] = useState({ 
-    latitude: 24.980667, 
-    longitude: 67.133553, 
-    address: "Halari Memon Society, Karachi" 
+  // const [officeLocation, setOfficeLocation] = useState({ 
+  //   latitude: 24.980667, 
+  //   longitude: 67.133553, 
+  //   address: "Halari Memon Society, Karachi" 
+  // });
+    const [officeLocation, setOfficeLocation] = useState({
+    latitude: 24.96146,
+    longitude: 67.07115,
+    address: "R-84, Sector 15-A/4, North Karachi, Karachi"
   });
-  const [checkRadius, setCheckRadius] = useState(100); // meters
+  const [checkRadius, setCheckRadius] = useState(10); // meters
 
   // Load saved location from localStorage
   useEffect(() => {

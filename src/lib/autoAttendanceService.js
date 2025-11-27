@@ -293,99 +293,245 @@ export async function markAutoAbsent() {
   }
 }
 
-/**
- * AUTO CHECKOUT (single attendance) - This should only be called when API endpoint is hit.
- * It will update attendance, compute working minutes, overtime, early checkout, half-day, and save.
- */
+// /**
+//  * AUTO CHECKOUT (single attendance) - This should only be called when API endpoint is hit.
+//  * It will update attendance, compute working minutes, overtime, early checkout, half-day, and save.
+//  */
+// export async function performAutoCheckout(attendance, currentTime = new Date(), locationData = null) {
+//   try {
+//     if (!attendance) throw new Error("No attendance provided");
+
+//     const tz = APP_TZ;
+//     // ensure we have a mongoose document
+//     // (attendance could be a plain object; try to fetch fresh doc if needed)
+//     let attendanceDoc = attendance;
+//     if (!attendance._id) {
+//       attendanceDoc = await Attendance.findById(attendance._id);
+//       if (!attendanceDoc) throw new Error("Attendance not found");
+//     }
+
+//     attendanceDoc.checkOutTime = currentTime;
+//     // attendanceDoc.checkOutLocation = "Auto-checkout: Frontend Triggered";
+//     // ✅ After (GeoJSON Object):
+//     attendanceDoc.checkOutLocation = {
+//       type: "Point",
+//       coordinates: [locationData.longitude, locationData.latitude],
+//       address: "Auto-checkout location"
+//     };
+
+//     // total working minutes
+//     const totalWorkingMinutes = getTimeDifferenceInMinutes(attendanceDoc.checkInTime, currentTime);
+//     attendanceDoc.totalWorkingMinutes = totalWorkingMinutes;
+
+//     // overtime / early checkout
+//     let isOvertime = false, overtimeMinutes = 0, isEarlyCheckout = false, earlyCheckoutMinutes = 0;
+
+//     if (attendanceDoc.shift) {
+//       const shift = attendanceDoc.shift;
+//       const checkInDate = moment(attendanceDoc.checkInTime).tz(tz);
+//       let shiftStart = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.startTime || "00:00").split(":")[0], 10)).minute(parseInt((shift.startTime || "00:00").split(":")[1], 10));
+//       let shiftEnd = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.endTime || "00:00").split(":")[0], 10)).minute(parseInt((shift.endTime || "00:00").split(":")[1], 10));
+
+//       // overnight handling
+//       if (!shift.startTime || !shift.endTime) {
+//         // if shift times missing, skip overtime logic
+//       } else {
+//         if (shiftEnd.isSameOrBefore(shiftStart)) {
+//           shiftEnd = shiftEnd.add(1, "day");
+//         }
+
+//         if (moment(currentTime).isAfter(shiftEnd)) {
+//           isOvertime = true;
+//           overtimeMinutes = getTimeDifferenceInMinutes(shiftEnd.toDate(), currentTime);
+//         }
+
+//         if (moment(currentTime).isBefore(shiftEnd)) {
+//           isEarlyCheckout = true;
+//           earlyCheckoutMinutes = getTimeDifferenceInMinutes(currentTime, shiftEnd.toDate());
+//         }
+//       }
+//     }
+
+//     // status logic
+//     let finalStatus = attendanceDoc.status || "present";
+//     const requiredMinutesForFullDay = 4 * 60;
+//     if (totalWorkingMinutes === 0) finalStatus = "absent";
+//     else if (totalWorkingMinutes < requiredMinutesForFullDay) finalStatus = "half_day";
+
+//     attendanceDoc.isOvertime = isOvertime;
+//     attendanceDoc.overtimeMinutes = overtimeMinutes;
+//     attendanceDoc.isEarlyCheckout = isEarlyCheckout;
+//     attendanceDoc.earlyCheckoutMinutes = earlyCheckoutMinutes;
+//     attendanceDoc.status = finalStatus;
+//     attendanceDoc.autoCheckedOut = true;
+//     attendanceDoc.notes = `Auto checked-out via frontend at ${moment(currentTime).tz(tz).format("HH:mm:ss")}`;
+
+//     await attendanceDoc.save();
+
+//     const populated = await Attendance.findById(attendanceDoc._id)
+//       .populate(attendanceDoc.agent ? "agent" : "user")
+//       .populate("shift");
+
+//     const workingHours = (totalWorkingMinutes / 60).toFixed(1);
+//     let message = `Auto checked-out successfully! ✅ (Total: ${workingHours} hours)`;
+//     if (isOvertime) message = `Auto checked-out successfully! 🕒 (Overtime: ${overtimeMinutes} minutes, Total: ${workingHours} hours)`;
+//     else if (finalStatus === "half_day") message = `Auto checked-out successfully! 📊 (Half Day: ${workingHours} hours)`;
+//     else if (finalStatus === "absent") message = `Auto checked-out, but marked absent (0 working minutes).`;
+
+//     console.log("✅ performAutoCheckout:", { attendanceId: populated._id.toString(), status: populated.status, workingHours });
+
+//     return { success: true, message, attendance: populated, workingHours, overtimeMinutes, finalStatus };
+//   } catch (err) {
+//     console.error("performAutoCheckout error:", err);
+//     return { success: false, error: err.message || String(err) };
+//   }
+// }
+
+
 export async function performAutoCheckout(attendance, currentTime = new Date(), locationData = null) {
   try {
     if (!attendance) throw new Error("No attendance provided");
 
-    const tz = APP_TZ;
-    // ensure we have a mongoose document
-    // (attendance could be a plain object; try to fetch fresh doc if needed)
-    let attendanceDoc = attendance;
-    if (!attendance._id) {
-      attendanceDoc = await Attendance.findById(attendance._id);
-      if (!attendanceDoc) throw new Error("Attendance not found");
-    }
+    const tz = APP_TZ || "Asia/Karachi";
 
-    attendanceDoc.checkOutTime = currentTime;
-    // attendanceDoc.checkOutLocation = "Auto-checkout: Frontend Triggered";
-    // ✅ After (GeoJSON Object):
-    attendanceDoc.checkOutLocation = {
-      type: "Point",
-      coordinates: [locationData.longitude, locationData.latitude],
-      address: "Auto-checkout location"
+    // Resolve attendance document (accepts doc, id string, or plain object with _id)
+    let attendanceDoc = null;
+    const tryId = (a) => {
+      try {
+        // if it's an ObjectId-like or string
+        return String(a);
+      } catch (e) {
+        return null;
+      }
     };
 
-    // total working minutes
-    const totalWorkingMinutes = getTimeDifferenceInMinutes(attendanceDoc.checkInTime, currentTime);
-    attendanceDoc.totalWorkingMinutes = totalWorkingMinutes;
-
-    // overtime / early checkout
-    let isOvertime = false, overtimeMinutes = 0, isEarlyCheckout = false, earlyCheckoutMinutes = 0;
-
-    if (attendanceDoc.shift) {
-      const shift = attendanceDoc.shift;
-      const checkInDate = moment(attendanceDoc.checkInTime).tz(tz);
-      let shiftStart = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.startTime || "00:00").split(":")[0], 10)).minute(parseInt((shift.startTime || "00:00").split(":")[1], 10));
-      let shiftEnd = moment(checkInDate).tz(tz).startOf("day").hour(parseInt((shift.endTime || "00:00").split(":")[0], 10)).minute(parseInt((shift.endTime || "00:00").split(":")[1], 10));
-
-      // overnight handling
-      if (!shift.startTime || !shift.endTime) {
-        // if shift times missing, skip overtime logic
-      } else {
-        if (shiftEnd.isSameOrBefore(shiftStart)) {
-          shiftEnd = shiftEnd.add(1, "day");
-        }
-
-        if (moment(currentTime).isAfter(shiftEnd)) {
-          isOvertime = true;
-          overtimeMinutes = getTimeDifferenceInMinutes(shiftEnd.toDate(), currentTime);
-        }
-
-        if (moment(currentTime).isBefore(shiftEnd)) {
-          isEarlyCheckout = true;
-          earlyCheckoutMinutes = getTimeDifferenceInMinutes(currentTime, shiftEnd.toDate());
-        }
+    if (typeof attendance === "string" || typeof attendance === "object" && !attendance._id && attendance.id) {
+      // case: attendance is an id string or has 'id'
+      const id = typeof attendance === "string" ? attendance : attendance.id;
+      attendanceDoc = await Attendance.findById(id).populate(attendance && attendance.agent ? "agent" : "user").populate("shift");
+    } else if (attendance && attendance._id) {
+      // fetch fresh doc to ensure population and mongoose methods
+      attendanceDoc = await Attendance.findById(attendance._id).populate(attendance.agent ? "agent" : "user").populate("shift");
+    } else if (attendance && attendance.checkInTime) {
+      // assume it's already a doc-like object with needed fields
+      attendanceDoc = attendance;
+      // try to populate shift if it's just an id
+      if (attendanceDoc.shift && typeof attendanceDoc.shift === "object" && !attendanceDoc.shift.startTime) {
+        attendanceDoc = await Attendance.findById(attendanceDoc._id).populate(attendanceDoc.agent ? "agent" : "user").populate("shift");
       }
     }
 
-    // status logic
-    let finalStatus = attendanceDoc.status || "present";
-    const requiredMinutesForFullDay = 4 * 60;
-    if (totalWorkingMinutes === 0) finalStatus = "absent";
-    else if (totalWorkingMinutes < requiredMinutesForFullDay) finalStatus = "half_day";
+    if (!attendanceDoc) throw new Error("Attendance record not found");
 
+    // set checkout time & location
+    attendanceDoc.checkOutTime = currentTime;
+    if (locationData && typeof locationData.latitude === "number" && typeof locationData.longitude === "number") {
+      attendanceDoc.checkOutLocation = {
+        type: "Point",
+        coordinates: [locationData.longitude, locationData.latitude],
+        address: locationData.address || "Auto-checkout location"
+      };
+    } else if (locationData && locationData.address) {
+      attendanceDoc.checkOutLocation = { address: locationData.address };
+    }
+
+    // compute total working minutes (safe guard if checkInTime missing)
+    const checkInTime = attendanceDoc.checkInTime ? new Date(attendanceDoc.checkInTime) : null;
+    const totalWorkingMinutes = checkInTime ? getTimeDifferenceInMinutes(checkInTime, currentTime) : 0;
+    attendanceDoc.totalWorkingMinutes = totalWorkingMinutes;
+
+    // defaults
+    let isOvertime = false, overtimeMinutes = 0, isEarlyCheckout = false, earlyCheckoutMinutes = 0;
+    let finalStatus = attendanceDoc.status || "present";
+
+    // If shift exists, compute shiftStart/shiftEnd in APP_TZ and handle overnight
+    if (attendanceDoc.shift && attendanceDoc.shift.startTime && attendanceDoc.shift.endTime) {
+      const shift = attendanceDoc.shift;
+
+      // Build shift start/end moments anchored to checkIn date (use checkIn if available else currentTime)
+      const anchor = checkInTime ? moment(checkInTime).tz(tz) : moment(currentTime).tz(tz);
+      const [sH, sM] = (shift.startTime || "00:00").split(":").map(Number);
+      const [eH, eM] = (shift.endTime || "00:00").split(":").map(Number);
+
+      let shiftStart = moment(anchor).tz(tz).startOf("day").hour(sH).minute(sM).second(0).millisecond(0);
+      let shiftEnd = moment(anchor).tz(tz).startOf("day").hour(eH).minute(eM).second(0).millisecond(0);
+
+      // overnight shift (end <= start) => add 1 day to end
+      if (shiftEnd.isSameOrBefore(shiftStart)) shiftEnd = shiftEnd.add(1, "day");
+
+      // compute overtime / early checkout relative to shiftEnd
+      if (moment(currentTime).isAfter(shiftEnd)) {
+        isOvertime = true;
+        overtimeMinutes = getTimeDifferenceInMinutes(shiftEnd.toDate(), currentTime);
+      } else if (moment(currentTime).isBefore(shiftEnd)) {
+        isEarlyCheckout = true;
+        earlyCheckoutMinutes = getTimeDifferenceInMinutes(currentTime, shiftEnd.toDate());
+      }
+
+      // Shift duration and half-shift threshold
+      const shiftDurationMinutes = getTimeDifferenceInMinutes(shiftStart.toDate(), shiftEnd.toDate());
+      const halfShiftThreshold = Math.floor(shiftDurationMinutes / 2);
+
+      // Status decision:
+      // - If no working minutes => absent
+      // - Else if worked < halfShiftThreshold => half_day
+      // - Else keep previous status (e.g., 'late' stays 'late'), else 'present'
+      if (!checkInTime || totalWorkingMinutes <= 0) {
+        finalStatus = "absent";
+      } else if (totalWorkingMinutes < halfShiftThreshold) {
+        finalStatus = "half_day";
+      } else {
+        // keep 'late' if already late (we don't override), otherwise mark present
+        finalStatus = (String(attendanceDoc.status || "").toLowerCase() === "late") ? "late" : "present";
+      }
+    } else {
+      // No shift info: fallback to generic rules (keep previous behavior but with safer thresholds)
+      const requiredMinutesForFullDay = 4 * 60;
+      if (totalWorkingMinutes === 0) finalStatus = "absent";
+      else if (totalWorkingMinutes < requiredMinutesForFullDay) finalStatus = "half_day";
+      else finalStatus = (String(attendanceDoc.status || "").toLowerCase() === "late") ? "late" : "present";
+    }
+
+    // Assign computed flags & fields
     attendanceDoc.isOvertime = isOvertime;
-    attendanceDoc.overtimeMinutes = overtimeMinutes;
+    attendanceDoc.overtimeMinutes = overtimeMinutes || 0;
     attendanceDoc.isEarlyCheckout = isEarlyCheckout;
-    attendanceDoc.earlyCheckoutMinutes = earlyCheckoutMinutes;
+    attendanceDoc.earlyCheckoutMinutes = earlyCheckoutMinutes || 0;
     attendanceDoc.status = finalStatus;
     attendanceDoc.autoCheckedOut = true;
-    attendanceDoc.notes = `Auto checked-out via frontend at ${moment(currentTime).tz(tz).format("HH:mm:ss")}`;
+
+    // Append a note (preserve existing notes)
+    const timeStr = moment(currentTime).tz(tz).format("HH:mm:ss");
+    attendanceDoc.notes = (attendanceDoc.notes ? attendanceDoc.notes + " | " : "") + `Auto checked-out at ${timeStr} (${tz})`;
 
     await attendanceDoc.save();
 
+    // populate fresh for return
     const populated = await Attendance.findById(attendanceDoc._id)
       .populate(attendanceDoc.agent ? "agent" : "user")
       .populate("shift");
 
     const workingHours = (totalWorkingMinutes / 60).toFixed(1);
-    let message = `Auto checked-out successfully! ✅ (Total: ${workingHours} hours)`;
-    if (isOvertime) message = `Auto checked-out successfully! 🕒 (Overtime: ${overtimeMinutes} minutes, Total: ${workingHours} hours)`;
-    else if (finalStatus === "half_day") message = `Auto checked-out successfully! 📊 (Half Day: ${workingHours} hours)`;
+    let message = `Auto checked-out successfully! (Total: ${workingHours} hours)`;
+    if (isOvertime) message = `Auto checked-out successfully! (Overtime: ${overtimeMinutes} minutes, Total: ${workingHours} hours)`;
+    else if (finalStatus === "half_day") message = `Auto checked-out successfully! (Half Day: ${workingHours} hours)`;
     else if (finalStatus === "absent") message = `Auto checked-out, but marked absent (0 working minutes).`;
 
-    console.log("✅ performAutoCheckout:", { attendanceId: populated._id.toString(), status: populated.status, workingHours });
+    console.log("✅ performAutoCheckout:", {
+      attendanceId: populated._id.toString(),
+      status: populated.status,
+      workingHours,
+      overtimeMinutes,
+      earlyCheckoutMinutes
+    });
 
-    return { success: true, message, attendance: populated, workingHours, overtimeMinutes, finalStatus };
+    return { success: true, message, attendance: populated, workingHours, overtimeMinutes, earlyCheckoutMinutes, finalStatus };
   } catch (err) {
     console.error("performAutoCheckout error:", err);
     return { success: false, error: err.message || String(err) };
   }
 }
+
 
 /**
  * Combined runner — IMPORTANT: This only runs AutoAbsent by default.

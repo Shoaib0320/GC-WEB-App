@@ -67,7 +67,55 @@ export async function GET() {
       ContactMessage.countDocuments({ status: 'new' }),
     ]);
 
+    // Also fetch small datasets for dashboard widgets (today's or pending items)
+    // Limit results to reasonable sizes for the dashboard preview widgets
+    const [
+      recentBookings,
+      todaysAttendance,
+      topPromoCodes,
+      recentContactsList,
+      pendingLeaveRequestsList,
+    ] = await Promise.all([
+      // Bookings created today (use createdAt which exists thanks to timestamps)
+      Booking.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean(),
+
+      // Attendance rows for today. Some records may use `date` or `checkInTime`.
+      Attendance.find({
+        $or: [
+          { date: { $gte: startOfDay, $lte: endOfDay } },
+          { checkInTime: { $gte: startOfDay, $lte: endOfDay } },
+        ],
+      })
+        .populate('agent user shift')
+        .sort({ checkInTime: -1 })
+        .limit(200)
+        .lean(),
+
+      // Top promo codes by usedCount (and discount) for quick insights
+      PromoCode.find({})
+        .sort({ usedCount: -1, discountPercentage: -1 })
+        .limit(10)
+        .lean(),
+
+      // Contact messages created today (recent)
+      ContactMessage.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(),
+
+      // Pending leave requests (full rows) to review
+      LeaveRequest.find({ status: 'pending' })
+      .populate('agent user')
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(),
+    ]);
+
     const data = {
+      // counts
       totalUsers,
       activeUsers,
       totalAgents,
@@ -86,6 +134,13 @@ export async function GET() {
       totalWeeklyOffs,
       upcomingHolidays,
       newContacts,
+
+      // preview/full datasets for dashboard UI
+      recentBookings,
+      todaysAttendance,
+      topPromoCodes,
+      recentContacts: recentContactsList,
+      pendingLeaveRequests: pendingLeaveRequestsList,
     };
 
     return NextResponse.json({ success: true, data });

@@ -182,7 +182,7 @@ const SalesScreen = () => {
           console.log("📋 Booking stats set:", statsResponse.data);
 
           setMonthlyProgress({
-            currentBookings: statsResponse.data.overview?.totalBookings || 0,
+            currentBookings: statsResponse.data.overview?.completedBookings || 0,
             monthlyTarget: agent.monthlyTarget || 10,
           });
         }
