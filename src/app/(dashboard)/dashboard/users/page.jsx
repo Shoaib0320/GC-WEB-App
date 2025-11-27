@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.j
 import { Alert, AlertDescription } from "@/components/ui/alert.jsx";
 import { Input } from "@/components/ui/input.jsx";
 import { Label } from "@/components/ui/label.jsx";
-import { User, Shield, CheckSquare, Square, Plus, Trash2, Power, Edit, X } from "lucide-react";
+import { User, Shield, CheckSquare, Square, Plus, Trash2, Power, Edit, X, MoreVertical } from "lucide-react";
 import GlobalData from "@/components/common/GlobalData";
 import { userService } from '@/services/userService';
 import { roleService } from '@/services/roleService';
@@ -28,6 +28,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 export default function Users() {
@@ -70,10 +77,6 @@ export default function Users() {
   // Role form state
   const DEFAULT_PERMISSIONS = {
     user: { view: false, create: false, edit: false, delete: false, export: false, approve: false, change_role: false },
-    // category: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    // product: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    // order: { view: false, create: false, edit: false, delete: false, export: false, approve: false, update_status: false },
-    // inventory: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
     analytics: { view: false, export: false },
     settings: { view: false, edit: false, manage_roles: false },
 
@@ -168,7 +171,6 @@ export default function Users() {
       const data = await userService.create(userForm);
 
       console.log('User Data', data);
-
 
       if (data.success) {
         toast.success('User created successfully');
@@ -591,7 +593,7 @@ export default function Users() {
     }
   ];
 
-  // Columns for GlobalData / DataTable
+  // Mobile-friendly user columns
   const userColumns = [
     {
       label: 'Name',
@@ -599,25 +601,22 @@ export default function Users() {
       render: (u) => (
         <div className="flex items-center gap-4">
           <div className="shrink-0">
-            <div className="h-12 w-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+            <div className="h-12 w-12 bg-[#10B5DB] rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white font-semibold text-sm">{u.firstName?.charAt(0)}{u.lastName?.charAt(0)}</span>
             </div>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-gray-900">{u.firstName} {u.lastName}</div>
-            <div className="text-xs text-gray-500">{u.department} {u.position ? `• ${u.position}` : ''}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-gray-900 truncate">{u.firstName} {u.lastName}</div>
+            <div className="text-xs text-gray-500 truncate">{u.email}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-gray-600 capitalize truncate">{u.role?.name}</span>
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {u.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
           </div>
         </div>
       ),
-    },
-    { label: 'Email', key: 'email', render: (u) => <div className="text-sm text-gray-700">{u.email}</div> },
-    { label: 'Role', key: 'role', render: (u) => <span className="capitalize text-sm">{u.role?.name}</span> },
-    {
-      label: 'Status', key: 'status', render: (u) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {u.isActive ? 'Active' : 'Inactive'}
-        </span>
-      )
     },
     {
       label: 'Actions',
@@ -658,11 +657,21 @@ export default function Users() {
   ];
 
   const roleColumns = [
-    { label: 'Role', key: 'name', render: (r) => <div className="text-sm font-semibold capitalize">{r.name.replace(/_/g, ' ')}</div> },
-    { label: 'Description', key: 'description', render: (r) => <div className="text-sm text-gray-600">{r.description}</div> },
+    { 
+      label: 'Role', 
+      key: 'name', 
+      render: (r) => (
+        <div className="min-w-0">
+          <div className="text-sm font-semibold capitalize truncate">{r.name.replace(/_/g, ' ')}</div>
+          <div className="text-xs text-gray-600 truncate mt-1">{r.description}</div>
+        </div>
+      ) 
+    },
     {
-      label: 'Status', key: 'isActive', render: (r) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+      label: 'Status', 
+      key: 'isActive', 
+      render: (r) => (
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
           {r.isActive ? 'Active' : 'Inactive'}
         </span>
       )
@@ -672,11 +681,11 @@ export default function Users() {
       align: 'right',
       render: (r) => (
         <div className="flex items-center justify-end gap-2">
-          <button onClick={() => handleEditRole(r)} className="inline-flex items-center px-3 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg text-sm font-medium transition-colors border border-yellow-200">
-            <Edit className="h-4 w-4 mr-1" /> Edit
+          <button onClick={() => handleEditRole(r)} className="inline-flex items-center px-2 py-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded text-xs font-medium transition-colors border border-yellow-200">
+            <Edit className="h-3 w-3 mr-1" /> Edit
           </button>
-          <button onClick={() => handleDeleteRole(r._id)} className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200">
-            <Trash2 className="h-4 w-4 mr-1" /> Delete
+          <button onClick={() => handleDeleteRole(r._id)} className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-200">
+            <Trash2 className="h-3 w-3 mr-1" /> Delete
           </button>
         </div>
       )
@@ -684,8 +693,8 @@ export default function Users() {
   ];
 
   return (
-    <div className="min-h-scree bg-white p-4 md:p-6">
-      <div className="max-w-7xl overflow-x-auto mx-auto space-y-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Card */}
         <Card className="shadow-lg border-0 bg-white text-black">
           <CardHeader className="pb-4">
@@ -693,9 +702,9 @@ export default function Users() {
               <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                 <User className="h-6 w-6" />
               </div>
-              <div>
-                <CardTitle className="text-2xl font-bold">Users & Roles Management</CardTitle>
-                <CardDescription className="text-black">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-xl md:text-2xl font-bold truncate">Users & Roles Management</CardTitle>
+                <CardDescription className="text-black text-sm md:text-base">
                   Manage users and roles for the admin panel with granular permissions
                 </CardDescription>
               </div>
@@ -707,26 +716,26 @@ export default function Users() {
         <Card className="shadow-xl border-0 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b bg-slate-50/50">
-              <div className="px-6">
+              <div className="px-4 md:px-6">
                 <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
                   <TabsTrigger
                     value="users"
-                    className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all"
+                    className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
                   >
                     <User className="h-4 w-4" />
-                    Users Management
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                    <span className="hidden xs:inline">Users</span>
+                    <span className="bg-[#10B5DB]/10 text-[#10B5DB] px-2 py-0.5 rounded-full text-xs font-medium">
                       {users.length}
                     </span>
                   </TabsTrigger>
                   {hasPermission('user', 'create') && (
                     <TabsTrigger
                       value="roles"
-                      className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all"
+                      className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
                     >
                       <Shield className="h-4 w-4" />
-                      Roles & Permissions
-                      <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                      <span className="hidden xs:inline">Roles</span>
+                      <span className="bg-[#10B5DB]/10 text-[#10B5DB] px-2 py-0.5 rounded-full text-xs font-medium">
                         {roles.length}
                       </span>
                     </TabsTrigger>
@@ -737,7 +746,7 @@ export default function Users() {
 
             {/* Message Alert */}
             {message.text && (
-              <div className="mx-6 mt-6">
+              <div className="mx-4 md:mx-6 mt-4 md:mt-6">
                 <Alert
                   variant={message.type === 'success' ? 'default' : 'destructive'}
                   className={message.type === 'success' ? 'bg-green-50 border-green-200' : ''}
@@ -749,51 +758,50 @@ export default function Users() {
               </div>
             )}
 
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               {/* Users Tab */}
               {activeTab === 'users' && (
-                <div className="space-y-8">
+                <div className="space-y-6 md:space-y-8">
                   {/* Users List Header with Add Button */}
                   <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-4 border-b bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-xl font-semibold text-gray-900">All Users</CardTitle>
-                          <CardDescription>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">All Users</CardTitle>
+                          <CardDescription className="text-sm">
                             Manage existing users and their account status
                           </CardDescription>
                         </div>
                         <Button
                           onClick={openUserDialog}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2"
+                          className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
                         >
                           <Plus className="h-4 w-4" />
                           Add User
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-6">
-                      <GlobalData
-                        title="All Users"
-                        icon={User}
-                        // unwrap API response which returns { success, data: { pagination, users } }
-                        fetcher={async (params) => {
-                          const res = await userService.getAll(params);
-                          // If API uses res.data.users and res.data.pagination
-                          const users = res?.data?.users ?? res?.users ?? [];
-                          const pagination = res?.data?.pagination ?? res?.pagination ?? null;
-                          if (pagination) {
-                            return { data: users, meta: pagination };
-                          }
-                          // fallback: return array directly
-                          return users;
-                        }}
-                        columns={userColumns}
-                        serverSide={true}
-                        rowsPerPage={10}
-                        searchEnabled={true}
-                        onDataFetched={(items, meta) => setUsers(items)}
-                      />
+                    <CardContent className="pt-4 md:pt-6 px-0 md:px-6">
+                      <div className="overflow-x-auto">
+                        <GlobalData
+                          title="All Users"
+                          icon={User}
+                          fetcher={async (params) => {
+                            const res = await userService.getAll(params);
+                            const users = res?.data?.users ?? res?.users ?? [];
+                            const pagination = res?.data?.pagination ?? res?.pagination ?? null;
+                            if (pagination) {
+                              return { data: users, meta: pagination };
+                            }
+                            return users;
+                          }}
+                          columns={userColumns}
+                          serverSide={true}
+                          rowsPerPage={10}
+                          searchEnabled={true}
+                          onDataFetched={(items, meta) => setUsers(items)}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -801,37 +809,39 @@ export default function Users() {
 
               {/* Roles Tab */}
               {activeTab === 'roles' && hasPermission('user', 'create') && (
-                <div className="space-y-8">
+                <div className="space-y-6 md:space-y-8">
                   {/* Roles List Header with Add Button */}
                   <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-4 border-b bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-xl font-semibold text-gray-900">All Roles</CardTitle>
-                          <CardDescription>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">All Roles</CardTitle>
+                          <CardDescription className="text-sm">
                             Overview of existing roles and their permissions
                           </CardDescription>
                         </div>
                         <Button
                           onClick={openRoleDialog}
-                          className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2"
+                          className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
                         >
                           <Plus className="h-4 w-4" />
                           Add Role
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-6">
-                      <GlobalData
-                        title="All Roles"
-                        icon={Shield}
-                        fetcher={async (params) => await roleService.getAll(params)}
-                        columns={roleColumns}
-                        serverSide={true}
-                        rowsPerPage={12}
-                        searchEnabled={true}
-                        onDataFetched={(items, meta) => setRoles(items)}
-                      />
+                    <CardContent className="pt-4 md:pt-6 px-0 md:px-6">
+                      <div className="overflow-x-auto">
+                        <GlobalData
+                          title="All Roles"
+                          icon={Shield}
+                          fetcher={async (params) => await roleService.getAll(params)}
+                          columns={roleColumns}
+                          serverSide={true}
+                          rowsPerPage={12}
+                          searchEnabled={true}
+                          onDataFetched={(items, meta) => setRoles(items)}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -843,18 +853,18 @@ export default function Users() {
 
       {/* User Dialog */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
               {editingUser ? <Edit className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
               {editingUser ? 'Edit User' : 'Create New User'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm md:text-base">
               {editingUser ? 'Update user information' : 'Add a new user to the system with appropriate role and permissions'}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={editingUser ? handleEditUserSubmit : handleUserSubmit} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+          <form onSubmit={editingUser ? handleEditUserSubmit : handleUserSubmit} className="grid grid-cols-1 gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
             <div className="space-y-2">
               <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
                 First Name *
@@ -889,7 +899,7 @@ export default function Users() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2 lg:col-span-1">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email *
               </Label>
@@ -907,7 +917,7 @@ export default function Users() {
             </div>
 
             {!editingUser && (
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2 lg:col-span-1">
                 <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password *
                 </Label>
@@ -942,7 +952,7 @@ export default function Users() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2 lg:col-span-1">
               <Label htmlFor="role" className="text-sm font-medium text-gray-700">
                 Role *
               </Label>
@@ -964,7 +974,7 @@ export default function Users() {
                         disabled={!role.isActive}
                       >
                         <div className="flex items-center justify-between w-full">
-                          <span className="capitalize">
+                          <span className="capitalize text-sm">
                             {role.name.replace(/_/g, ' ')}
                           </span>
                           {!role.isActive && (
@@ -978,12 +988,12 @@ export default function Users() {
               </Select>
             </div>
 
-            <div className="sm:col-span-2 lg:col-span-3 pt-4 flex gap-3 justify-end border-t">
+            <div className="md:col-span-2 lg:col-span-3 pt-4 flex flex-col sm:flex-row gap-3 justify-end border-t">
               <Button
                 type="button"
                 variant="outline"
                 onClick={closeUserDialog}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors order-2 sm:order-1 w-full sm:w-auto"
               >
                 {viewOnly ? 'Close' : 'Cancel'}
               </Button>
@@ -1013,7 +1023,7 @@ export default function Users() {
 
       {/* Change User Role Dialog */}
       <Dialog open={roleChangeOpen} onOpenChange={setRoleChangeOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Change Role</DialogTitle>
             <DialogDescription>Assign a different role to this user</DialogDescription>
@@ -1021,11 +1031,11 @@ export default function Users() {
 
           <div className="space-y-4 mt-4">
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                 <Label className="text-sm">Select Role</Label>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => loadRoles()} className="px-2 py-1">Refresh</Button>
-                  <Button size="sm" className="px-2 py-1" onClick={() => { setRoleDialogOpen(true); setEditingRole(null); setRoleChangeOpen(false); }}>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => loadRoles()} className="px-2 py-1 text-xs">Refresh</Button>
+                  <Button size="sm" className="px-2 py-1 text-xs" onClick={() => { setRoleDialogOpen(true); setEditingRole(null); setRoleChangeOpen(false); }}>
                     Create Role
                   </Button>
                 </div>
@@ -1047,8 +1057,8 @@ export default function Users() {
               </Select>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setRoleChangeOpen(false)}>Cancel</Button>
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+              <Button variant="outline" onClick={() => setRoleChangeOpen(false)} className="w-full sm:w-auto">Cancel</Button>
               <Button onClick={async () => {
                 if (!roleChangeUser) return;
                 try {
@@ -1063,7 +1073,7 @@ export default function Users() {
                 } catch (err) {
                   showMessage('error', 'Failed to update role');
                 }
-              }}>Save</Button>
+              }} className="w-full sm:w-auto">Save</Button>
             </div>
           </div>
         </DialogContent>
@@ -1071,19 +1081,19 @@ export default function Users() {
 
       {/* Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
               <Shield className="h-5 w-5" />
               {editingRole ? 'Edit Role' : 'Create New Role'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm md:text-base">
               {editingRole ? 'Update role permissions and settings' : 'Define a new role with specific permissions and access levels'}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleRoleSubmit} className="space-y-6 mt-4">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="roleName" className="text-sm font-medium text-gray-700">
                   Role Name *
@@ -1119,10 +1129,10 @@ export default function Users() {
 
             {/* Permissions Section */}
             <div className="border-t pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Permissions Configuration</h3>
-                  <p className="text-gray-600 mt-1">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg md:text-xl font-semibold text-gray-900">Permissions Configuration</h3>
+                  <p className="text-gray-600 mt-1 text-sm md:text-base">
                     Select the permissions for this role across different modules
                   </p>
                 </div>
@@ -1132,7 +1142,7 @@ export default function Users() {
                     variant="outline"
                     size="sm"
                     onClick={() => permissionModules.forEach(module => handleSelectAll(module.name))}
-                    className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
+                    className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 text-xs"
                   >
                     <CheckSquare className="h-4 w-4" />
                     Select All
@@ -1142,7 +1152,7 @@ export default function Users() {
                     variant="outline"
                     size="sm"
                     onClick={() => permissionModules.forEach(module => handleDeselectAll(module.name))}
-                    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50"
+                    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 text-xs"
                   >
                     <Square className="h-4 w-4" />
                     Clear All
@@ -1150,12 +1160,12 @@ export default function Users() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 max-h-96 overflow-y-auto p-2">
                 {permissionModules.map((module) => (
                   <Card key={module.name} className="border border-gray-200 hover:shadow-md transition-shadow">
                     <CardHeader className="pb-3 bg-slate-50/50">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-semibold capitalize text-gray-900">
+                        <CardTitle className="text-sm font-semibold capitalize text-gray-900 truncate">
                           {module.title}
                         </CardTitle>
                         <div className="flex gap-1">
@@ -1202,7 +1212,7 @@ export default function Users() {
                                         onChange={handleRoleFormChange}
                                         className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus:ring-2"
                                       />
-                                      <span className="text-sm font-medium capitalize text-gray-700">{sub.replace(/_/g, ' ')}</span>
+                                      <span className="text-xs font-medium capitalize text-gray-700 truncate">{sub.replace(/_/g, ' ')}</span>
                                     </label>
                                   ))}
                                 </div>
@@ -1234,27 +1244,27 @@ export default function Users() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t">
+            <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6 border-t">
               <Button
                 type="button"
                 variant="outline"
                 onClick={closeRoleDialog}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors w-full sm:w-auto order-2 sm:order-1"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-8 rounded-lg transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed shadow-sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-8 rounded-lg transition-colors disabled:bg-purple-400 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto order-1 sm:order-2"
               >
                 {loading ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-center">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    {editingRole ? 'Updating Role...' : 'Creating Role...'}
+                    {editingRole ? 'Updating...' : 'Creating...'}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-center">
                     <Shield className="h-4 w-4" />
                     {editingRole ? 'Update Role' : 'Create Role'}
                   </div>

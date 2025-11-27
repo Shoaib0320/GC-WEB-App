@@ -15,6 +15,7 @@ import {
   Clock,
   DollarSign,
   ClipboardList,
+  X,
 } from "lucide-react";
 
 import { useState, useEffect } from "react";
@@ -30,8 +31,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export default function Sidebar({ collapsed, setCollapsed }) {
   const [openMobile, setOpenMobile] = useState(false);
@@ -76,39 +78,73 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   return (
     <TooltipProvider>
       {/* Mobile Overlay */}
-      {openMobile && (
-        <div
-          onClick={() => setOpenMobile(false)}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-        />
-      )}
+      <AnimatePresence>
+        {openMobile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setOpenMobile(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <motion.aside
-        initial={{ width: 80 }}
+        initial={false}
         animate={{
-          width: openMobile ? "80vw" : collapsed ? 80 : 260,
+          width: isMobile 
+            ? (openMobile ? "100vw" : 0) 
+            : (collapsed ? 80 : 260),
+          x: isMobile && !openMobile ? "-100%" : 0
         }}
-        transition={{ duration: 0.28, ease: "easeInOut" }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
         className={cn(
           "fixed z-50 flex flex-col h-full border-r shadow-xl bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl",
           "border-gray-200 dark:border-slate-700",
-          // FIXED: On desktop, sidebar always left-0 (NO half-visible issue)
-          openMobile ? "left-0" : "left-0",
-          "lg:left-0 lg:top-0 lg:h-screen rounded-r-2xl"
+          "lg:left-0 lg:top-0 lg:h-screen lg:rounded-r-2xl",
+          "overflow-hidden" // Prevent content overflow on mobile
         )}
       >
-        {/* Header (hide when collapsed) */}
-        <div
-          className={cn(
-            "flex items-center justify-center py-6 px-4 border-b border-gray-200 dark:border-slate-700 transition-all duration-200 gap-8",
-            collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
-          )}
-        >
-          <h1 className="text-2xl font-semibold tracking-tight text-blue-600 dark:text-blue-400 select-none">
-            My Dashboard
-          </h1>
-        </div>
+        {/* Mobile Header with Close Button */}
+        {isMobile && openMobile && (
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+            <Image
+              src="/images/GCLogo.png"
+              alt="GC Logo"
+              width={80}
+              height={80}
+              className="object-contain"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpenMobile(false)}
+              className="rounded-full"
+            >
+              <X size={20} />
+            </Button>
+          </div>
+        )}
+
+        {/* Desktop Header (hide when collapsed) */}
+        {!isMobile && (
+          <div
+            className={cn(
+              "flex items-center justify-center py-6 px-4 border-b border-gray-200 dark:border-slate-700 transition-all duration-200 gap-8",
+              collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
+          >
+            <Image
+              src="/images/GCLogo.png"
+              alt="GC Logo"
+              width={70}
+              height={70}
+              className="object-contain"
+            />
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
@@ -116,7 +152,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             const isActive = pathname === item.href;
 
             return (
-              <Tooltip key={index}> {/* YAHAN PAR CHANGE KARNA HAI - idx se index */}
+              <Tooltip key={index}>
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
@@ -125,22 +161,22 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
                       // Active styles
                       isActive
-                        ? "bg-blue-600/10 text-blue-700 dark:text-blue-300 dark:bg-blue-900/30 border border-blue-600/20 shadow"
+                        ? "bg-[#10B5DB]/10 text-[#10B5DB] dark:text-[#10B5DB] dark:bg-[#10B5DB]/30 border border-[#10B5DB]/20 shadow"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-slate-800/70",
 
-                      // Collapsed icon mode
-                      collapsed ? "justify-center px-3" : "justify-start"
+                      // Collapsed icon mode (desktop only)
+                      !isMobile && collapsed ? "justify-center px-3" : "justify-start"
                     )}
                   >
                     <item.icon
                       size={22}
                       className={cn(
                         "transition-all duration-200",
-                        isActive && "text-blue-600 dark:text-blue-300"
+                        isActive && "text-[#10B5DB]"
                       )}
                     />
 
-                    {(isMobile || !collapsed) && (
+                    {(!isMobile || openMobile) && (
                       <span className="truncate transition-opacity duration-200">
                         {item.label}
                       </span>
@@ -148,8 +184,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   </Link>
                 </TooltipTrigger>
 
-                {/* Tooltip only in collapsed mode */}
-                {collapsed && (
+                {/* Tooltip only in collapsed mode (desktop only) */}
+                {!isMobile && collapsed && (
                   <TooltipContent side="right" className="text-sm">
                     {item.label}
                   </TooltipContent>
@@ -164,25 +200,37 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         {/* Footer Logout */}
         <div className="p-4">
           <button
-            className="w-full flex items-center gap-3 justify-center md:justify-start 
-            text-[15px] font-medium rounded-xl px-4 py-3 text-red-600 dark:text-red-400 
-            hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+            className={cn(
+              "w-full flex items-center gap-3 text-[15px] font-medium rounded-xl px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors",
+              !isMobile && collapsed ? "justify-center" : "justify-start"
+            )}
           >
             <LogOut size={20} />
-            {(isMobile || !collapsed) && <span>Logout</span>}
+            {(!isMobile || openMobile) && <span>Logout</span>}
           </button>
         </div>
       </motion.aside>
 
-      {/* Mobile Toggle Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
-        onClick={() => setOpenMobile(!openMobile)}
-      >
-        <Menu size={20} />
-      </Button>
+      {/* Mobile Toggle Button - Only show when sidebar is closed on mobile */}
+      <AnimatePresence>
+        {isMobile && !openMobile && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              className="fixed top-4 left-4 z-50 lg:hidden shadow-md"
+              onClick={() => setOpenMobile(true)}
+            >
+              <Menu size={20} />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Desktop Toggle Button */}
       <Button

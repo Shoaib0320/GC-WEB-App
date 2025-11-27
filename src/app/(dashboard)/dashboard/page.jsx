@@ -132,7 +132,7 @@ export default function DashboardPage() {
                     <Users className="h-4 w-4 mr-2" />
                     <span>Add User</span>
                   </div>
-                  <span className="inline-flex items-center justify-center rounded-full bg-blue-100 text-blue-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.totalUsers) : '—'}</span>
+                  <span className="inline-flex items-center justify-center rounded-full bg-[#10B5DB]/10 text-[#10B5DB] text-xs px-2 py-0.5">{stats ? formatNumber(stats.totalUsers) : '—'}</span>
                 </Button>
 
                 <Button aria-label="New booking" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/bookings')}>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-3 rounded-md border px-3 py-2 bg-gray-50">
-                  <Users className="h-5 w-5 text-blue-600" />
+                  <Users className="h-5 w-5 text-[#10B5DB]" />
                   <div>
                     <div className="text-sm font-semibold">{stats ? formatNumber(stats.totalUsers) : '—'}</div>
                     <div className="text-xs text-muted-foreground">Total Users</div>
@@ -490,7 +490,7 @@ export default function DashboardPage() {
               title: "Total Users",
               value: formatNumber(stats?.totalUsers),
               icon: Users,
-              color: "text-blue-600",
+              color: "text-[#10B5DB]",
             },
             {
               title: "Bookings",
@@ -544,7 +544,7 @@ export default function DashboardPage() {
           ) : (
             [
               { title: 'Confirmed Bookings', value: stats?.confirmedBookings, icon: CheckSquare, color: 'text-green-600' },
-              { title: 'Active Users', value: stats?.activeUsers, icon: UserCheck, color: 'text-blue-600' },
+              { title: 'Active Users', value: stats?.activeUsers, icon: UserCheck, color: 'text-[#10B5DB]' },
               { title: 'Total Agents', value: stats?.totalAgents, icon: Users, color: 'text-indigo-600' },
               { title: 'Pending Leaves', value: stats?.pendingLeaves, icon: Layers, color: 'text-yellow-600' },
               { title: 'Notifications', value: stats?.totalNotifications, icon: Bell, color: 'text-rose-600' },
@@ -609,7 +609,7 @@ export default function DashboardPage() {
                       <td className="px-4 py-3 text-gray-700">{action}</td>
                       <td className="px-4 py-3 text-gray-500">{dateStr}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs rounded-full ${item.status === "confirmed" ? "bg-green-100 text-green-700" : item.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${item.status === "confirmed" ? "bg-green-100 text-green-700" : item.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-[#10B5DB]/10 text-[#10B5DB]"}`}>
                           {item.status || 'N/A'}
                         </span>
                       </td>
@@ -648,7 +648,7 @@ export default function DashboardPage() {
                       <div className="text-xs text-gray-400 mt-1">{dateStr}</div>
                     </div>
                     <div>
-                      <span className={`px-2 py-1 text-xs rounded-full ${item.status === "confirmed" ? "bg-green-100 text-green-700" : item.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.status === "confirmed" ? "bg-green-100 text-green-700" : item.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-[#10B5DB]/10 text-[#10B5DB]"}`}>
                         {item.status || 'N/A'}
                       </span>
                     </div>

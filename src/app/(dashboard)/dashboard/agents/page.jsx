@@ -252,7 +252,7 @@ export default function AgentsPage() {
         <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
           {hasPermission('agent', 'create') && (
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-[#10B5DB] hover:bg-[#10B5DB]/90">
                 Create New Agent
               </Button>
             </DialogTrigger>
@@ -345,7 +345,7 @@ export default function AgentsPage() {
                   </div>
                 </div>
                 <div className="col-span-1 sm:col-span-2 flex gap-3 pt-4">
-                  <Button type="submit" disabled={loading || shifts.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                  <Button type="submit" disabled={loading || shifts.length === 0} className="flex-1 bg-[#10B5DB] hover:bg-[#10B5DB]/90">
                     {loading ? 'Creating...' : 'Create Agent'}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)} className="flex-1">
@@ -480,7 +480,7 @@ export default function AgentsPage() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 bg-[#10B5DB] hover:bg-[#10B5DB]/90"
                   >
                     {loading ? 'Updating...' : 'Update Agent'}
                   </Button>
@@ -510,13 +510,14 @@ export default function AgentsPage() {
       </Dialog>
 
       {/* Agents List */}
-      <Card className="overflow-x-auto">
+      <Card>
         <CardHeader>
           <CardTitle>Agents</CardTitle>
           <CardDescription>View and manage all registered agents</CardDescription>
         </CardHeader>
         <CardContent>
-          <GlobalData
+          <div className="overflow-auto max-h-[70vh]">
+            <GlobalData
             key={reloadKey}
             title="Agents"
             serverSide={true}
@@ -542,7 +543,7 @@ export default function AgentsPage() {
                 label: 'Shift',
                 key: 'shift',
                 render: (agent) => agent.shift ? (
-                  <Badge className="bg-blue-100 text-blue-800">{agent.shift.name}</Badge>
+                  <Badge className="bg-[#10B5DB]/10 text-[#10B5DB]">{agent.shift.name}</Badge>
                 ) : (
                   <Badge className="bg-gray-100 text-gray-800">No Shift</Badge>
                 )
@@ -569,7 +570,7 @@ export default function AgentsPage() {
                 render: (agent) => (
                   <div className="flex justify-end gap-2">
                           {hasPermission('agent', 'edit') && (
-                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(agent, 'edit')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">Edit</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(agent, 'edit')} className="text-[#10B5DB] hover:text-[#10B5DB]/90 hover:bg-[#10B5DB]/10">Edit</Button>
                           )}
                           {!hasPermission('agent', 'edit') && hasPermission('agent', 'view') && (
                             <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(agent, 'view')} className="text-gray-600 hover:bg-gray-50">View</Button>
@@ -595,6 +596,7 @@ export default function AgentsPage() {
               isActive: [{ label: 'Active', value: true }, { label: 'Inactive', value: false }]
             }}
           />
+          </div>
         </CardContent>
       </Card>
     </div>

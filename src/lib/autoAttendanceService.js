@@ -387,7 +387,10 @@ export async function markAutoAbsent() {
 //   }
 // }
 
-
+// /**
+//  * AUTO CHECKOUT (single attendance) - This should only be called when API endpoint is hit.
+//  * It will update attendance, compute working minutes, overtime, early checkout, half-day, and save.
+//  */
 export async function performAutoCheckout(attendance, currentTime = new Date(), locationData = null) {
   try {
     if (!attendance) throw new Error("No attendance provided");
@@ -531,8 +534,6 @@ export async function performAutoCheckout(attendance, currentTime = new Date(), 
     return { success: false, error: err.message || String(err) };
   }
 }
-
-
 /**
  * Combined runner — IMPORTANT: This only runs AutoAbsent by default.
  * AutoCheckout is intentionally NOT called here (we run checkout only via API).

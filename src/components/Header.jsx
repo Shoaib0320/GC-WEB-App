@@ -18,7 +18,7 @@ export default function Header() {
             priority
           />
           <span className="text-xl font-semibold text-gray-900 dark:text-gray-100 select-none">
-            Gobium Cloud
+            Globium Clouds
           </span>
         </div>
 

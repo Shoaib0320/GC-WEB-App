@@ -1,4 +1,3 @@
-// src/app/(dashboard)/dashboard/shift-pannel/page.jsx
 "use client";
 import React, { useState } from "react";
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +15,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import GlobalData from "@/components/common/GlobalData";
+import { MoreVertical, Edit, Trash2, Clock } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const LIMIT = 10;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -150,148 +157,249 @@ export default function AdminCreateShift() {
     } catch (err) { console.error(err); return { data: [], meta: { total: 0, totalPages: 1, page: 1, limit: LIMIT } }; }
   };
 
+  // Mobile-friendly columns
+  const columns = [
+    { 
+      label: "Shift Details", 
+      key: "name", 
+      render: (s) => (
+        <div className="min-w-0">
+          <div className="font-semibold text-sm md:text-base truncate">{s.name}</div>
+          <div className="text-xs md:text-sm text-gray-600 mt-1">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {s.startTime} - {s.endTime}
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {(s.days || []).map(d => (
+                <Badge key={d} variant="secondary" className="text-xs">{d}</Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) 
+    },
+    { 
+      label: "Actions", 
+      key: "actions", 
+      render: (s) => (
+        <>
+          {/* Desktop Actions */}
+          <div className="hidden md:flex gap-2">
+            {hasPermission('shift', 'edit') && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => startEdit(s)}
+                className="text-xs"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            )}
+            {hasPermission('shift', 'delete') && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => confirmDelete(s._id)}
+                className="text-xs"
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Delete
+              </Button>
+            )}
+          </div>
+
+          {/* Mobile Actions Dropdown */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {hasPermission('shift', 'edit') && (
+                  <DropdownMenuItem onClick={() => startEdit(s)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Shift
+                  </DropdownMenuItem>
+                )}
+                {hasPermission('shift', 'delete') && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => confirmDelete(s._id)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Shift
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </>
+      ), 
+      align: 'right' 
+    },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <h2 className="text-3xl font-bold text-center text-blue-700">Manage Shifts</h2>
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <h2 className="text-2xl md:text-3xl font-bold text-center text-[#10B5DB]">Manage Shifts</h2>
 
       <Card>
-        <CardHeader><CardTitle>Shifts Management</CardTitle></CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center mb-4">
-              <div className="flex gap-2 items-center">
+        <CardHeader className="px-4 md:px-6">
+          <CardTitle className="text-lg md:text-xl">Shifts Management</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+            <div className="flex gap-2 items-center">
               {hasPermission('shift', 'create') && (
-                <Button onClick={openCreate}>Create Shift</Button>
+                <Button onClick={openCreate} className="w-full sm:w-auto">
+                  Create Shift
+                </Button>
               )}
             </div>
           </div>
 
           {message && (
-            <p className={`text-sm mb-4 ${message.toLowerCase().includes("error") ? "text-red-600" : "text-green-600"}`}>{message}</p>
+            <p className={`text-sm mb-4 ${message.toLowerCase().includes("error") ? "text-red-600" : "text-green-600"}`}>
+              {message}
+            </p>
           )}
 
-          <GlobalData
-            key={reloadKey}
-            title="Shifts"
-            fetcher={shiftsFetcher}
-            serverSide
-            rowsPerPage={LIMIT}
-            searchEnabled
-            columns={[
-              { 
-                label: "Name", 
-                key: "name", 
-                render: (s) => <div className="font-semibold">{s.name}</div> 
-              },
-              { 
-                label: "Time", 
-                key: "time", 
-                render: (s) => `${s.startTime} - ${s.endTime}` 
-              },
-              { 
-                label: "Days", 
-                key: "days", 
-                render: (s) => (
-                  <div className="flex gap-1 flex-wrap">
-                    {(s.days || []).map(d => (
-                      <Badge key={d} variant="secondary">{d}</Badge>
-                    ))}
-                  </div>
-                ) 
-              },
-              { 
-                label: "Actions", 
-                key: "actions", 
-                render: (s) => (
-                  <div className="flex gap-2">
-                    {/* {hasPermission('shift', 'view') && (
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        // simple view behaviour: open edit dialog in read-only mode
-                        startEdit(s);
-                      }}>
-                        View
-                      </Button>
-                    )} */}
-                    {hasPermission('shift', 'edit') && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => startEdit(s)}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                    {hasPermission('shift', 'delete') && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => confirmDelete(s._id)}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                ), 
-                align: 'right' 
-              },
-            ]}
-          />
+          <div className="overflow-x-auto">
+            <GlobalData
+              key={reloadKey}
+              title="Shifts"
+              fetcher={shiftsFetcher}
+              serverSide
+              rowsPerPage={8}
+              searchEnabled
+              columns={columns}
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Dialog - Mobile Responsive */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] md:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Shift" : "Create Shift"}</DialogTitle>
-            <DialogDescription>{editingId ? "Update the shift details below." : "Fill the details to create a new shift."}</DialogDescription>
+            <DialogTitle className="text-lg md:text-xl">
+              {editingId ? "Edit Shift" : "Create Shift"}
+            </DialogTitle>
+            <DialogDescription className="text-sm md:text-base">
+              {editingId ? "Update the shift details below." : "Fill the details to create a new shift."}
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Shift Name</Label>
-              <Input id="name" required name="name" value={form.name} onChange={handleChange} placeholder="Enter shift name" />
+              <Label htmlFor="name" className="text-sm md:text-base">Shift Name</Label>
+              <Input 
+                id="name" 
+                required 
+                name="name" 
+                value={form.name} 
+                onChange={handleChange} 
+                placeholder="Enter shift name" 
+                className="text-sm md:text-base"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time</Label>
-                <Input id="startTime" required type="time" name="startTime" value={form.startTime} onChange={handleChange} />
+                <Label htmlFor="startTime" className="text-sm md:text-base">Start Time</Label>
+                <Input 
+                  id="startTime" 
+                  required 
+                  type="time" 
+                  name="startTime" 
+                  value={form.startTime} 
+                  onChange={handleChange} 
+                  className="text-sm md:text-base"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endTime">End Time</Label>
-                <Input id="endTime" required type="time" name="endTime" value={form.endTime} onChange={handleChange} />
+                <Label htmlFor="endTime" className="text-sm md:text-base">End Time</Label>
+                <Input 
+                  id="endTime" 
+                  required 
+                  type="time" 
+                  name="endTime" 
+                  value={form.endTime} 
+                  onChange={handleChange} 
+                  className="text-sm md:text-base"
+                />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Days</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-sm md:text-base">Days</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {DAYS.map(day => (
                   <div key={day} className="flex items-center space-x-2">
-                    <input type="checkbox" id={`day-${day}`} checked={form.days.includes(day)} onChange={() => toggleDay(day)} className="h-4 w-4 rounded border-gray-300" />
-                    <Label htmlFor={`day-${day}`} className="text-sm">{day}</Label>
+                    <input 
+                      type="checkbox" 
+                      id={`day-${day}`} 
+                      checked={form.days.includes(day)} 
+                      onChange={() => toggleDay(day)} 
+                      className="h-4 w-4 rounded border-gray-300" 
+                    />
+                    <Label htmlFor={`day-${day}`} className="text-sm whitespace-nowrap">{day}</Label>
                   </div>
                 ))}
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading}>{loading ? "Saving..." : editingId ? "Update Shift" : "Create Shift"}</Button>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setDialogOpen(false)}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
+                {loading ? "Saving..." : editingId ? "Update Shift" : "Create Shift"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation - Mobile Responsive */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] md:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>Are you sure you want to delete this shift? This action cannot be undone.</DialogDescription>
+            <DialogTitle className="text-lg md:text-xl">Confirm Delete</DialogTitle>
+            <DialogDescription className="text-sm md:text-base">
+              Are you sure you want to delete this shift? This action cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

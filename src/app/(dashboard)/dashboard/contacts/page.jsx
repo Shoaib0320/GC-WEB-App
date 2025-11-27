@@ -246,14 +246,14 @@ export default function ContactsPage() {
         </div>
       ) 
     },
-    { 
-      label: "Message", 
-      key: "message", 
+    {
+      label: "Message",
+      key: "message",
       render: (contact) => (
-        <p className="text-gray-600 line-clamp-2 max-w-xs">
+        <p className="text-gray-600 line-clamp-2 max-w-[150px] md:max-w-xs">
           {contact.message || "No message"}
         </p>
-      ) 
+      )
     },
     { 
       label: "Status", 
@@ -276,7 +276,7 @@ export default function ContactsPage() {
       render: (contact) => {
         const { hasPermission } = auth;
         return (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 md:flex-row">
             {hasPermission("contact", "view") && (
               <Button
                 variant="outline"
@@ -285,6 +285,7 @@ export default function ContactsPage() {
                   setSelectedContact(contact);
                   setIsModalOpen(true);
                 }}
+                className="w-full md:w-auto"
               >
                 <Eye className="h-4 w-4 mr-1" />
                 View
@@ -300,6 +301,7 @@ export default function ContactsPage() {
                   setIsModalOpen(true);
                   setIsReplyMode(true);
                 }}
+                className="w-full md:w-auto"
               >
                 <Reply className="h-4 w-4" />
               </Button>
@@ -321,6 +323,7 @@ export default function ContactsPage() {
                     toast.error("Failed to delete contact");
                   }
                 }}
+                className="w-full md:w-auto"
               >
                 Delete
               </Button>
@@ -336,7 +339,7 @@ export default function ContactsPage() {
   const auth = useAuth();
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col p-4 md:p-6 max-w-full">
       {/* Header */}
       <PageHeader
         title="Contact Center"
@@ -403,6 +406,7 @@ export default function ContactsPage() {
             rowsPerPage={10}
             searchEnabled={true}
             searchPlaceholder="Search contacts by name, email, or message..."
+            tableHeight="calc(100vh - 350px)"
             onDataFetched={(items, metaData) => {
               setContacts(items || []);
             }}
@@ -568,4 +572,3 @@ export default function ContactsPage() {
     </div>
   );
 }
-

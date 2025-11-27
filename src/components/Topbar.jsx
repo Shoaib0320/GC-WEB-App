@@ -35,7 +35,7 @@ export default function Topbar({ collapsed }) {
       id: 1,
       title: "New message from Ali",
       description: "Hey! Can we schedule a quick meeting?",
-      icon: <MessageCircle className="w-5 h-5 text-blue-500" />,
+      icon: <MessageCircle className="w-5 h-5 text-[#10B5DB]" />,
       time: "2m ago",
     },
     {
@@ -61,7 +61,7 @@ export default function Topbar({ collapsed }) {
         </Button>
 
         <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-          Dashboard
+          <span className="font-bold text-[#10B5DB]">GC</span> Dashboard
         </h1>
       </div>
 

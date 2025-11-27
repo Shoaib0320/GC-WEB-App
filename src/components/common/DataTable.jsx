@@ -1,7 +1,6 @@
-// File: src/components/common/DataTable.jsx
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,10 +42,12 @@ export default function DataTable({
   onPageChange,
   onSearchChange,
   onFilterChange,
+  tableHeight = '60vh',
 }) {
   const [currentPage, setCurrentPage] = useState(propCurrentPage);
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const tableContainerRef = useRef(null);
 
   // Keep internal page in sync with prop
   useEffect(() => {
@@ -132,7 +133,7 @@ export default function DataTable({
   const showingEnd = Math.min(currentPage * rowsPerPage, totalItems);
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} className="space-y-4 w-full">
+    <div className="space-y-4 w-full">
 
       {/* Header - Improved Responsive */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -186,7 +187,7 @@ export default function DataTable({
         </div>
       </div>
 
-      {/* TABLE WITH HORIZONTAL SCROLL */}
+      {/* MAIN TABLE CONTAINER - FIXED HEIGHT FOR SCROLL */}
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="text-center">
@@ -195,90 +196,86 @@ export default function DataTable({
           </div>
         </div>
       ) : (
-      <div className="w-full rounded-lg border bg-white shadow-sm overflow-hidden">
+        <div className="w-full rounded-lg border bg-white shadow-sm flex flex-col">
 
-          {/* Main Table Container with Horizontal Scroll */}
-          <div className="overflow-x-auto w-full">
-          <div className="w-full overflow-x-auto inline-block align-middle">
-             {/* <div className="inline-block min-w-max align-middle"> */}
-              <Table className="w-full">
-                {/* Table Header */} 
-                <TableHeader className="bg-gray-50/80 sticky top-0 backdrop-blur-sm">
-                  <TableRow className="hover:bg-transparent">
-                    {columns.map((col, i) => (
-                      <TableHead 
-                        key={i}
-                        className={`px-4 py-3 text-xs sm:text-sm font-semibold text-gray-700 ${
-                          col.align === "right" ? "text-right" : "text-left"
-                        } ${col.key === 'actions' ? 'w-20' : ''} ${
-                          `${col.minWidth ? `min-w-[${col.minWidth}px]` : ''}`
-                        }`}
-                        style={{ whiteSpace: 'normal' }}
-                      >
-                        {col.label}
-                      </TableHead>
-                    ))}
+          {/* TABLE CONTAINER WITH FIXED HEIGHT AND SCROLL */}
+          <div
+            ref={tableContainerRef}
+            className="overflow-auto"
+            style={{
+              height: tableHeight, // Dynamic height to contain scroll
+              minHeight: '400px',
+              overscrollBehavior: 'contain'
+            }}
+          >
+            <Table className="w-full">
+              <TableHeader className="sticky top-0 bg-gray-50 z-10">
+                <TableRow className="hover:bg-transparent">
+                  {columns.map((col, i) => (
+                    <TableHead
+                      key={i}
+                      className={`px-4 py-3 text-xs sm:text-sm font-semibold text-gray-700 ${
+                        col.align === "right" ? "text-right" : "text-left"
+                      } ${col.key === 'actions' ? 'w-20' : ''} ${
+                        col.minWidth ? `min-w-[${col.minWidth}]` : ''
+                      }`}
+                    >
+                      {col.label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              
+              <TableBody>
+                {currentData.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="text-center py-12 text-gray-500 text-sm"
+                    >
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="text-gray-400 text-lg">📊</div>
+                        <p className="text-gray-500">No data found</p>
+                        {searchQuery && (
+                          <p className="text-gray-400 text-xs">
+                            Try adjusting your search or filter
+                          </p>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-
-                {/* Table Body */}
-                <TableBody>
-                  {currentData.length === 0 ? (
-                    <TableRow>
-                      <TableCell 
-                        colSpan={columns.length} 
-                        className="text-center py-12 text-gray-500 text-sm"
-                      >
-                        <div className="flex flex-col items-center justify-center space-y-2">
-                          <div className="text-gray-400 text-lg">📊</div>
-                          <p className="text-gray-500">No data found</p>
-                          {searchQuery && (
-                            <p className="text-gray-400 text-xs">
-                              Try adjusting your search or filter
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
+                ) : (
+                  currentData.map((row, index) => (
+                    <TableRow
+                      key={row._id || row.id || index}
+                      className="border-b hover:bg-gray-50/50 transition-colors duration-150"
+                    >
+                      {columns.map((col, colIndex) => (
+                        <TableCell
+                          key={colIndex}
+                          className={`px-4 py-3 text-xs sm:text-sm text-gray-600 ${
+                            col.align === "right" ? "text-right" : "text-left"
+                          } ${col.key === 'actions' ? 'w-20' : ''} ${
+                            col.className || ''
+                          }`}
+                        >
+                          <div className={`flex items-center ${
+                            col.align === "right" ? "justify-end" : "justify-start"
+                          } ${col.truncate ? 'truncate max-w-[200px]' : ''}`}>
+                            {col.render ? col.render(row) : row[col.key]}
+                          </div>
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  ) : (
-                    currentData.map((row, index) => (
-                      <motion.tr
-                        key={row._id || row.id || index}
-                        custom={index}
-                        initial="hidden"
-                        animate="visible"
-                        variants={fadeUp}
-                        // as={TableRow}
-                        className="border-b hover:bg-gray-50/50 transition-colors duration-150"
-                      >
-                        {columns.map((col, colIndex) => (
-                          <TableCell
-                            key={colIndex}
-                            className={`px-4 py-3 text-xs sm:text-sm text-gray-600 ${
-                              col.align === "right" ? "text-right" : "text-left"
-                            } ${col.key === 'actions' ? 'w-20' : ''} ${
-                              col.className || ''
-                            }`}
-                            style={{ whiteSpace: 'normal' }}
-                          >
-                            <div className={`flex items-center ${
-                              col.align === "right" ? "justify-end" : "justify-start"
-                            } ${col.truncate ? 'truncate max-w-[200px]' : ''}`}>
-                              {col.render ? col.render(row) : row[col.key]}
-                            </div>
-                          </TableCell>
-                        ))}
-                      </motion.tr>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
 
-          {/* Pagination - Enhanced Responsive */}
+          {/* PAGINATION - ALWAYS VISIBLE AT BOTTOM */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t px-4 py-3 bg-gray-50/50 text-xs sm:text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t px-4 py-3 bg-gray-50/50 text-xs sm:text-sm sticky bottom-0 bg-white">
               {/* Showing info */}
               <div className="text-center sm:text-left text-gray-600 whitespace-nowrap">
                 Showing <strong>{showingStart}</strong> to <strong>{showingEnd}</strong> of{" "}
@@ -287,22 +284,6 @@ export default function DataTable({
 
               {/* Pagination Controls */}
               <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap">
-                {/* Rows per page selector */}
-                <div className="flex items-center gap-2 text-gray-600 order-2 sm:order-1">
-                  <span className="hidden sm:inline whitespace-nowrap">Rows per page</span>
-                  <Select value={rowsPerPage.toString()} disabled>
-                    <SelectTrigger className="h-8 w-16">
-                      <SelectValue placeholder={rowsPerPage} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Page info */}
                 <div className="flex items-center gap-1 mx-2 text-gray-600 order-1 sm:order-2 whitespace-nowrap">
                   <span className="hidden sm:inline">Page</span>
@@ -322,7 +303,7 @@ export default function DataTable({
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -338,16 +319,6 @@ export default function DataTable({
           )}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
-
-
-
-
-
-
-
-
-
-

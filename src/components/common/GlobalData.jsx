@@ -27,6 +27,7 @@ export default function GlobalData({
   filterOptionsMap = {},
   onDataFetched,
   customFilters,
+  tableHeight = '60vh',
 }) {
   const [data, setData] = useState([]);
   const [allItems, setAllItems] = useState([]);
@@ -378,15 +379,14 @@ export default function GlobalData({
     return customFilters;
   };
 
- // GlobalData.jsx mein return section modify karein
 return (
   <div className="w-full">
     {renderFilters()}
     {renderCustomFilters()}
-    
-    {/* ✅ Yeh wrapper add karein */}
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-max"> {/* Changed from min-w-[640px] to min-w-max for better shrink to fit */}
+
+    {/* Mobile-friendly table wrapper */}
+    <div className="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="min-w-full sm:min-w-max">
         <DataTable
           title={title}
           icon={icon}
@@ -402,6 +402,7 @@ return (
           onPageChange={handlePageChange}
           onSearchChange={handleSearchChange}
           onFilterChange={handleFilterChange}
+          tableHeight={tableHeight}
         />
       </div>
     </div>

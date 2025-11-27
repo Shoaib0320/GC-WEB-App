@@ -107,7 +107,7 @@ export default function BookingsPage() {
       <div className="flex justify-end">
         <Button
           onClick={() => setCreateDialogOpen(true)}
-          className="flex items-center gap-2 w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 transition-colors rounded-lg"
+          className="flex items-center gap-2 w-full sm:w-auto bg-[#10B5DB] text-white hover:bg-[#10B5DB]/90 transition-colors rounded-lg"
         >
           <Plus className="w-4 h-4" />
           Create Booking

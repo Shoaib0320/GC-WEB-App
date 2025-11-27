@@ -1,4 +1,4 @@
-// app/notifications/admin/page.jsx
+// src/app/(dashboard)/dashboard/notifications/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,6 +19,12 @@ import { Loader2, Plus, Edit, Trash2, Bell } from "lucide-react";
 
 export default function NotificationsAdminPage() {
   const { user, hasPermission } = useAuth();
+
+  // Permission flags for notifications module
+  const canView = hasPermission?.("notification", "view");
+  const canCreate = hasPermission?.("notification", "create");
+  const canEdit = hasPermission?.("notification", "edit");
+  const canDelete = hasPermission?.("notification", "delete");
 
   // States
   const [notifications, setNotifications] = useState([]);
@@ -238,10 +244,13 @@ export default function NotificationsAdminPage() {
             </Select>
           </div>
 
-          <Button onClick={() => openModal()} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Notification
-          </Button>
+          {/* Only show Create button if user has create permission */}
+          {canCreate && (
+            <Button onClick={() => openModal()} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Notification
+            </Button>
+          )}
         </div>
       </div>
 
@@ -260,6 +269,11 @@ export default function NotificationsAdminPage() {
         <div className="flex justify-center items-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : !canView ? (
+        // If user cannot view notifications but may have other permissions (e.g., create)
+        <div className="text-center py-8 text-muted-foreground">
+          <p>You don't have permission to view notifications.</p>
+        </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -275,7 +289,10 @@ export default function NotificationsAdminPage() {
                 <TableHead className="whitespace-nowrap">Target</TableHead>
                 <TableHead className="whitespace-nowrap">Type</TableHead>
                 <TableHead className="whitespace-nowrap">Created</TableHead>
-                <TableHead className="whitespace-nowrap">Actions</TableHead>
+                {/* Only show Actions header when edit/delete available */}
+                {(canEdit || canDelete) && (
+                  <TableHead className="whitespace-nowrap">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -290,12 +307,24 @@ export default function NotificationsAdminPage() {
                     <Badge variant="outline">{n.type}</Badge>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">{new Date(n.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex gap-2 flex-wrap">
-                      <Button variant="outline" size="sm" onClick={() => openModal(n)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(n._id)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
+                  {/* Actions cell: only render if edit/delete permissions exist */}
+                  {(canEdit || canDelete) && (
+                    <TableCell className="whitespace-nowrap">
+                      <div className="flex gap-2 flex-wrap">
+                        {canEdit && (
+                          <Button variant="outline" size="sm" onClick={() => openModal(n)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {canDelete && (
+                          <Button variant="outline" size="sm" onClick={() => handleDelete(n._id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -397,5 +426,3 @@ export default function NotificationsAdminPage() {
 
   );
 }
-
-
