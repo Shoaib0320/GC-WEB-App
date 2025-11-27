@@ -27,7 +27,6 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             {children}
-            <Footer />
           </div>
         </AuthProvider>
       </body>

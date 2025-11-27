@@ -7,6 +7,7 @@ import TeamSection from "@/components/TeamSection";
 import AboutSection from "@/components/AboutSection";
 import ContactSection from "@/components/ContactSection";
 import { Button } from "@/components/ui/button";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
       <ContactSection />
 
       {/* Footer moved to global layout */}
+      <Footer />
     </div>
   );
 }
