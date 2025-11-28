@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from '@/context/AuthContext';
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +21,10 @@ export default function BookingDetailsDialog({
   const [showReschedule, setShowReschedule] = useState(false);
   const [reason, setReason] = useState("");
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+
+  // Permissions
+  const { hasPermission } = useAuth();
+  const canChangeStatus = hasPermission('booking', 'update_status') || hasPermission('booking', 'edit');
 
   // Close on escape key
   useEffect(() => {
@@ -273,6 +278,12 @@ export default function BookingDetailsDialog({
 
   // 🔹 Booking status update function
   const updateBookingStatus = async (newStatus, cancellationReason = null) => {
+    // Client-side guard: ensure user has permission to change status
+    if (!hasPermission('booking', 'update_status') && !hasPermission('booking', 'edit')) {
+      toast.error("You don't have permission to change booking status");
+      return;
+    }
+
     try {
       setLoading(true);
       const bodyPayload = {
@@ -535,41 +546,47 @@ export default function BookingDetailsDialog({
 
           {/* Footer Actions */}
           <div className="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
-            <div className="flex flex-wrap gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowCancelDialog(true)}
-                disabled={loading || status === "cancelled" || status === "completed"}
-                className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 px-4 py-2 text-sm"
-              >
-                Cancel Booking
-              </Button>
+              <div className="flex flex-wrap gap-2 justify-end">
+                {canChangeStatus ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCancelDialog(true)}
+                      disabled={loading || status === "cancelled" || status === "completed"}
+                      className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 px-4 py-2 text-sm"
+                    >
+                      Cancel Booking
+                    </Button>
 
-              <Button
-                onClick={() => updateBookingStatus("confirmed")}
-                disabled={loading || status === "confirmed" || status === "completed" || status === "rescheduled"}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
-              >
-                Confirm Booking
-              </Button>
+                    <Button
+                      onClick={() => updateBookingStatus("confirmed")}
+                      disabled={loading || status === "confirmed" || status === "completed" || status === "rescheduled"}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
+                    >
+                      Confirm Booking
+                    </Button>
 
-              <Button
-                onClick={() => updateBookingStatus("completed")}
-                disabled={loading || status === "completed" || status === "cancelled"}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                Complete Booking
-              </Button>
+                    <Button
+                      onClick={() => updateBookingStatus("completed")}
+                      disabled={loading || status === "completed" || status === "cancelled"}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                      Complete Booking
+                    </Button>
 
-              <Button
-                onClick={() => setShowReschedule(true)}
-                disabled={loading || status === "completed" || status === "cancelled"}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 text-sm"
-              >
-                Reschedule
-              </Button>
-            </div>
+                    <Button
+                      onClick={() => setShowReschedule(true)}
+                      disabled={loading || status === "completed" || status === "cancelled"}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 text-sm"
+                    >
+                      Reschedule
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-600 py-2">You don't have permission to change booking status.</div>
+                )}
+              </div>
           </div>
         </div>
       </div>

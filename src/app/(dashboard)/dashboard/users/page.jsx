@@ -39,6 +39,19 @@ import { toast } from "sonner";
 
 export default function Users() {
   const { user, hasPermission } = useAuth();
+  // Permission flags for this page (role-level resolved inside hasPermission)
+  const canViewUser = hasPermission('user', 'view');
+  const canCreateUser = hasPermission('user', 'create');
+  const canEditUser = hasPermission('user', 'edit');
+  const canDeleteUser = hasPermission('user', 'delete');
+  const canChangeRole = hasPermission('user', 'change_role') || hasPermission('role', 'manage_roles') || hasPermission('user', 'edit');
+
+  const canViewRole = hasPermission('role', 'view');
+  const canCreateRole = hasPermission('role', 'create');
+  const canEditRole = hasPermission('role', 'edit');
+  const canDeleteRole = hasPermission('role', 'delete');
+  const canManageRoles = hasPermission('role', 'manage_roles');
+  const showRolesTab = canViewRole || canCreateRole || canEditRole || canDeleteRole || canManageRoles;
   const [activeTab, setActiveTab] = useState('users');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -624,29 +637,29 @@ export default function Users() {
       align: 'right',
       render: (u) => (
         <div className="flex items-center justify-end gap-2">
-          {hasPermission('user', 'edit') ? (
+          {canEditUser ? (
             <button onClick={() => handleEditUser(u, 'edit')} className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200">
               <Edit className="h-4 w-4 mr-1" /> Edit
             </button>
-          ) : hasPermission('user', 'view') ? (
+          ) : canViewUser ? (
             <button onClick={() => handleEditUser(u, 'view')} className="inline-flex items-center px-3 py-2 bg-white text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors border border-gray-200">
               <User className="h-4 w-4 mr-1" /> View
             </button>
           ) : null}
 
-          {hasPermission('user', 'edit') && (
+          {canEditUser && (
             <button onClick={() => handleToggleUserStatus(u._id, u.isActive)} className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${u.isActive ? 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}>
               <Power className="h-4 w-4 mr-1" /> {u.isActive ? 'Deactivate' : 'Activate'}
             </button>
           )}
 
-          {hasPermission('user', 'delete') && (
+          {canDeleteUser && (
             <button onClick={() => handleDeleteUser(u._id)} className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200">
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </button>
           )}
 
-          {(hasPermission('user', 'change_role') || hasPermission('role', 'manage_roles') || hasPermission('user', 'edit')) && (
+          {canChangeRole && (
             <button onClick={() => { setRoleChangeUser(u); setRoleChangeValue(u.role?._id || ''); setRoleChangeOpen(true); }} className="inline-flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors border border-indigo-200">
               <Shield className="h-4 w-4 mr-1" /> Change Role
             </button>
@@ -681,12 +694,16 @@ export default function Users() {
       align: 'right',
       render: (r) => (
         <div className="flex items-center justify-end gap-2">
-          <button onClick={() => handleEditRole(r)} className="inline-flex items-center px-2 py-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded text-xs font-medium transition-colors border border-yellow-200">
-            <Edit className="h-3 w-3 mr-1" /> Edit
-          </button>
-          <button onClick={() => handleDeleteRole(r._id)} className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-200">
-            <Trash2 className="h-3 w-3 mr-1" /> Delete
-          </button>
+          {canEditRole && (
+            <button onClick={() => handleEditRole(r)} className="inline-flex items-center px-2 py-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded text-xs font-medium transition-colors border border-yellow-200">
+              <Edit className="h-3 w-3 mr-1" /> Edit
+            </button>
+          )}
+          {canDeleteRole && (
+            <button onClick={() => handleDeleteRole(r._id)} className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-200">
+              <Trash2 className="h-3 w-3 mr-1" /> Delete
+            </button>
+          )}
         </div>
       )
     }
@@ -728,7 +745,7 @@ export default function Users() {
                       {users.length}
                     </span>
                   </TabsTrigger>
-                  {hasPermission('user', 'create') && (
+                  {showRolesTab && (
                     <TabsTrigger
                       value="roles"
                       className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
@@ -772,13 +789,15 @@ export default function Users() {
                             Manage existing users and their account status
                           </CardDescription>
                         </div>
-                        <Button
-                          onClick={openUserDialog}
-                          className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add User
-                        </Button>
+                        {canCreateUser && (
+                          <Button
+                            onClick={openUserDialog}
+                            className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add User
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="pt-4 md:pt-6 px-0 md:px-6">
@@ -808,7 +827,7 @@ export default function Users() {
               )}
 
               {/* Roles Tab */}
-              {activeTab === 'roles' && hasPermission('user', 'create') && (
+              {activeTab === 'roles' && showRolesTab && (
                 <div className="space-y-6 md:space-y-8">
                   {/* Roles List Header with Add Button */}
                   <Card className="border-0 shadow-sm">
@@ -820,13 +839,15 @@ export default function Users() {
                             Overview of existing roles and their permissions
                           </CardDescription>
                         </div>
-                        <Button
-                          onClick={openRoleDialog}
-                          className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add Role
-                        </Button>
+                        {canCreateRole && (
+                          <Button
+                            onClick={openRoleDialog}
+                            className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Role
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="pt-4 md:pt-6 px-0 md:px-6">
@@ -1035,9 +1056,11 @@ export default function Users() {
                 <Label className="text-sm">Select Role</Label>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => loadRoles()} className="px-2 py-1 text-xs">Refresh</Button>
-                  <Button size="sm" className="px-2 py-1 text-xs" onClick={() => { setRoleDialogOpen(true); setEditingRole(null); setRoleChangeOpen(false); }}>
-                    Create Role
-                  </Button>
+                  {canCreateRole && (
+                    <Button size="sm" className="px-2 py-1 text-xs" onClick={() => { setRoleDialogOpen(true); setEditingRole(null); setRoleChangeOpen(false); }}>
+                      Create Role
+                    </Button>
+                  )}
                 </div>
               </div>
               <Select value={roleChangeValue} onValueChange={(v) => setRoleChangeValue(v)}>
@@ -1059,21 +1082,25 @@ export default function Users() {
 
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
               <Button variant="outline" onClick={() => setRoleChangeOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={async () => {
-                if (!roleChangeUser) return;
-                try {
-                  const data = await userService.updateRole(roleChangeUser._id, roleChangeValue);
-                  if (data.success) {
-                    showMessage('success', 'Role updated');
-                    setRoleChangeOpen(false);
-                    loadUsers();
-                  } else {
-                    showMessage('error', data.error || 'Failed to update role');
+              {canChangeRole ? (
+                <Button onClick={async () => {
+                  if (!roleChangeUser) return;
+                  try {
+                    const data = await userService.updateRole(roleChangeUser._id, roleChangeValue);
+                    if (data.success) {
+                      showMessage('success', 'Role updated');
+                      setRoleChangeOpen(false);
+                      loadUsers();
+                    } else {
+                      showMessage('error', data.error || 'Failed to update role');
+                    }
+                  } catch (err) {
+                    showMessage('error', 'Failed to update role');
                   }
-                } catch (err) {
-                  showMessage('error', 'Failed to update role');
-                }
-              }} className="w-full sm:w-auto">Save</Button>
+                }} className="w-full sm:w-auto">Save</Button>
+              ) : (
+                <div className="w-full sm:w-auto text-sm text-gray-600 flex items-center justify-center">You don't have permission to change role.</div>
+              )}
             </div>
           </div>
         </DialogContent>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from '@/context/AuthContext';
 import DataTable from "@/components/common/DataTable";
 import GlobalData from "@/components/common/GlobalData";
 import PageHeader from "@/components/common/PageHeader";
@@ -44,6 +45,10 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const { hasPermission } = useAuth();
+  const canCreateBooking = hasPermission('booking', 'create');
+  const canViewBooking = hasPermission('booking', 'view');
 
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
@@ -105,13 +110,15 @@ export default function BookingsPage() {
 
       {/* Create Booking Button */}
       <div className="flex justify-end">
-        <Button
-          onClick={() => setCreateDialogOpen(true)}
-          className="flex items-center gap-2 w-full sm:w-auto bg-[#10B5DB] text-white hover:bg-[#10B5DB]/90 transition-colors rounded-lg"
-        >
-          <Plus className="w-4 h-4" />
-          Create Booking
-        </Button>
+        {canCreateBooking && (
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="flex items-center gap-2 w-full sm:w-auto bg-[#10B5DB] text-white hover:bg-[#10B5DB]/90 transition-colors rounded-lg"
+          >
+            <Plus className="w-4 h-4" />
+            Create Booking
+          </Button>
+        )}
       </div>
 
       <Separator />
@@ -204,9 +211,11 @@ export default function BookingsPage() {
                       }
                     },
                     { label: "Action", align: "right", render: b => (
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(b); setDialogOpen(true); }}>
-                          View
-                        </Button>
+                        canViewBooking ? (
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(b); setDialogOpen(true); }}>
+                            View
+                          </Button>
+                        ) : null
                       )
                     },
                   ]}
@@ -256,7 +265,9 @@ export default function BookingsPage() {
                       <CardContent>
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
                           <span>{b.formData?.email || "N/A"}</span>
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(b); setDialogOpen(true); }}>View</Button>
+                          {canViewBooking && (
+                            <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(b); setDialogOpen(true); }}>View</Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

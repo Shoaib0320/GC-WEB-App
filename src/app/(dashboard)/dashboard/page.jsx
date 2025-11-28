@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from '@/context/AuthContext';
 import {
   Card,
   CardHeader,
@@ -44,6 +45,18 @@ export default function DashboardPage() {
   const [contactsLoading, setContactsLoading] = useState(true);
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [leavesLoading, setLeavesLoading] = useState(true);
+
+  // Permissions (frontend gating only)
+  const { hasPermission } = useAuth();
+  const canCreateUser = hasPermission('user', 'create');
+  const canCreateBooking = hasPermission('booking', 'create');
+  const canViewAgents = hasPermission('agent', 'view');
+  const canViewContacts = hasPermission('contact', 'view');
+  const canViewAttendance = hasPermission('attendance', 'view');
+  const canViewPromo = hasPermission('promoCode', 'view');
+  const canManagePromo = hasPermission('promoCode', 'create') || hasPermission('promoCode', 'edit') || hasPermission('promoCode', 'delete');
+  const canViewLeaves = hasPermission('leaveRequest', 'view');
+  const canViewBookings = hasPermission('booking', 'view');
 
   useEffect(() => {
     let mounted = true;
@@ -127,37 +140,45 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-4">
               {/* Buttons: stack full-width on mobile, inline on larger screens */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-                <Button aria-label="Add user" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/users')}>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2" />
-                    <span>Add User</span>
-                  </div>
-                  <span className="inline-flex items-center justify-center rounded-full bg-[#10B5DB]/10 text-[#10B5DB] text-xs px-2 py-0.5">{stats ? formatNumber(stats.totalUsers) : '—'}</span>
-                </Button>
+                {canCreateUser && (
+                  <Button aria-label="Add user" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/users')}>
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-2" />
+                      <span>Add User</span>
+                    </div>
+                    <span className="inline-flex items-center justify-center rounded-full bg-[#10B5DB]/10 text-[#10B5DB] text-xs px-2 py-0.5">{stats ? formatNumber(stats.totalUsers) : '—'}</span>
+                  </Button>
+                )}
 
-                <Button aria-label="New booking" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/bookings')}>
-                  <div className="flex items-center">
-                    <CalendarDays className="h-4 w-4 mr-2" />
-                    <span>New Booking</span>
-                  </div>
-                  <span className="inline-flex items-center justify-center rounded-full bg-green-100 text-green-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.pendingBookings) : '—'}</span>
-                </Button>
+                {canCreateBooking && (
+                  <Button aria-label="New booking" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/bookings')}>
+                    <div className="flex items-center">
+                      <CalendarDays className="h-4 w-4 mr-2" />
+                      <span>New Booking</span>
+                    </div>
+                    <span className="inline-flex items-center justify-center rounded-full bg-green-100 text-green-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.pendingBookings) : '—'}</span>
+                  </Button>
+                )}
 
-                <Button aria-label="Agents" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/agents')}>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2" />
-                    <span>Agents</span>
-                  </div>
-                  <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.activeAgents) : '—'}</span>
-                </Button>
+                {canViewAgents && (
+                  <Button aria-label="Agents" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/agents')}>
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-2" />
+                      <span>Agents</span>
+                    </div>
+                    <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.activeAgents) : '—'}</span>
+                  </Button>
+                )}
 
-                <Button aria-label="Contacts" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/contacts')}>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2" />
-                    <span>Contacts</span>
-                  </div>
-                  <span className="inline-flex items-center justify-center rounded-full bg-rose-100 text-rose-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.newContacts) : '—'}</span>
-                </Button>
+                {canViewContacts && (
+                  <Button aria-label="Contacts" className="w-full justify-between" variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/contacts')}>
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-2" />
+                      <span>Contacts</span>
+                    </div>
+                    <span className="inline-flex items-center justify-center rounded-full bg-rose-100 text-rose-800 text-xs px-2 py-0.5">{stats ? formatNumber(stats.newContacts) : '—'}</span>
+                  </Button>
+                )}
               </div>
 
               {/* mini stat chips: responsive grid */}

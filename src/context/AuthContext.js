@@ -78,8 +78,21 @@ export function AuthProvider({ children }) {
   };
 
   const hasPermission = (module, action) => {
-    if (!user || !user.permissions) return false;
-    return user.permissions[module]?.[action] || false;
+    if (!user) return false;
+    // Prefer role-level permission if present (role may be populated on the user object)
+    try {
+      const rolePerm = user.role && user.role.permissions && user.role.permissions[module] ? !!user.role.permissions[module]?.[action] : null;
+      const userPerm = user.permissions && user.permissions[module] ? !!user.permissions[module]?.[action] : null;
+
+      // If role explicitly grants or denies (boolean), respect it; otherwise fall back to user-specific permission
+      if (rolePerm === true) return true;
+      if (rolePerm === false && userPerm === true) return true; // user can still have explicit true
+
+      return !!userPerm;
+    } catch (err) {
+      // In case of unexpected shape, fall back to checking user.permissions
+      return user.permissions && !!user.permissions[module]?.[action];
+    }
   };
 
   const value = {
