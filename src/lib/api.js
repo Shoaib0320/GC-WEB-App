@@ -239,8 +239,14 @@ const api = axios.create({
 // Optional logout handler support
 // ===============================
 let logoutHandler = null;
+let tokenRefreshHandler = null;
+
 export const registerLogoutHandler = (fn) => {
   logoutHandler = typeof fn === "function" ? fn : null;
+};
+
+export const registerTokenRefreshHandler = (fn) => {
+  tokenRefreshHandler = typeof fn === "function" ? fn : null;
 };
 
 // ===============================
@@ -305,6 +311,29 @@ api.interceptors.response.use(
     // ===============================
     if (status === 401) {
       console.warn("🔐 401 Unauthorized – Token expired or invalid");
+
+      // Try to refresh token first
+      if (tokenRefreshHandler && /expired|token|unauthorized/i.test(errorMsg.toLowerCase())) {
+        try {
+          console.log('🔄 Attempting to refresh token via handler...');
+          const refreshed = await tokenRefreshHandler({
+            reason: "token_expired",
+            url,
+            response: error.response?.data,
+          });
+
+          if (refreshed) {
+            console.log('✅ Token refreshed successfully, retrying request...');
+            // Retry the original request with new token
+            return api(error.config);
+          } else {
+            throw new Error('Token refresh failed');
+          }
+        } catch (e) {
+          console.error("❌ Token refresh failed:", e.message);
+          // Token refresh failed, proceed to logout
+        }
+      }
 
       // If logoutHandler exists
       if (logoutHandler && /expired|token|unauthorized/i.test(errorMsg.toLowerCase())) {

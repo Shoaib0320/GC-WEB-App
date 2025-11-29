@@ -172,7 +172,7 @@ export async function POST(request) {
         { success: false, message: "Not authenticated" },
         { status: 401 }
       );
-    }
+    }    
 
     const token = authHeader.replace("Bearer ", "");
     const decoded = verifyToken(token);
@@ -187,6 +187,8 @@ export async function POST(request) {
     const userId = getUserIdFromToken(decoded);
     const body = await request.json();
     const { attendanceId, location, userType = "agent" } = body;
+
+        console.log('Request ', request.body);
 
     const now = new Date();
     const todayStart = new Date(

@@ -51,6 +51,7 @@ export const agentAttendanceService = {
   },
 
   async checkOut(checkOutData) {
+    console.log('Check out data', checkOutData);
     try {
       const response = await api.post('/attendance/checkout', checkOutData);
       const todayStatus = response.data.data;

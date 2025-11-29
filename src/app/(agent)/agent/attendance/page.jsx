@@ -1,7 +1,22 @@
 //src/app/(agent%)/agent/attendance/page.jsx
 "use client";
 import { useContext, useEffect, useState } from "react";
-import { toast } from "sonner"; // Using sonner for toasts
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  RefreshCw, 
+  MapPin, 
+  Calendar, 
+  Clock, 
+  CheckCircle2, 
+  XCircle, 
+  AlertCircle,
+  Download,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  Loader2
+} from "lucide-react";
 
 import { useAgent } from "@/context/AgentContext";
 import { useOfficeLocation } from "@/context/LocationContext";
@@ -14,6 +29,7 @@ import {
 } from "@/utils/backgroundLocation";
 import { getCurrentLocation, getDistance } from "@/utils/locationUtils";
 import { agentAttendanceService } from "@/services/agentAttendenceService";
+import { agentAuthService } from "@/services/agentAuthService";
 
 // Components
 import AttendanceFilter from "@/components/AttendanceFilter";
@@ -49,17 +65,53 @@ const AttendanceScreen = () => {
   const [showLeaveRequests, setShowLeaveRequests] = useState(false);
   const [activeLeaveModalVisible, setActiveLeaveModalVisible] = useState(false);
   const [activeLeaveDetails, setActiveLeaveDetails] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({
+    status: true,
+    details: false,
+    location: false
+  });
 
   console.log('Agent Data', agent);
-    console.log('Agent Token', token);
-
+  console.log('Agent Token', token);
 
   useEffect(() => {
     if (isLoggedIn) {
-      loadInitialData();
-      setupNotifications();
+      // Ensure token is valid before loading data
+      const initializePage = async () => {
+        try {
+          // Check if token needs refresh
+          const currentToken = token || localStorage.getItem('agentToken');
+          if (currentToken) {
+            const tokenExpiry = getTokenExpiryTime(currentToken);
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+
+            // If token expires within 5 minutes, refresh it first
+            if (tokenExpiry && (tokenExpiry - now) < fiveMinutes) {
+              console.log('🔄 Token expiring soon, refreshing before loading attendance data...');
+              try {
+                const refreshResult = await agentAuthService.refreshToken(currentToken);
+                if (refreshResult.token) {
+                  console.log('✅ Token refreshed successfully before loading data');
+                }
+              } catch (refreshError) {
+                console.error('❌ Token refresh failed:', refreshError);
+                // Continue with loading data - the API interceptor will handle 401
+              }
+            }
+          }
+
+          await loadInitialData();
+          setupNotifications();
+        } catch (error) {
+          console.error('❌ Error initializing attendance page:', error);
+          await loadInitialData(); // Try loading data anyway
+        }
+      };
+
+      initializePage();
     }
-  }, [agent, isLoggedIn]);
+  }, [agent, isLoggedIn, token]);
 
   useEffect(() => {
     let interval;
@@ -105,7 +157,6 @@ const AttendanceScreen = () => {
   const loadTodayStatus = async () => {
     try {
       let status = await agentAttendanceService.getTodayStatus();
-      // if (!status) status = await agentAttendanceService.getTodaysAttendance();
       setTodayAttendance(status);
       if (status && !status.checkOutTime) updateWorkingTime();
     } catch (error) {
@@ -346,87 +397,97 @@ const AttendanceScreen = () => {
     return months[monthNumber - 1] || "";
   };
 
-  // Custom Button Component for internal use
-  const CustomButton = ({ title, onPress, disabled, style, ...props }) => (
-    <button
-      onClick={onPress}
-      disabled={disabled}
-      style={{
-        padding: '12px 16px',
-        backgroundColor: theme?.colors?.primary || '#3B82F6',
-        border: 'none',
-        borderRadius: 8,
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.6 : 1,
-        ...style,
-      }}
-      {...props}
-    >
-      {title}
-    </button>
-  );
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   // Show loading while agent context is loading
   if (!isLoggedIn) {
     return (
-      <div style={{ 
-        display: "flex", 
-        flexDirection: "column",
-        flex: 1, 
-        backgroundColor: theme?.colors?.background || '#f5f5f5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20
-      }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading agent data...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"
+          />
+          <p className="text-slate-600 text-lg font-medium">Loading attendance data...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        backgroundColor: theme?.colors?.background || '#f5f5f5',
-      }}
-    >
-      {/* Top Buttons */}
-      <div style={{ padding: "12px 16px", backgroundColor: "transparent" }}>
-        <CustomButton
-          title={`📅 ${getMonthName(currentFilter.month)} ${currentFilter.year}`}
-          onPress={() => setFilterModalVisible(true)}
-          style={{ padding: "10px 0", width: '100%' }}
-        />
-        <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-          <CustomButton
-            title="Request Leave"
-            onPress={handleLeaveRequestClick}
-            style={{ flex: 1, height: 45 }}
-          />
-          <CustomButton
-            title={showLeaveRequests ? "Hide Leaves" : "My Leaves"}
-            onPress={() => setShowLeaveRequests(!showLeaveRequests)}
-            style={{ flex: 1, height: 45 }}
-          />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+      {/* Header Section */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-slate-200/50">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                Attendance
+              </h1>
+              <p className="text-slate-600 text-sm sm:text-base mt-1">
+                Track your daily check-ins and working hours
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-5 w-5 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
+            </motion.button>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setFilterModalVisible(true)}
+              className="flex-1 bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <Calendar className="h-4 w-4 text-slate-600" />
+              <span className="font-medium text-slate-700">
+                {getMonthName(currentFilter.month)} {currentFilter.year}
+              </span>
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            </motion.button>
+
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleLeaveRequestClick}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl px-4 py-3 shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-sm"
+              >
+                Request Leave
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowLeaveRequests(!showLeaveRequests)}
+                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-all duration-200 font-medium text-sm text-slate-700"
+              >
+                {showLeaveRequests ? "Hide Leaves" : "My Leaves"}
+              </motion.button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: 16,
-          paddingBottom: 20,
-        }}
-      >
+      {/* Main Content */}
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Leave Request Modal */}
         <LeaveRequestModal
           visible={showLeaveModal}
@@ -435,101 +496,164 @@ const AttendanceScreen = () => {
         />
 
         {/* Leave Requests List */}
-        {showLeaveRequests && <LeaveRequestsList />}
+        <AnimatePresence>
+          {showLeaveRequests && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <LeaveRequestsList />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Show Today's Leave if exists */}
-        {todayLeave && (
-          <div
-            style={{
-              padding: 16,
-              backgroundColor: "#FFEBEE",
-              borderRadius: 12,
-              marginBottom: 10,
-            }}
-          >
-            <div style={{ color: "#D32F2F", fontWeight: "bold" }}>
-              You have an approved leave today ({todayLeave.leaveType})
-            </div>
-            <div style={{ color: "#D32F2F" }}>
-              From {new Date(todayLeave.startDate).toLocaleDateString()} to{" "}
-              {new Date(todayLeave.endDate).toLocaleDateString()}
-            </div>
-          </div>
-        )}
+        {/* Today's Leave Banner */}
+        <AnimatePresence>
+          {todayLeave && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <AlertCircle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-800">
+                    Approved Leave Today
+                  </h3>
+                  <p className="text-amber-700 text-sm">
+                    {todayLeave.leaveType} • From {new Date(todayLeave.startDate).toLocaleDateString()} to{" "}
+                    {new Date(todayLeave.endDate).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Check In/Out Button */}
-        <div style={{ marginBottom: 20 }}>
-          {!todayAttendance ? (
-            <CustomButton
-              title={checking ? "Checking In..." : "Check In Now"}
-              onPress={handleCheckIn}
-              disabled={!canCheckIn()}
-              style={{
-                height: 50,
-                width: '100%',
-                opacity: !canCheckIn() ? 0.6 : 1
-              }}
-            />
-          ) : !todayAttendance.checkOutTime ? (
-            <CustomButton
-              title={checking ? "Checking Out..." : "Check Out Now"}
-              onPress={handleCheckOut}
-              disabled={!canCheckOut()}
-              style={{
-                height: 50,
-                width: '100%',
-                backgroundColor: "#FF9800",
-                opacity: !canCheckOut() ? 0.6 : 1,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                padding: 16,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderStyle: "solid",
-                borderColor: theme?.colors?.border || '#e5e5e5',
-                backgroundColor: theme?.colors?.card || '#ffffff',
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: "bold", marginBottom: 8, color: theme?.colors?.text || '#333333' }}>
-                Today's attendance completed
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden"
+        >
+          <div className="p-6">
+            {!todayAttendance ? (
+              <motion.button
+                whileHover={{ scale: canCheckIn() ? 1.02 : 1 }}
+                whileTap={{ scale: canCheckIn() ? 0.98 : 1 }}
+                onClick={handleCheckIn}
+                disabled={!canCheckIn()}
+                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
+                  canCheckIn()
+                    ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg hover:shadow-xl text-white"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                {checking ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Checking In...
+                  </div>
+                ) : (
+                  "Check In Now"
+                )}
+              </motion.button>
+            ) : !todayAttendance.checkOutTime ? (
+              <motion.button
+                whileHover={{ scale: canCheckOut() ? 1.02 : 1 }}
+                whileTap={{ scale: canCheckOut() ? 0.98 : 1 }}
+                onClick={handleCheckOut}
+                disabled={!canCheckOut()}
+                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
+                  canCheckOut()
+                    ? "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg hover:shadow-xl text-white"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                {checking ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Checking Out...
+                  </div>
+                ) : (
+                  "Check Out Now"
+                )}
+              </motion.button>
+            ) : (
+              <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <h3 className="text-lg font-bold text-green-800 mb-2">
+                  Today's attendance completed
+                </h3>
+                <div className="text-green-700 space-y-1">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Check-in: {formatTime(todayAttendance.checkInTime)}
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Check-out: {formatTime(todayAttendance.checkOutTime)}
+                  </div>
+                </div>
               </div>
-              <div style={{ color: theme?.colors?.textSecondary || '#666666' }}>
-                <div>Check-in: {formatTime(todayAttendance.checkInTime)}</div>
-                <div>Check-out: {formatTime(todayAttendance.checkOutTime)}</div>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </motion.div>
 
         {/* Monthly Summary */}
-        {filteredSummary && <AttendanceSummary monthlySummary={filteredSummary} filter={currentFilter} />}
+        {filteredSummary && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <AttendanceSummary monthlySummary={filteredSummary} filter={currentFilter} />
+          </motion.div>
+        )}
 
         {/* Today's Status */}
-        <TodayStatusCard todayAttendance={todayAttendance} agentShift={agentShift} workingTime={workingTime} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <TodayStatusCard 
+            todayAttendance={todayAttendance} 
+            agentShift={agentShift} 
+            workingTime={workingTime} 
+          />
+        </motion.div>
 
         {/* Today's Details */}
-        {todayAttendance && <TodayDetailsCard todayAttendance={todayAttendance} />}
+        {todayAttendance && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <TodayDetailsCard todayAttendance={todayAttendance} />
+          </motion.div>
+        )}
 
         {/* Location Status */}
-        <LocationStatusCard distance={distance} checkRadius={checkRadius} loading={loading} />
-
-        {/* Refresh Button */}
-        {/* <div style={{ marginTop: 20 }}>
-          <CustomButton
-            title={refreshing ? "Refreshing..." : "Refresh Data"}
-            onPress={onRefresh}
-            disabled={refreshing}
-            style={{
-              width: '100%',
-              backgroundColor: '#6B7280',
-              opacity: refreshing ? 0.6 : 1
-            }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <LocationStatusCard 
+            distance={distance} 
+            checkRadius={checkRadius} 
+            loading={loading} 
           />
-        </div> */}
+        </motion.div>
       </div>
 
       {/* Filter Modal */}

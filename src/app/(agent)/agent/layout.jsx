@@ -233,18 +233,12 @@ function AgentLayoutContent({ children }) {
   // Automatic location permission check
   useEffect(() => {
     if (isLoggedIn && agent && !isLoading) {
-      // Small delay to ensure everything is loaded
-      const timer = setTimeout(() => {
-        checkLocationPermission();
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+      // Request location immediately (no delay)
+      checkLocationPermission();
     }
-  }, [isLoggedIn, agent, isLoading, pathname]);
+  }, [isLoggedIn, agent, isLoading]);
 
   const checkLocationPermission = async () => {
-    if (hasCheckedLocation) return;
-    
     console.log('🔍 Checking location permission...');
     
     // Check if we're on a page that needs location
@@ -258,14 +252,7 @@ function AgentLayoutContent({ children }) {
     );
     
     if (!needsLocation) {
-      console.log('📍 Location not required for this page');
-      return;
-    }
-
-    // Check if we've already shown the prompt
-    const hasShownPrompt = localStorage.getItem('locationPromptShown');
-    if (hasShownPrompt) {
-      console.log('📍 Prompt already shown before');
+      console.log('📍 Location not required for this page:', pathname);
       return;
     }
 
@@ -277,18 +264,18 @@ function AgentLayoutContent({ children }) {
         currentPermission = result.state;
         console.log('📍 Current permission state:', currentPermission);
       } catch (error) {
-        console.error('📍 Permission check error:', error);
+        console.warn('📍 Permission query not supported, will request location directly');
+        currentPermission = 'unknown';
       }
     }
 
-    // Only show prompt if permission is not already granted
-    if (currentPermission === 'prompt') {
+    // Show prompt if permission is not already granted or we're on dashboard/attendance
+    if (currentPermission === 'prompt' || currentPermission === 'unknown') {
       console.log('📍 Showing location permission prompt');
       setShowLocationPrompt(true);
       setHasCheckedLocation(true);
-      localStorage.setItem('locationPromptShown', 'true');
     } else if (currentPermission === 'denied') {
-      console.log('📍 Location permission already denied');
+      console.log('📍 Location permission denied by user');
       setHasCheckedLocation(true);
     } else {
       console.log('📍 Location permission already granted');

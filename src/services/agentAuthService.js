@@ -74,18 +74,29 @@ export const agentAuthService = {
     }
   },
 
-  // // ---------------------------------------------------------
-  // // REFRESH TOKEN
-  // // ---------------------------------------------------------
-  // async refreshToken() {
-  //   try {
-  //     const res = await api.post("/auth/refresh");
-  //     return res.data;
-  //   } catch (error) {
-  //     console.error("❌ Token refresh error:", error.response?.data || error.message);
-  //     throw new Error(error.response?.data?.message || "Token refresh failed");
-  //   }
-  // },
+  // ---------------------------------------------------------
+  // REFRESH TOKEN
+  // ---------------------------------------------------------
+  async refreshToken(token) {
+    try {
+      const authToken = token || localStorage.getItem("agentToken");
+      if (!authToken) throw new Error("No token available");
+
+      const res = await api.post("/agents/refresh-token", {}, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      // Update localStorage with new token
+      if (res.data.token) {
+        localStorage.setItem("agentToken", res.data.token);
+      }
+
+      return res.data;
+    } catch (error) {
+      console.error("❌ Token refresh error:", error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || "Token refresh failed");
+    }
+  },
 
   // ---------------------------------------------------------
   // UPDATE AGENT LOCATION (Lat/Long + Address)

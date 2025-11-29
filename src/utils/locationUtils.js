@@ -87,14 +87,26 @@ export const getCurrentLocation = () => {
 
     const options = {
       enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 60000
+      timeout: 30000, // Increased timeout for better GPS acquisition
+      maximumAge: 0 // Force fresh location, never use cache
     };
+
+    console.log('📍 Requesting fresh location with high accuracy...');
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude, accuracy } = position.coords;
-        console.log('📍 Location fetched successfully:', { latitude, longitude, accuracy });
+        console.log('📍 Location fetched successfully:', {
+          latitude,
+          longitude,
+          accuracy: `${accuracy.toFixed(1)} meters`
+        });
+
+        // Check if accuracy is reasonable (less than 1000 meters)
+        if (accuracy > 1000) {
+          console.warn(`⚠️ Location accuracy is poor (${accuracy.toFixed(1)}m). This might be IP-based location.`);
+        }
+
         resolve({
           latitude,
           longitude,
@@ -103,23 +115,23 @@ export const getCurrentLocation = () => {
       },
       (error) => {
         console.error('❌ Location error:', error);
-        
+
         let errorMessage = 'Failed to get location';
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location permissions in your browser.';
+            errorMessage = 'Location access denied. Please enable location permissions in your browser and refresh the page.';
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable.';
+            errorMessage = 'Location information unavailable. Please check your device GPS settings and ensure you have a clear view of the sky.';
             break;
           case error.TIMEOUT:
-            errorMessage = 'Location request timed out. Please try again.';
+            errorMessage = 'Location request timed out. Please ensure GPS is enabled and you have a good signal.';
             break;
           default:
             errorMessage = 'An unknown error occurred while getting location.';
             break;
         }
-        
+
         reject(new Error(errorMessage));
       },
       options
@@ -207,40 +219,54 @@ export const checkLocationPermissions = async () => {
  */
 export const getEnhancedLocation = async () => {
   try {
-    // Check permissions first
-    const permission = await checkLocationPermissions();
-    if (permission === 'denied') {
-      throw new Error('Location access denied by user');
-    }
-
-    // Try to get fresh location
-    const location = await getCurrentLocation();
-    const address = await getAddressFromCoords(location.latitude, location.longitude);
+    console.log('🔍 Attempting to get enhanced location...');
     
-    return {
-      ...location,
-      address,
-      timestamp: Date.now(),
-      source: 'fresh'
-    };
-  } catch (error) {
-    console.error('❌ Enhanced location failed:', error);
-    
-    // Try to get cached location from localStorage
+    // Try to get fresh location directly - don't check permissions first
+    // as permission check might fail on some browsers/scenarios
     try {
-      const cachedLocation = localStorage.getItem('agentLocation');
-      if (cachedLocation) {
-        const parsed = JSON.parse(cachedLocation);
-        // Use cached location if it's less than 10 minutes old
-        if (Date.now() - (parsed.timestamp || 0) < 10 * 60 * 1000) {
-          console.log('📍 Using cached location');
-          return { ...parsed, source: 'cached' };
-        }
+      const location = await getCurrentLocation();
+      console.log('✅ Got location from browser GPS:', location);
+      
+      // Try to get address
+      let address = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+      try {
+        address = await getAddressFromCoords(location.latitude, location.longitude);
+        console.log('✅ Got address from coordinates');
+      } catch (addressError) {
+        console.warn('⚠️ Address lookup failed, using coordinates:', addressError.message);
       }
-    } catch (cacheError) {
-      console.error('❌ Cache read error:', cacheError);
+      
+      return {
+        ...location,
+        address,
+        timestamp: Date.now(),
+        source: 'fresh'
+      };
+    } catch (geoError) {
+      console.warn('⚠️ GPS location failed:', geoError.message);
+      
+      // Try to get cached location from localStorage
+      try {
+        const cachedLocation = localStorage.getItem('agentLocation');
+        if (cachedLocation) {
+          const parsed = JSON.parse(cachedLocation);
+          // Use cached location if it's less than 15 minutes old
+          if (Date.now() - (parsed.timestamp || 0) < 15 * 60 * 1000) {
+            console.log('📍 Using cached location from localStorage');
+            return { ...parsed, source: 'cached' };
+          } else {
+            console.log('⚠️ Cached location is too old, removing');
+            localStorage.removeItem('agentLocation');
+          }
+        }
+      } catch (cacheError) {
+        console.error('❌ Cache read error:', cacheError);
+      }
+      
+      throw geoError;
     }
-    
+  } catch (error) {
+    console.error('❌ Enhanced location failed completely:', error.message);
     throw error;
   }
 };
