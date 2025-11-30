@@ -71,9 +71,6 @@ const AttendanceScreen = () => {
     location: false
   });
 
-  console.log('Agent Data', agent);
-  console.log('Agent Token', token);
-
   useEffect(() => {
     if (isLoggedIn) {
       // Ensure token is valid before loading data

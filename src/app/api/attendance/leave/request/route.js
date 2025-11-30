@@ -83,25 +83,30 @@
 //   }
 // }
 
+
+
+
+
+
 //src/app/api/attendance/leave/request/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import LeaveRequest from "@/Models/LeaveRequest";
-import Attendance from "@/Models/Attendance";
 import { verifyToken } from "@/lib/jwt";
+import Attendance from "@/Models/Attendance";
+import Agent from "@/Models/Agent";
 
 export async function POST(request) {
   try {
     await connectDB();
 
-    // Method 1: Authorization header se token lo (frontend compatible)
+    // Token extraction (same as before)
     const authHeader = request.headers.get('authorization');
     let token = null;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.replace('Bearer ', '');
     } else {
-      // Method 2: Fallback - cookies se token lo
       token = request.cookies.get("token")?.value;
     }
 
@@ -112,7 +117,6 @@ export async function POST(request) {
       }, { status: 401 });
     }
 
-    // Verify token - string format mein pass karo
     const decoded = verifyToken(token);
     if (!decoded) {
       return NextResponse.json({ 
@@ -122,27 +126,62 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { leaveType, startDate, endDate, reason, userType = 'user' } = body;
+    const { leaveType, startDate, endDate, reason, userType = 'agent' } = body;
 
+    // Validation
     if (!leaveType || !startDate || !reason) {
       return NextResponse.json({ 
         success: false, 
-        message: "All fields are required" 
+        message: "Leave type, start date and reason are required" 
       }, { status: 400 });
+    }
+
+    // ✅ Date validation improved
+    const startDateObj = new Date(startDate);
+    if (isNaN(startDateObj.getTime())) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Invalid start date" 
+      }, { status: 400 });
+    }
+
+    let endDateObj = null;
+    if (endDate) {
+      endDateObj = new Date(endDate);
+      if (isNaN(endDateObj.getTime())) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Invalid end date" 
+        }, { status: 400 });
+      }
+      
+      // Check if end date is before start date
+      if (endDateObj < startDateObj) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "End date cannot be before start date" 
+        }, { status: 400 });
+      }
+    }
+
+    // If no end date, set it same as start date (single day leave)
+    if (!endDateObj) {
+      endDateObj = new Date(startDateObj);
     }
 
     const leaveData = {
       leaveType,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate: startDateObj,
+      endDate: endDateObj, // ✅ Always valid date
       reason,
       status: "pending"
     };
 
+    // Set user/agent reference
     if (userType === 'agent') {
-      leaveData.agent = decoded.id || decoded.userId; // ✅ id use karo
+      leaveData.agent = decoded.id || decoded.userId;
     } else {
-      leaveData.user = decoded.id || decoded.userId; // ✅ id use karo
+      leaveData.user = decoded.id || decoded.userId;
     }
 
     const leaveRequest = await LeaveRequest.create(leaveData);
@@ -154,12 +193,20 @@ export async function POST(request) {
     }, { status: 201 });
   } catch (error) {
     console.error("POST /api/attendance/leave/request error:", error);
+    
+    // Better error messages
+    let errorMessage = error.message;
+    if (error.name === 'ValidationError') {
+      errorMessage = Object.values(error.errors).map(err => err.message).join(', ');
+    }
+    
     return NextResponse.json({ 
       success: false, 
-      message: error.message 
+      message: errorMessage 
     }, { status: 500 });
   }
 }
+
 
 export async function GET(request) {
   try {
