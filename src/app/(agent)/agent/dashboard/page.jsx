@@ -15,7 +15,6 @@ import {
   Target,
   ChevronRight,
   Activity,
-
   DollarSign,
   Clock,
   CheckCircle2,
@@ -33,6 +32,7 @@ import { ThemeContext } from '../../../../context/ThemeContext';
 import { agentAttendanceService } from '../../../../services/agentAttendenceService';
 import { agentSalesService } from '../../../../services/agentSalesService';
 import { getAddressFromCoords, getCurrentLocation, getDistance } from '../../../../utils/locationUtils';
+import ShiftSchedule from '../../../../components/ShiftSchedule';
 
 // Accuracy threshold — ignore fixes with accuracy worse than this (in meters)
 const ACCURACY_THRESHOLD = 1000;
@@ -138,7 +138,7 @@ const HomeScreen = () => {
     return null;
   };
 
-  // Data fetching functions (same as before)
+  // Data fetching functions
   const fetchAttendanceData = async () => {
     try {
       const [todayStatusResp, monthlyStatsResp] = await Promise.allSettled([
@@ -604,15 +604,15 @@ const HomeScreen = () => {
         ))}
       </motion.div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-        {/* Recent Activity - 2/3 width on large screens */}
+      {/* Main Content Grid - UPDATED LAYOUT WITH SHIFT SCHEDULE */}
+      <div className="grid grid-cols-1 xl:grid-cols-7 gap-6 lg:gap-8">
+        {/* Recent Activity - 4/7 width on large screens */}
         <motion.div
           initial="hidden"
           animate="visible"
           variants={fadeUp}
           custom={3}
-          className="xl:col-span-2"
+          className="xl:col-span-4"
         >
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
             {/* Header with Actions */}
@@ -709,14 +709,17 @@ const HomeScreen = () => {
           </div>
         </motion.div>
 
-        {/* Sidebar - 1/3 width on large screens */}
+        {/* Sidebar - 3/7 width on large screens */}
         <motion.div
           initial="hidden"
           animate="visible"
           variants={fadeUp}
           custom={4}
-          className="space-y-6 lg:space-y-8"
+          className="xl:col-span-3 space-y-6 lg:space-y-8"
         >
+          {/* Shift Schedule Component */}
+          <ShiftSchedule />
+
           {/* Quick Actions */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
             <div className="p-6 border-b border-slate-100/50 bg-gradient-to-r from-blue-50 to-indigo-50/50">
@@ -834,6 +837,3 @@ const HomeScreen = () => {
 };
 
 export default HomeScreen;
-
-
-

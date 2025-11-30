@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { adminService } from "@/services/adminService";
 import { shiftService } from "@/services/shiftService";
 import { attendanceService } from "@/services/attendanceService";
@@ -872,6 +872,39 @@ export default function AdminAttendancePage() {
     }]),
   ];
 
+   // ✅ TEXTAREA HANDLERS - YEH ADD KAREIN
+  const handleManualNotesChange = useCallback((e) => {
+    const value = e.target.value;
+    setManualForm(prev => ({ 
+      ...prev, 
+      notes: value 
+    }));
+  }, []);
+
+  const handleLeaveReasonChange = useCallback((e) => {
+    const value = e.target.value;
+    setLeaveForm(prev => ({ 
+      ...prev, 
+      reason: value 
+    }));
+  }, []);
+
+  const handleHolidayDescriptionChange = useCallback((e) => {
+    const value = e.target.value;
+    setHolidayForm(prev => ({ 
+      ...prev, 
+      description: value 
+    }));
+  }, []);
+
+  const handleWeeklyOffDescriptionChange = useCallback((e) => {
+    const value = e.target.value;
+    setWeeklyOffForm(prev => ({ 
+      ...prev, 
+      description: value 
+    }));
+  }, []);
+
   // ✅ MODALS COMPONENTS
 
   // Manual Attendance Modal
@@ -974,7 +1007,7 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea
             value={manualForm.notes}
@@ -983,7 +1016,7 @@ export default function AdminAttendancePage() {
             rows={3}
             className="w-full"
           />
-        </div>
+        </div> */}
 
         <div className="flex flex-col sm:flex-row gap-2 pt-4">
           <Button
@@ -1097,7 +1130,7 @@ export default function AdminAttendancePage() {
           </Select>
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="reason">Reason</Label>
           <Textarea
             value={leaveForm.reason}
@@ -1106,6 +1139,17 @@ export default function AdminAttendancePage() {
             rows={3}
             required
             className="w-full"
+          />
+        </div> */}
+         <div className="space-y-2">
+          <Label htmlFor="reason">Reason</Label>
+          <Textarea
+            value={leaveForm.reason}
+            onChange={handleLeaveReasonChange}
+            placeholder="Reason for leave..."
+            rows={3}
+            required
+            className="w-full resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -1964,3 +2008,6 @@ export default function AdminAttendancePage() {
     </div>
   );
 }
+
+
+

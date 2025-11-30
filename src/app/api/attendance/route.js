@@ -18,12 +18,6 @@ export async function GET(request) {
     const decoded = verifyToken(token);
     if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
 
-    // Check if user is admin (you need to implement this based on your user model)
-    // const user = await User.findById(decoded.userId);
-    // if (!user || user.role !== 'admin') {
-    //   return NextResponse.json({ success: false, message: "Admin access required" }, { status: 403 });
-    // }
-
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -36,18 +30,18 @@ export async function GET(request) {
 
     const skip = (page - 1) * limit;
 
-    // Log all incoming parameters
-    console.log("📥 API Request Parameters:", {
-      page,
-      limit,
-      userType,
-      status,
-      date,
-      fromDateParam,
-      toDateParam,
-      monthParam,
-      skip
-    });
+    // // Log all incoming parameters
+    // console.log("📥 API Request Parameters:", {
+    //   page,
+    //   limit,
+    //   userType,
+    //   status,
+    //   date,
+    //   fromDateParam,
+    //   toDateParam,
+    //   monthParam,
+    //   skip
+    // });
 
     // Build filter query
     let filter = {};
