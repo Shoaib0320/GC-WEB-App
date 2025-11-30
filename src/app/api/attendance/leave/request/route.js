@@ -124,7 +124,7 @@ export async function POST(request) {
     const body = await request.json();
     const { leaveType, startDate, endDate, reason, userType = 'user' } = body;
 
-    if (!leaveType || !startDate || !endDate || !reason) {
+    if (!leaveType || !startDate || !reason) {
       return NextResponse.json({ 
         success: false, 
         message: "All fields are required" 
