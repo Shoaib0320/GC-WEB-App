@@ -27,6 +27,14 @@ const agentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  phone: {
+    type: String,
+    trim: true
+  },
+  monthlyTarget: {
+    type: Number,
+    default: 0
+  },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   isActive: {

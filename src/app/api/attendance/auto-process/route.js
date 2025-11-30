@@ -173,8 +173,8 @@ export async function POST(request) {
     const decoded = verifyToken(token);
     if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
 
-    const body = await request.json();
-    const { date } = body;
+  const body = await request.json();
+  const { date, userType } = body;
 
     const processDate = date ? new Date(date) : new Date();
     const dateStart = new Date(processDate);
@@ -200,9 +200,9 @@ export async function POST(request) {
       notes = `Auto-marked as weekly off: ${weeklyOff.name}`;
     }
 
-    // Get all active users and agents
-    const activeUsers = await User.find({ isActive: true }, "_id firstName lastName email");
-    const activeAgents = await Agent.find({ isActive: true }, "_id agentName agentId email");
+  // Get all active users and agents (can be filtered by userType)
+  const activeUsers = userType === 'agent' ? [] : await User.find({ isActive: true }, "_id firstName lastName email");
+  const activeAgents = await Agent.find({ isActive: true }, "_id agentName agentId email");
 
     const userIds = activeUsers.map(user => user._id);
     const agentIds = activeAgents.map(agent => agent._id);
@@ -230,8 +230,8 @@ export async function POST(request) {
       agentId => !existingAgentIds.includes(agentId.toString())
     );
 
-    // Create records for users without attendance
-    const userAttendancePromises = usersWithoutAttendance.map(userId => {
+    // Create records for users without attendance (skip when userType==='agent')
+    const userAttendancePromises = (userType === 'agent' ? [] : usersWithoutAttendance.map(userId => {
       const user = activeUsers.find(u => u._id.toString() === userId.toString());
       return Attendance.create({
         user: userId,
@@ -240,7 +240,7 @@ export async function POST(request) {
         createdAt: processDate,
         updatedAt: new Date()
       });
-    });
+    }));
 
     // Create records for agents without attendance
     const agentAttendancePromises = agentsWithoutAttendance.map(agentId => {
@@ -269,7 +269,7 @@ export async function POST(request) {
       message: `Auto attendance processed successfully for ${processDate.toDateString()}`,
       data: {
         date: processDate.toISOString().split('T')[0],
-        usersProcessed: usersWithoutAttendance.length,
+        usersProcessed: userType === 'agent' ? 0 : usersWithoutAttendance.length,
         agentsProcessed: agentsWithoutAttendance.length,
         totalRecordsCreated: successfulRecords,
         failedRecords: failedRecords,

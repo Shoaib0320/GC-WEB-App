@@ -18,8 +18,11 @@ import { Loader2, Calendar, Users, CheckCircle, XCircle, Clock, Plus, Trash2, Pl
 import { toast } from "sonner";
 import GlobalData from "@/components/common/GlobalData";
 import CustomModal from "@/components/ui/customModal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminAttendancePage() {
+  // Auth context for permissions
+  const { hasPermission } = useAuth();
   // State variables
   const [attendance, setAttendance] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -46,7 +49,42 @@ export default function AdminAttendancePage() {
     date: "",
     search: ""
   });
-  const [activeTab, setActiveTab] = useState("attendance");
+  const [activeTab, setActiveTab] = useState("");
+  
+  // Permission checks for different modules
+  const canViewAttendance = hasPermission('attendance', 'view');
+  const canCreateAttendance = hasPermission('attendance', 'create');
+  const canEditAttendance = hasPermission('attendance', 'edit');
+  const canDeleteAttendance = hasPermission('attendance', 'delete');
+  
+  const canViewLeave = hasPermission('leaveRequest', 'view');
+  const canCreateLeave = hasPermission('leaveRequest', 'create');
+  const canApproveLeave = hasPermission('leaveRequest', 'approve');
+  
+  const canViewHolidays = hasPermission('holiday', 'view');
+  const canCreateHolidays = hasPermission('holiday', 'create');
+  const canEditHolidays = hasPermission('holiday', 'edit');
+  const canDeleteHolidays = hasPermission('holiday', 'delete');
+  
+  const canViewWeeklyOff = hasPermission('weeklyOff', 'view');
+  const canCreateWeeklyOff = hasPermission('weeklyOff', 'create');
+  const canEditWeeklyOff = hasPermission('weeklyOff', 'edit');
+  const canDeleteWeeklyOff = hasPermission('weeklyOff', 'delete');
+  
+  // Determine available tabs based on permissions
+  const availableTabs = [
+    canViewAttendance && 'attendance',
+    canViewLeave && 'leave',
+    canViewHolidays && 'holidays',
+    canViewWeeklyOff && 'weekly-off'
+  ].filter(Boolean);
+  
+  // Set default active tab to first available tab
+  useEffect(() => {
+    if (!activeTab && availableTabs.length > 0) {
+      setActiveTab(availableTabs[0]);
+    }
+  }, [availableTabs, activeTab]);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showHolidayModal, setShowHolidayModal] = useState(false);
@@ -92,7 +130,7 @@ export default function AdminAttendancePage() {
   });
   const [shiftAutoForm, setShiftAutoForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    userType: "all"
+    userType: "agent"
   });
 
   const LIMIT = 10;
@@ -362,7 +400,7 @@ export default function AdminAttendancePage() {
     e.preventDefault();
     try {
       setLoading(prev => ({ ...prev, auto: true }));
-      const response = await attendanceService.processAutoAttendanceForDate(autoForm.date);
+      const response = await attendanceService.processAutoAttendance({ date: autoForm.date, userType: 'agent' });
       if (response.success) {
         toast.success(response.message || "Auto attendance processed successfully");
         setShowAutoModal(false);
@@ -484,7 +522,7 @@ export default function AdminAttendancePage() {
     e.preventDefault();
     try {
       setLoading(prev => ({ ...prev, shiftAuto: true }));
-      const response = await attendanceService.processShiftAutoAttendance(shiftAutoForm);
+  const response = await attendanceService.processShiftAutoAttendance(shiftAutoForm.date, "agent");
       if (response.success) {
         toast.success(response.message || "Shift-based auto attendance processed successfully");
         setShowShiftAutoModal(false);
@@ -505,7 +543,7 @@ export default function AdminAttendancePage() {
   };
 
   // ✅ Check if attendance can be edited
-  const canEditAttendance = (attendance) => {
+  const canEditAttendanceRecord = (attendance) => {
     return !["holiday", "weekly_off"].includes(attendance.status);
   };
 
@@ -721,7 +759,7 @@ export default function AdminAttendancePage() {
       ),
     },
     { label: "Date", render: (a) => new Date(a.createdAt).toLocaleDateString() },
-    {
+    ...(canEditAttendance ? [{
       label: "Actions",
       align: "right",
       render: (a) => (
@@ -729,9 +767,9 @@ export default function AdminAttendancePage() {
           variant="outline"
           size="sm"
           onClick={() => handleEditAttendance(a)}
-          disabled={!canEditAttendance(a)}
+          disabled={!canEditAttendanceRecord(a)}
           title={
-            !canEditAttendance(a)
+            !canEditAttendanceRecord(a)
               ? a.status === "holiday" || a.status === "weekly_off"
                 ? "Cannot edit holiday/weekly off records"
                 : "Cannot edit this record"
@@ -741,7 +779,7 @@ export default function AdminAttendancePage() {
           <Edit className="h-4 w-4" />
         </Button>
       ),
-    },
+    }] : []),
   ];
 
   // Columns for Holidays
@@ -750,13 +788,13 @@ export default function AdminAttendancePage() {
     { label: "Date", render: (h) => new Date(h.date).toLocaleDateString() },
     { label: "Description", render: (h) => <div className="max-w-xs truncate" title={h.description}>{h.description || '—'}</div> },
     { label: "Recurring", render: (h) => (<Badge variant={h.isRecurring ? 'default' : 'secondary'}>{h.isRecurring ? 'Yes' : 'No'}</Badge>) },
-    {
+    ...(canDeleteHolidays ? [{
       label: "Actions", align: "right", render: (h) => (
         <Button variant="destructive" size="sm" onClick={() => handleDeleteHoliday(h._id)}>
           <Trash2 className="h-4 w-4" />
         </Button>
       )
-    },
+    }] : []),
   ];
 
   // Columns for Weekly Offs
@@ -765,23 +803,27 @@ export default function AdminAttendancePage() {
     { label: "Name", render: (w) => w.name },
     { label: "Description", render: (w) => <div className="max-w-xs truncate" title={w.description}>{w.description || '—'}</div> },
     { label: "Status", render: (w) => (<Badge variant={w.isActive ? 'default' : 'secondary'}>{w.isActive ? 'Active' : 'Inactive'}</Badge>) },
-    {
+    ...((canEditWeeklyOff || canDeleteWeeklyOff) ? [{
       label: "Actions", align: "right", render: (w) => (
         <div className="flex gap-2">
-          <Button
-            variant={w.isActive ? "outline" : "default"}
-            size="sm"
-            onClick={() => handleToggleWeeklyOff(w._id, !w.isActive)}
-          >
-            {w.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
-            {w.isActive ? "Deactivate" : "Activate"}
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => handleDeleteWeeklyOff(w._id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canEditWeeklyOff && (
+            <Button
+              variant={w.isActive ? "outline" : "default"}
+              size="sm"
+              onClick={() => handleToggleWeeklyOff(w._id, !w.isActive)}
+            >
+              {w.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
+              {w.isActive ? "Deactivate" : "Activate"}
+            </Button>
+          )}
+          {canDeleteWeeklyOff && (
+            <Button variant="destructive" size="sm" onClick={() => handleDeleteWeeklyOff(w._id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       )
-    },
+    }] : []),
   ];
 
   // Columns for Leave Requests
@@ -799,7 +841,7 @@ export default function AdminAttendancePage() {
     { label: "Period", render: (r) => `${new Date(r.startDate).toLocaleDateString()} - ${new Date(r.endDate).toLocaleDateString()}` },
     { label: "Reason", render: (r) => <div className="max-w-xs truncate" title={r.reason}>{r.reason}</div> },
     { label: "Status", render: (r) => getLeaveStatusBadge(r.status) },
-    {
+    ...(canApproveLeave ? [{
       label: "Actions", align: "right", render: (r) => (
         <div className="flex gap-2">
           {r.status === 'pending' ? (
@@ -819,7 +861,15 @@ export default function AdminAttendancePage() {
           )}
         </div>
       )
-    },
+    }] : [{
+      label: "Status Info", align: "right", render: (r) => (
+        <span className="text-sm text-muted-foreground">
+          {r.status === 'pending' ? 'Awaiting approval' :
+            r.status === 'approved' ? 'Approved' :
+            r.status === 'rejected' ? 'Rejected' : r.status}
+        </span>
+      )
+    }]),
   ];
 
   // ✅ MODALS COMPONENTS
@@ -1250,8 +1300,8 @@ export default function AdminAttendancePage() {
     <CustomModal
       isOpen={showAutoModal}
       onClose={() => setShowAutoModal(false)}
-      title="Process Auto Attendance"
-      description="Automatically mark absent for users/agents without attendance on the selected date."
+  title="Process Auto Attendance (Agents)"
+  description="Automatically mark absent for agents without attendance on the selected date. Holidays and weekly offs are respected."
       size="md"
       preventClose={loading.auto}
     >
@@ -1268,11 +1318,11 @@ export default function AdminAttendancePage() {
         </div>
 
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <h4 className="font-medium text-blue-800 mb-2">How Auto Attendance Works:</h4>
+          <h4 className="font-medium text-blue-800 mb-2">How Auto Attendance (Agents) Works:</h4>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• Users/Agents without attendance will be marked as <strong>Absent</strong></li>
-            <li>• If date is a holiday, they will be marked as <strong>Holiday</strong></li>
-            <li>• If date is weekly off, they will be marked as <strong>Weekly Off</strong></li>
+            <li>• Agents without attendance will be marked as <strong>Absent</strong></li>
+            <li>• If date is a holiday, agents will be marked as <strong>Holiday</strong></li>
+            <li>• If date is weekly off, agents will be marked as <strong>Weekly Off</strong></li>
             <li>• Existing attendance records will not be modified</li>
           </ul>
         </div>
@@ -1306,48 +1356,30 @@ export default function AdminAttendancePage() {
       isOpen={showShiftAutoModal}
       onClose={() => setShowShiftAutoModal(false)}
       title="Process Shift-based Auto Attendance"
-      description="Mark absent for users/agents whose shifts have ended and no check-in recorded."
+      description="Mark absent for agents whose shifts have ended and no check-in recorded."
       size="md"
       preventClose={loading.shiftAuto}
     >
       <form onSubmit={handleShiftAutoAttendance} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <Input
-              type="date"
-              value={shiftAutoForm.date}
-              onChange={(e) => setShiftAutoForm({ ...shiftAutoForm, date: e.target.value })}
-              required
-              className="w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="userType">Select</Label>
-            <Select
-              value={shiftAutoForm.userType}
-              onValueChange={(value) => setShiftAutoForm({ ...shiftAutoForm, userType: value })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="All Agents" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="agent">Agents Only</SelectItem>
-                <SelectItem value="all">All Agents</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="date">Date</Label>
+          <Input
+            type="date"
+            value={shiftAutoForm.date}
+            onChange={(e) => setShiftAutoForm({ ...shiftAutoForm, date: e.target.value })}
+            required
+            className="w-full"
+          />
         </div>
 
         <div className="bg-green-50 p-4 rounded-lg border border-green-200">
           <h4 className="font-medium text-green-800 mb-2">How Shift-based Auto Attendance Works:</h4>
           <ul className="text-sm text-green-700 space-y-1">
-            <li>• Checks if user/agent has a shift assigned</li>
+            <li>• Checks if agent has a shift assigned</li>
             <li>• Verifies if shift end time has passed</li>
             <li>• Marks as <strong>Absent</strong> only if shift ended and no check-in</li>
             <li>• Respects holidays and weekly offs automatically</li>
-            <li>• Only processes selected user type</li>
+            <li>• Only processes agents</li>
           </ul>
         </div>
 
@@ -1485,10 +1517,12 @@ export default function AdminAttendancePage() {
             Manage system holidays. Recurring holidays automatically repeat every year.
           </CardDescription>
         </div>
-        <Button onClick={() => setShowHolidayModal(true)} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Holiday
-        </Button>
+        {canCreateHolidays && (
+          <Button onClick={() => setShowHolidayModal(true)} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Holiday
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {loading.holidays ? (
@@ -1512,7 +1546,7 @@ export default function AdminAttendancePage() {
                     <TableHead>Date</TableHead>
                     <TableHead className="hidden sm:table-cell">Description</TableHead>
                     <TableHead>Recurring</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {canDeleteHolidays && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1532,15 +1566,17 @@ export default function AdminAttendancePage() {
                           {holiday.isRecurring ? "Yes" : "No"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteHoliday(holiday._id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      {canDeleteHolidays && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteHoliday(holiday._id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1562,10 +1598,12 @@ export default function AdminAttendancePage() {
             Manage weekly off days that automatically mark as off every week
           </CardDescription>
         </div>
-        <Button onClick={() => setShowWeeklyOffModal(true)} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Weekly Off
-        </Button>
+        {canCreateWeeklyOff && (
+          <Button onClick={() => setShowWeeklyOffModal(true)} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Weekly Off
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {loading.weeklyOff ? (
@@ -1589,7 +1627,7 @@ export default function AdminAttendancePage() {
                     <TableHead>Name</TableHead>
                     <TableHead className="hidden sm:table-cell">Description</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {(canEditWeeklyOff || canDeleteWeeklyOff) && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1607,25 +1645,31 @@ export default function AdminAttendancePage() {
                           {weeklyOff.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            variant={weeklyOff.isActive ? "outline" : "default"}
-                            size="sm"
-                            onClick={() => handleToggleWeeklyOff(weeklyOff._id, !weeklyOff.isActive)}
-                          >
-                            {weeklyOff.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
-                            {weeklyOff.isActive ? "Deactivate" : "Activate"}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteWeeklyOff(weeklyOff._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {(canEditWeeklyOff || canDeleteWeeklyOff) && (
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            {canEditWeeklyOff && (
+                              <Button
+                                variant={weeklyOff.isActive ? "outline" : "default"}
+                                size="sm"
+                                onClick={() => handleToggleWeeklyOff(weeklyOff._id, !weeklyOff.isActive)}
+                              >
+                                {weeklyOff.isActive ? <ToggleLeft className="h-4 w-4 mr-1" /> : <ToggleRight className="h-4 w-4 mr-1" />}
+                                {weeklyOff.isActive ? "Deactivate" : "Activate"}
+                              </Button>
+                            )}
+                            {canDeleteWeeklyOff && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteWeeklyOff(weeklyOff._id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1661,33 +1705,51 @@ export default function AdminAttendancePage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 sm:gap-3">
-            <Button
-              onClick={() => setShowLeaveModal(true)}
-              className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm w-full sm:w-auto"
-              size="sm"
-            >
-              <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Assign Leave
-            </Button>
+            {canCreateLeave && (
+              <Button
+                onClick={() => setShowLeaveModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm w-full sm:w-auto"
+                size="sm"
+              >
+                <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Assign Leave
+              </Button>
+            )}
 
-            <Button
-              onClick={() => setShowManualModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm w-full sm:w-auto"
-              size="sm"
-            >
-              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Manual Entry
-            </Button>
+            {canCreateAttendance && (
+              <Button
+                onClick={() => setShowManualModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm w-full sm:w-auto"
+                size="sm"
+              >
+                <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Manual Entry
+              </Button>
+            )}
 
-            <Button
-              onClick={() => setShowAutoModal(true)}
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm w-full sm:w-auto"
-              size="sm"
-            >
-              <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Auto Attendance
-            </Button>
+            {canCreateAttendance && (
+              <Button
+                onClick={() => setShowAutoModal(true)}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm w-full sm:w-auto"
+                size="sm"
+              >
+                <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Auto Attendance
+              </Button>
+            )}
+
+            {canCreateAttendance && (
+              <Button
+                onClick={() => setShowShiftAutoModal(true)}
+                variant="outline"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50 text-xs sm:text-sm w-full sm:w-auto"
+                size="sm"
+              >
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Shift Wise
+              </Button>
+            )}
 
             <Button
               onClick={() => fetchAttendance(page)}
@@ -1707,54 +1769,64 @@ export default function AdminAttendancePage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="w-full">
-            <TabsList className="grid grid-cols-2 lg:grid-cols-4 gap-1 p-1 bg-muted/50 rounded-md w-full">
-              <TabsTrigger
-                value="attendance"
-                className="flex items-center justify-center gap-2 px-3 py-2 text-sm"
-              >
-                <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline">Attendance Records</span>
-                <span className="sm:hidden">Attendance</span>
-              </TabsTrigger>
+            <TabsList className={`grid gap-1 p-1 bg-muted/50 rounded-md w-full`} 
+              style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
+              {canViewAttendance && (
+                <TabsTrigger
+                  value="attendance"
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span className="hidden sm:inline">Attendance Records</span>
+                  <span className="sm:hidden">Attendance</span>
+                </TabsTrigger>
+              )}
 
-              <TabsTrigger
-                value="leave"
-                className="flex items-center justify-center gap-2 px-3 py-2 text-sm relative"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Leave Requests</span>
-                <span className="sm:hidden">Leave</span>
-                {leaveRequests.filter(r => r.status === "pending").length > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
-                  >
-                    {leaveRequests.filter(r => r.status === "pending").length}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              {canViewLeave && (
+                <TabsTrigger
+                  value="leave"
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm relative"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Leave Requests</span>
+                  <span className="sm:hidden">Leave</span>
+                  {leaveRequests.filter(r => r.status === "pending").length > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
+                    >
+                      {leaveRequests.filter(r => r.status === "pending").length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
 
-              <TabsTrigger
-                value="holidays"
-                className="flex items-center justify-center gap-2 px-3 py-2 text-sm"
-              >
-                <PartyPopper className="h-4 w-4" />
-                <span className="hidden sm:inline">Holidays ({holidays.length})</span>
-                <span className="sm:hidden">Holidays</span>
-              </TabsTrigger>
+              {canViewHolidays && (
+                <TabsTrigger
+                  value="holidays"
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm"
+                >
+                  <PartyPopper className="h-4 w-4" />
+                  <span className="hidden sm:inline">Holidays ({holidays.length})</span>
+                  <span className="sm:hidden">Holidays</span>
+                </TabsTrigger>
+              )}
 
-              <TabsTrigger
-                value="weekly-off"
-                className="flex items-center justify-center gap-2 px-3 py-2 text-sm"
-              >
-                <CalendarDays className="h-4 w-4" />
-                <span className="hidden sm:inline">Weekly Off ({weeklyOffs.length})</span>
-                <span className="sm:hidden">Weekly Off</span>
-              </TabsTrigger>
+              {canViewWeeklyOff && (
+                <TabsTrigger
+                  value="weekly-off"
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Weekly Off ({weeklyOffs.length})</span>
+                  <span className="sm:hidden">Weekly Off</span>
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
-          <TabsContent value="attendance" className="space-y-4">
+          {canViewAttendance && (
+            <TabsContent value="attendance" className="space-y-4">
             <FiltersSection />
             <Card className="shadow-sm overflow-hidden">
               <CardHeader className="p-4 sm:p-6">
@@ -1843,8 +1915,10 @@ export default function AdminAttendancePage() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
-          <TabsContent value="leave">
+          {canViewLeave && (
+            <TabsContent value="leave">
             <Card className="shadow-sm overflow-hidden">
               <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="text-lg sm:text-xl">Leave Requests Management</CardTitle>
@@ -1872,14 +1946,19 @@ export default function AdminAttendancePage() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
-          <TabsContent value="holidays">
+          {canViewHolidays && (
+            <TabsContent value="holidays">
             <HolidaysSection />
           </TabsContent>
+          )}
 
-          <TabsContent value="weekly-off">
+          {canViewWeeklyOff && (
+            <TabsContent value="weekly-off">
             <WeeklyOffSection />
           </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

@@ -1,3 +1,4 @@
+//app/(agent)/agent/notification/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,6 +25,7 @@ import { agentNotificationService } from "@/services/agentNotificationService";
 
 export default function AgentNotificationPage() {
   const { isLoggedIn, agent, isLoading: contextLoading } = useAgent();
+  const router = useRouter();
 
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,30 @@ export default function AgentNotificationPage() {
     try {
       setLoading(true);
 
-      // Always show mock data for all agents
-      const notificationsData = [
+      // Fetch both types of notifications
+      const [specificNotifications, allNotifications] = await Promise.all([
+        // Agent-specific notifications
+        agentNotificationService.fetchNotificationsForAgent(agent._id || agent.agentId),
+        
+        // All notifications (for all agents)
+        agentNotificationService.fetchUserNotifications()
+      ]);
+
+      // Combine both types of notifications
+      const combinedNotifications = [
+        ...specificNotifications.map(notif => ({ ...notif, notificationType: 'specific' })),
+        ...allNotifications.map(notif => ({ ...notif, notificationType: 'all' }))
+      ];
+
+      // Sort by creation date (newest first)
+      combinedNotifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setNotifications(combinedNotifications);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+      
+      // Fallback to mock data if API fails
+      const fallbackData = [
         {
           _id: 'mock-1',
           status: 'pending',
@@ -51,7 +75,8 @@ export default function AgentNotificationPage() {
           message: 'BMW X5 interior and exterior detailing scheduled for tomorrow at 10 AM.',
           isRead: false,
           createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'BMW X5', service: 'Full Detail', price: 250 }
+          data: { vehicle: 'BMW X5', service: 'Full Detail', price: 250 },
+          notificationType: 'specific'
         },
         {
           _id: 'mock-2',
@@ -60,103 +85,32 @@ export default function AgentNotificationPage() {
           message: 'Toyota Camry ceramic coating maintenance check completed.',
           isRead: false,
           createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'Toyota Camry', service: 'Ceramic Coating Maintenance' }
+          data: { vehicle: 'Toyota Camry', service: 'Ceramic Coating Maintenance' },
+          notificationType: 'specific'
         },
         {
           _id: 'mock-3',
-          status: 'complete',
-          title: 'Payment Received',
-          message: 'Payment of $180 received for Honda Civic interior detailing.',
+          status: 'announcement',
+          title: 'New Service Training Available',
+          message: 'Advanced ceramic coating training session available next Tuesday for all agents.',
           isRead: true,
           createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'Honda Civic', amount: 180, service: 'Interior Detail' }
+          data: { training: 'Advanced Ceramic Coating', date: 'Next Tuesday' },
+          notificationType: 'all'
         },
         {
           _id: 'mock-4',
-          status: 'cancel',
-          title: 'Booking Cancelled',
-          message: 'Mercedes-Benz C-Class booking at 2 PM has been cancelled.',
+          status: 'info',
+          title: 'System Maintenance Notice',
+          message: 'The booking system will be down for maintenance this Sunday from 2 AM to 4 AM.',
           isRead: false,
           createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'Mercedes-Benz C-Class', time: '2 PM' }
-        },
-        {
-          _id: 'mock-5',
-          status: 'complete',
-          title: 'Lead Converted',
-          message: 'Lead for Audi A4 exterior wash has been confirmed and scheduled.',
-          isRead: true,
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'Audi A4', service: 'Exterior Wash', price: 75 }
-        },
-        {
-          _id: 'mock-6',
-          status: 'pending',
-          title: 'New Booking Request',
-          message: 'Nissan Altima owner requested full detailing package for this weekend.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'Nissan Altima', service: 'Full Package', price: 350 }
-        },
-        {
-          _id: 'mock-7',
-          status: 'complete',
-          title: 'Monthly Performance Update',
-          message: 'Great job! You\'ve completed 28 bookings this month with 92% customer satisfaction.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-          data: { bookings: 28, satisfaction: '92%', month: 'November' }
-        },
-        {
-          _id: 'mock-8',
-          status: 'complete',
-          title: 'Commission Paid',
-          message: 'Your commission of $425 for October has been deposited to your account.',
-          isRead: true,
-          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          data: { amount: 425, month: 'October', type: 'Commission' }
-        },
-        {
-          _id: 'mock-9',
-          status: 'pending',
-          title: 'Equipment Maintenance Required',
-          message: 'Steam cleaner needs servicing. Please schedule maintenance within 7 days.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-          data: { equipment: 'Steam Cleaner', urgency: 'Medium', days: 7 }
-        },
-        {
-          _id: 'mock-10',
-          status: 'complete',
-          title: 'Repeat Customer Booking',
-          message: 'Sarah Johnson (Honda Civic) booked quarterly maintenance service.',
-          isRead: true,
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          data: { customer: 'Sarah Johnson', vehicle: 'Honda Civic', service: 'Quarterly Maintenance', price: 120 }
-        },
-        {
-          _id: 'mock-11',
-          status: 'pending',
-          title: 'New Service Training Available',
-          message: 'Advanced ceramic coating training session available next Tuesday.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-          data: { training: 'Advanced Ceramic Coating', date: 'Next Tuesday', duration: '4 hours' }
-        },
-        {
-          _id: 'mock-12',
-          status: 'cancel',
-          title: 'Weather Alert - Service Cancelled',
-          message: 'Heavy rain expected tomorrow. Outdoor services have been cancelled.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-          data: { weather: 'Heavy Rain', impact: 'Outdoor Services', suggestion: 'Reschedule' }
+          data: { maintenance: 'System Update', duration: '2 hours' },
+          notificationType: 'all'
         }
       ];
-
-      setNotifications(notificationsData);
-    } catch (error) {
-      console.error("Error loading notifications:", error);
+      
+      setNotifications(fallbackData);
     } finally {
       setLoading(false);
     }
@@ -165,9 +119,10 @@ export default function AgentNotificationPage() {
   const markAsRead = async (notificationId) => {
     try {
       setMarkingAsRead(notificationId);
-      // Simulate API delay for mock data
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      
+      // Update via API
+      await agentNotificationService.markAsRead(notificationId);
+      
       // Update local state
       setNotifications(prev =>
         prev.map(notif =>
@@ -183,47 +138,58 @@ export default function AgentNotificationPage() {
     }
   };
 
-  const markAllAsRead = async () => {
-    try {
-      setMarkingAsRead('all');
-      // Simulate API delay for mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Update local state
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, isRead: true }))
-      );
-    } catch (error) {
-      console.error("Error marking all notifications as read:", error);
-    } finally {
-      setMarkingAsRead(null);
-    }
-  };
-
   const getNotificationIcon = (status) => {
     switch (status) {
       case 'complete':
+      case 'success':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'pending':
+      case 'warning':
         return <Clock className="h-5 w-5 text-blue-600" />;
       case 'cancel':
+      case 'error':
         return <AlertCircle className="h-5 w-5 text-red-600" />;
+      case 'announcement':
+        return <BellRing className="h-5 w-5 text-purple-600" />;
       default:
         return <Info className="h-5 w-5 text-gray-600" />;
     }
   };
 
-  const getNotificationBadge = (status) => {
+  const getNotificationBadge = (status, notificationType) => {
+    // Type badge
+    const typeBadge = notificationType === 'specific' 
+      ? <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs mr-2">For You</Badge>
+      : <Badge className="bg-gray-100 text-gray-800 border-gray-200 text-xs mr-2">All Agents</Badge>;
+
+    // Status badge
+    let statusBadge;
     switch (status) {
       case 'complete':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Complete</Badge>;
+      case 'success':
+        statusBadge = <Badge className="bg-green-100 text-green-800 border-green-200">Complete</Badge>;
+        break;
       case 'pending':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>;
+      case 'warning':
+        statusBadge = <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>;
+        break;
       case 'cancel':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
+      case 'error':
+        statusBadge = <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
+        break;
+      case 'announcement':
+        statusBadge = <Badge className="bg-purple-100 text-purple-800 border-purple-200">Announcement</Badge>;
+        break;
       default:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Info</Badge>;
+        statusBadge = <Badge className="bg-gray-100 text-gray-800 border-gray-200">Info</Badge>;
     }
+
+    return (
+      <div className="flex items-center gap-2">
+        {typeBadge}
+        {statusBadge}
+      </div>
+    );
   };
 
   const fadeUp = {
@@ -252,7 +218,6 @@ export default function AgentNotificationPage() {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
           <p className="text-slate-700 font-medium">Please login to view notifications.</p>
-
         </div>
       </div>
     );
@@ -274,10 +239,9 @@ export default function AgentNotificationPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 p-2  space-y-3 sm:space-y-9 xl:p-10 text-left">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 p-2 space-y-3 sm:space-y-9 xl:p-10 text-left">
       {/* Header */}
       <motion.div
-        // initial="hidden"
         animate="visible"
         variants={fadeUp}
         custom={1}
@@ -293,37 +257,11 @@ export default function AgentNotificationPage() {
                 Notifications
               </h1>
               <p className="text-slate-600 mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base">
-                Stay updated with your latest activities and alerts
+                Stay updated with your activities and company announcements
               </p>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-            {unreadCount > 0 && (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  onClick={markAllAsRead}
-                  disabled={markingAsRead === 'all'}
-                  variant="outline"
-                  size="sm"
-                  className="bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 rounded-xl font-semibold shadow-sm w-full sm:w-auto"
-                >
-                  {markingAsRead === 'all' ? (
-                    <>
-                      <Loader className="h-4 w-4 mr-2 animate-spin" />
-                      Marking...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCheck className="h-4 w-4 mr-2" />
-                      Mark All Read ({unreadCount})
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            )}
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -406,7 +344,7 @@ export default function AgentNotificationPage() {
         animate="visible"
         variants={fadeUp}
         custom={3}
-        className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+        className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
       >
         <motion.div
           whileHover={{ scale: 1.03, y: -5 }}
@@ -417,7 +355,7 @@ export default function AgentNotificationPage() {
               <div className="flex items-center justify-between flex-1">
                 <div className="flex-1">
                   <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    Total Notifications
+                    Total
                   </p>
                   <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
                     {notifications.length}
@@ -463,14 +401,37 @@ export default function AgentNotificationPage() {
               <div className="flex items-center justify-between flex-1">
                 <div className="flex-1">
                   <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    Read
+                    For You
                   </p>
                   <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
-                    {notifications.length - unreadCount}
+                    {notifications.filter(n => n.notificationType === 'specific').length}
                   </p>
                 </div>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-600" />
+                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-green-50 to-green-100 shadow-lg flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ scale: 1.03, y: -5 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-2xl overflow-hidden h-full">
+            <CardContent className="p-4 sm:p-6 h-full flex flex-col">
+              <div className="flex items-center justify-between flex-1">
+                <div className="flex-1">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
+                    All Agents
+                  </p>
+                  <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
+                    {notifications.filter(n => n.notificationType === 'all').length}
+                  </p>
+                </div>
+                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 shadow-lg flex items-center justify-center flex-shrink-0">
+                  <BellRing className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -548,7 +509,7 @@ export default function AgentNotificationPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
                           <div className="flex items-center space-x-2">
-                            {getNotificationBadge(notification.status)}
+                            {getNotificationBadge(notification.status, notification.notificationType)}
                             {!notification.isRead && (
                               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
                             )}

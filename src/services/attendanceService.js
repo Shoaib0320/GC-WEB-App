@@ -143,8 +143,8 @@ export const attendanceService = {
     return response.data;
   },
     // Auto Absent Processing
-  processAutoAttendance: async () => {
-    const response = await api.post('/attendance/auto-process');
+  processAutoAttendance: async (data = {}) => {
+    const response = await api.post('/attendance/auto-process', data);
     return response.data;
   },
 
