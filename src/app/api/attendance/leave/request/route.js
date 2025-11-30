@@ -95,6 +95,7 @@ import LeaveRequest from "@/Models/LeaveRequest";
 import { verifyToken } from "@/lib/jwt";
 import Attendance from "@/Models/Attendance";
 import Agent from "@/Models/Agent";
+import User from "@/Models/User";
 
 export async function POST(request) {
   try {
