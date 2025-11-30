@@ -4,6 +4,8 @@ import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import Shift from "@/Models/Shift";
 import { verifyToken } from "@/lib/jwt";
+import User from "@/Models/User"; 
+import Agent from "@/Models/Agent";
 
 // app/api/attendance/route.js - Updated GET function
 export async function GET(request) {

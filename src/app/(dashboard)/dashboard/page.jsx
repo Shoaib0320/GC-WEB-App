@@ -421,7 +421,7 @@ export default function DashboardPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Pending Leave Requests</h2>
-          <Button variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/leaves')}>Review</Button>
+          <Button variant="outline" size="sm" onClick={() => (window.location.href = '/dashboard/view-attendance')}>Review</Button>
         </div>
 
         <div className="hidden sm:block overflow-x-auto rounded-xl border">

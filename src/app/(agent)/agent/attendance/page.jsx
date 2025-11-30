@@ -1,6 +1,7 @@
 //src/app/(agent%)/agent/attendance/page.jsx
 "use client";
 import { useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -42,7 +43,8 @@ import TodayDetailsCard from "@/components/TodayDetailsCard";
 import TodayStatusCard from "@/components/TodayStatusCard";
 
 const AttendanceScreen = () => {
-  const { agent, refreshAgentData, isLoggedIn, token } = useAgent();
+  const router = useRouter();
+  const { agent, refreshAgentData, isLoggedIn, token, logout, checkTokenValidity } = useAgent();
   const { theme } = useContext(ThemeContext);
   const { officeLocation, checkRadius } = useOfficeLocation();
 
@@ -76,26 +78,14 @@ const AttendanceScreen = () => {
       // Ensure token is valid before loading data
       const initializePage = async () => {
         try {
-          // Check if token needs refresh
           const currentToken = token || localStorage.getItem('agentToken');
-          if (currentToken) {
-            const tokenExpiry = getTokenExpiryTime(currentToken);
-            const now = Date.now();
-            const fiveMinutes = 5 * 60 * 1000;
 
-            // If token expires within 5 minutes, refresh it first
-            if (tokenExpiry && (tokenExpiry - now) < fiveMinutes) {
-              console.log('🔄 Token expiring soon, refreshing before loading attendance data...');
-              try {
-                const refreshResult = await agentAuthService.refreshToken(currentToken);
-                if (refreshResult.token) {
-                  console.log('✅ Token refreshed successfully before loading data');
-                }
-              } catch (refreshError) {
-                console.error('❌ Token refresh failed:', refreshError);
-                // Continue with loading data - the API interceptor will handle 401
-              }
-            }
+          // If token is missing or invalid/expired, logout and redirect to login
+          const isValid = currentToken ? checkTokenValidity() : false;
+          if (!isValid) {
+            await logout();
+            router.replace('/agent/login');
+            return;
           }
 
           await loadInitialData();

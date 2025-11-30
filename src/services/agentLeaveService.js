@@ -19,7 +19,7 @@ export const agentLeaveService = {
   async getMyLeaves(agentType = 'agent') {
     try {
       // console.log("📋 Fetching Leave Requests...");
-      const response = await api.get(`/attendance/leave/request?agentType=${agentType}`);
+      const response = await api.get(`/attendance/leave/request?userType=${agentType}`);
       // console.log("✅ Leave Requests Received:", response.data.data?.length || 0);
       return response.data.data || [];
     } catch (error) {
