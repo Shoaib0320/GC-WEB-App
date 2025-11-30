@@ -63,44 +63,102 @@ export const agentAttendanceService = {
       throw error;
     }
   },
+  // ///
+  // async getTodayStatus() {
+  //   try {
+  //     // Try local cache first
+  //     const localToday = await this.getFromLocal('todaysAttendance');
+  //     if (localToday) return localToday;
+
+  //     // Fallback to API
+  //     const todayResponse = await api.get('/attendance/today');
+  //     if (todayResponse.data.success && todayResponse.data.data) {
+  //       await this.saveToLocal('todaysAttendance', todayResponse.data.data);
+  //       return todayResponse.data.data;
+  //     }
+
+  //     // If not found, fallback to manual filtering
+  //     const historyResponse = await api.get('/attendance/my?limit=100');
+  //     const today = new Date();
+  //     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  //     const todayEnd = new Date(todayStart);
+  //     todayEnd.setDate(todayEnd.getDate() + 1);
+
+  //     const todayRecord = historyResponse.data.data.find(record => {
+  //       if (!record.checkInTime) return false;
+  //       const recordDate = new Date(record.checkInTime);
+  //       return recordDate >= todayStart && recordDate < todayEnd;
+  //     });
+
+  //     if (todayRecord) {
+  //       await this.saveToLocal('todaysAttendance', todayRecord);
+  //       return todayRecord;
+  //     }
+
+  //     return null;
+  //   } catch (error) {
+  //     console.error('❌ Today status error:', error.response?.data || error.message);
+  //     return null;
+  //   }
+  // },
 
   async getTodayStatus() {
-    try {
-      // Try local cache first
-      const localToday = await this.getFromLocal('todaysAttendance');
-      if (localToday) return localToday;
-
-      // Fallback to API
-      const todayResponse = await api.get('/attendance/today');
-      if (todayResponse.data.success && todayResponse.data.data) {
-        await this.saveToLocal('todaysAttendance', todayResponse.data.data);
-        return todayResponse.data.data;
+  try {
+    // Clear old local storage data first
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    // Try API first - always get fresh data
+    const todayResponse = await api.get('/attendance/today');
+    
+    if (todayResponse.data.success && todayResponse.data.data) {
+      const freshData = todayResponse.data.data;
+      // Verify it's actually from today
+      const checkInDate = new Date(freshData.checkInTime);
+      if (checkInDate >= todayStart) {
+        await this.saveToLocal('todaysAttendance', freshData);
+        return freshData;
+      } else {
+        // Old data from different day - clear it
+        await this.removeFromLocal('todaysAttendance');
+        return null;
       }
-
-      // If not found, fallback to manual filtering
-      const historyResponse = await api.get('/attendance/my?limit=100');
-      const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const todayEnd = new Date(todayStart);
-      todayEnd.setDate(todayEnd.getDate() + 1);
-
-      const todayRecord = historyResponse.data.data.find(record => {
-        if (!record.checkInTime) return false;
-        const recordDate = new Date(record.checkInTime);
-        return recordDate >= todayStart && recordDate < todayEnd;
-      });
-
-      if (todayRecord) {
-        await this.saveToLocal('todaysAttendance', todayRecord);
-        return todayRecord;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('❌ Today status error:', error.response?.data || error.message);
-      return null;
     }
-  },
+
+    // If API fails, check local storage but verify date
+    const localToday = await this.getFromLocal('todaysAttendance');
+    if (localToday) {
+      const checkInDate = new Date(localToday.checkInTime);
+      if (checkInDate >= todayStart) {
+        return localToday;
+      } else {
+        // Old data - clear it
+        await this.removeFromLocal('todaysAttendance');
+        return null;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ Today status error:', error.response?.data || error.message);
+    
+    // On error, clear potentially stale local data
+    await this.removeFromLocal('todaysAttendance');
+    return null;
+  }
+},
+
+// Add this helper method
+async removeFromLocal(key) {
+  try {
+    localStorage.removeItem(key);
+    console.log(`🗑️ "${key}" removed from storage`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error removing "${key}" from storage:`, error);
+    return false;
+  }
+},
 
   async getAttendanceHistory(limit = 50, page = 1) {
     try {

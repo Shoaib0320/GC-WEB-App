@@ -4,13 +4,13 @@ import { useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  RefreshCw, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  RefreshCw,
+  MapPin,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   Download,
   Filter,
@@ -44,7 +44,7 @@ import TodayStatusCard from "@/components/TodayStatusCard";
 
 const AttendanceScreen = () => {
   const router = useRouter();
-  const { agent, refreshAgentData, isLoggedIn, token, logout, checkTokenValidity } = useAgent();
+  const { agent, refreshAgentData, isLoggedIn, token, logout, checkTokenValidity, login } = useAgent();
   const { theme } = useContext(ThemeContext);
   const { officeLocation, checkRadius } = useOfficeLocation();
 
@@ -75,30 +75,80 @@ const AttendanceScreen = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      // Ensure token is valid before loading data
       const initializePage = async () => {
         try {
-          const currentToken = token || localStorage.getItem('agentToken');
+          console.log('🔄 Initializing attendance page...');
 
-          // If token is missing or invalid/expired, logout and redirect to login
-          const isValid = currentToken ? checkTokenValidity() : false;
-          if (!isValid) {
+          const currentToken = token || localStorage.getItem('agentToken');
+          console.log('🔐 Current token exists:', !!currentToken);
+
+          // If token is missing, logout immediately
+          if (!currentToken) {
+            console.log('❌ No token found, logging out');
             await logout();
             router.replace('/agent/login');
             return;
           }
 
+          // Check token validity with better error handling
+          let isValid = false;
+          try {
+            isValid = checkTokenValidity();
+            console.log('✅ Token validity check passed:', isValid);
+          } catch (tokenError) {
+            console.error('❌ Token validation error:', tokenError);
+            isValid = false;
+          }
+
+          if (!isValid) {
+            console.log('❌ Token invalid, logging out');
+            // Try to use saved credentials for auto-login first
+            const savedCreds = localStorage.getItem("agentCredentials");
+            if (savedCreds) {
+              try {
+                const { agentId, password } = JSON.parse(savedCreds);
+                console.log('🔄 Attempting auto-login...');
+                const autoLoginResult = await login(agentId, password, true);
+
+                if (autoLoginResult.success) {
+                  console.log('✅ Auto-login successful');
+                  await loadInitialData();
+                  setupNotifications();
+                  return;
+                }
+              } catch (autoLoginError) {
+                console.error('❌ Auto-login failed:', autoLoginError);
+              }
+            }
+
+            // If auto-login fails or no credentials, logout
+            await logout();
+            router.replace('/agent/login');
+            return;
+          }
+
+          // Token is valid, proceed with data loading
+          console.log('✅ Token valid, loading data...');
           await loadInitialData();
           setupNotifications();
+
         } catch (error) {
           console.error('❌ Error initializing attendance page:', error);
-          await loadInitialData(); // Try loading data anyway
+
+          // On initialization error, try to load data anyway if logged in
+          if (isLoggedIn) {
+            try {
+              await loadInitialData();
+            } catch (loadError) {
+              console.error('❌ Failed to load data after initialization error:', loadError);
+            }
+          }
         }
       };
 
       initializePage();
     }
-  }, [agent, isLoggedIn, token]);
+  }, [isLoggedIn, token]); // Remove 'agent' from dependencies to prevent unnecessary re-initialization
 
   useEffect(() => {
     let interval;
@@ -143,13 +193,63 @@ const AttendanceScreen = () => {
 
   const loadTodayStatus = async () => {
     try {
+      // Force refresh by clearing cache first in certain situations
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      // Check if we have old data that might be stale
+      const localStatus = await agentAttendanceService.getFromLocal('todaysAttendance');
+      if (localStatus) {
+        const checkInDate = new Date(localStatus.checkInTime);
+        if (checkInDate < todayStart) {
+          // Old data - clear it before making API call
+          await agentAttendanceService.removeFromLocal('todaysAttendance');
+        }
+      }
+
       let status = await agentAttendanceService.getTodayStatus();
+
+      // Additional verification
+      if (status && status.checkInTime) {
+        const checkInDate = new Date(status.checkInTime);
+        if (checkInDate < todayStart) {
+          // This is old data, don't use it
+          status = null;
+          await agentAttendanceService.removeFromLocal('todaysAttendance');
+        }
+      }
+
       setTodayAttendance(status);
       if (status && !status.checkOutTime) updateWorkingTime();
     } catch (error) {
       console.error("Error loading today status:", error);
+      // On error, clear any potentially stale data
+      await agentAttendanceService.removeFromLocal('todaysAttendance');
       setTodayAttendance(null);
       toast.error("Failed to load today's attendance");
+    }
+  };
+
+  // Refresh function mein bhi clear karen
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Clear cache before refresh
+      await agentAttendanceService.removeFromLocal('todaysAttendance');
+
+      await Promise.all([
+        refreshAgentData().then((freshAgent) => setAgentShift(freshAgent.shift)),
+        loadTodayStatus(),
+        checkLocation(),
+        loadMonthlySummary(),
+        loadTodayLeave(),
+      ]);
+      toast.success("Data refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -243,7 +343,7 @@ const AttendanceScreen = () => {
       } else {
         location = await getCurrentLocation();
       }
-      
+
       const dist = getDistance(
         location.latitude,
         location.longitude,
@@ -255,25 +355,6 @@ const AttendanceScreen = () => {
       console.error("Error fetching distance:", error);
       setDistance(null);
       toast.error("Failed to get location");
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([
-        refreshAgentData().then((freshAgent) => setAgentShift(freshAgent.shift)),
-        loadTodayStatus(),
-        checkLocation(),
-        loadMonthlySummary(),
-        loadTodayLeave(),
-      ]);
-      toast.success("Data refreshed successfully");
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      toast.error("Failed to refresh data");
-    } finally {
-      setRefreshing(false);
     }
   };
 
@@ -537,11 +618,10 @@ const AttendanceScreen = () => {
                 whileTap={{ scale: canCheckIn() ? 0.98 : 1 }}
                 onClick={handleCheckIn}
                 disabled={!canCheckIn()}
-                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  canCheckIn()
-                    ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg hover:shadow-xl text-white"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                }`}
+                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${canCheckIn()
+                  ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg hover:shadow-xl text-white"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  }`}
               >
                 {checking ? (
                   <div className="flex items-center justify-center gap-2">
@@ -558,11 +638,10 @@ const AttendanceScreen = () => {
                 whileTap={{ scale: canCheckOut() ? 0.98 : 1 }}
                 onClick={handleCheckOut}
                 disabled={!canCheckOut()}
-                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  canCheckOut()
-                    ? "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg hover:shadow-xl text-white"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                }`}
+                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${canCheckOut()
+                  ? "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg hover:shadow-xl text-white"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  }`}
               >
                 {checking ? (
                   <div className="flex items-center justify-center gap-2">
@@ -611,10 +690,10 @@ const AttendanceScreen = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <TodayStatusCard 
-            todayAttendance={todayAttendance} 
-            agentShift={agentShift} 
-            workingTime={workingTime} 
+          <TodayStatusCard
+            todayAttendance={todayAttendance}
+            agentShift={agentShift}
+            workingTime={workingTime}
           />
         </motion.div>
 
@@ -635,10 +714,10 @@ const AttendanceScreen = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <LocationStatusCard 
-            distance={distance} 
-            checkRadius={checkRadius} 
-            loading={loading} 
+          <LocationStatusCard
+            distance={distance}
+            checkRadius={checkRadius}
+            loading={loading}
           />
         </motion.div>
       </div>
