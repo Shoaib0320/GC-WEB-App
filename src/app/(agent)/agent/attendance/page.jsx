@@ -1,4 +1,4 @@
-//src/app/(agent%)/agent/attendance/page.jsx
+// src/app/(agent)/agent/attendance/page.jsx
 "use client";
 import { useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,12 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
-  Loader2
+  Loader2,
+  Home,
+  CalendarDays,
+  Map,
+  LogOut,
+  LogIn
 } from "lucide-react";
 
 import { useAgent } from "@/context/AgentContext";
@@ -67,11 +72,11 @@ const AttendanceScreen = () => {
   const [showLeaveRequests, setShowLeaveRequests] = useState(false);
   const [activeLeaveModalVisible, setActiveLeaveModalVisible] = useState(false);
   const [activeLeaveDetails, setActiveLeaveDetails] = useState(null);
-  const [expandedSections, setExpandedSections] = useState({
-    status: true,
-    details: false,
-    location: false
-  });
+
+  // Navigation function
+  const goToDashboard = () => {
+    router.push('/agent/dashboard');
+  };
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -90,7 +95,7 @@ const AttendanceScreen = () => {
             return;
           }
 
-          // Check token validity with better error handling
+          // Check token validity
           let isValid = false;
           try {
             isValid = checkTokenValidity();
@@ -148,7 +153,7 @@ const AttendanceScreen = () => {
 
       initializePage();
     }
-  }, [isLoggedIn, token]); // Remove 'agent' from dependencies to prevent unnecessary re-initialization
+  }, [isLoggedIn, token]);
 
   useEffect(() => {
     let interval;
@@ -465,103 +470,68 @@ const AttendanceScreen = () => {
     return months[monthNumber - 1] || "";
   };
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
   // Show loading while agent context is loading
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"
-          />
-          <p className="text-slate-600 text-lg font-medium">Loading attendance data...</p>
-        </motion.div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading attendance data...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
-      {/* Header Section */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-slate-200/50">
-        <div className="p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Simple Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                Attendance
-              </h1>
-              <p className="text-slate-600 text-sm sm:text-base mt-1">
-                Track your daily check-ins and working hours
-              </p>
+              <h1 className="text-xl font-bold text-gray-900 pt-8">Attendance</h1>
+              <p className="text-gray-600 text-sm">Track your daily check-ins</p>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-5 w-5 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
-            </motion.button>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setFilterModalVisible(true)}
-              className="flex-1 bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              <Calendar className="h-4 w-4 text-slate-600" />
-              <span className="font-medium text-slate-700">
-                {getMonthName(currentFilter.month)} {currentFilter.year}
-              </span>
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            </motion.button>
-
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleLeaveRequestClick}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl px-4 py-3 shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-sm"
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goToDashboard}
+                className="p-2 text-gray-600 hover:text-gray-900"
+                title="Dashboard"
               >
-                Request Leave
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowLeaveRequests(!showLeaveRequests)}
-                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-all duration-200 font-medium text-sm text-slate-700"
+                <Home className="h-5 w-5" />
+              </button>
+              <button
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                title="Refresh"
               >
-                {showLeaveRequests ? "Hide Leaves" : "My Leaves"}
-              </motion.button>
+                <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Leave Request Modal */}
         <LeaveRequestModal
           visible={showLeaveModal}
           onClose={() => setShowLeaveModal(false)}
           onSubmit={handleLeaveSubmit}
         />
+
+        {/* Leave Requests Toggle */}
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold text-gray-900">Leave Requests</h2>
+          <button
+            onClick={() => setShowLeaveRequests(!showLeaveRequests)}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            {showLeaveRequests ? 'Hide' : 'View'} Leaves
+          </button>
+        </div>
 
         {/* Leave Requests List */}
         <AnimatePresence>
@@ -571,6 +541,7 @@ const AttendanceScreen = () => {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
+              className="mb-4"
             >
               <LeaveRequestsList />
             </motion.div>
@@ -581,22 +552,17 @@ const AttendanceScreen = () => {
         <AnimatePresence>
           {todayLeave && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 shadow-sm"
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-yellow-50 border border-yellow-200 rounded-lg p-3"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <AlertCircle className="h-5 w-5 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-amber-800">
-                    Approved Leave Today
-                  </h3>
-                  <p className="text-amber-700 text-sm">
-                    {todayLeave.leaveType} • From {new Date(todayLeave.startDate).toLocaleDateString()} to{" "}
-                    {new Date(todayLeave.endDate).toLocaleDateString()}
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">Approved Leave Today</p>
+                  <p className="text-xs text-yellow-700">
+                    {todayLeave.leaveType} • {new Date(todayLeave.startDate).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -604,122 +570,112 @@ const AttendanceScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Check In/Out Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden"
-        >
-          <div className="p-6">
+        {/* Check In/Out Button - SIMPLIFIED */}
+        <div className="bg-white rounded-lg shadow border border-gray-200">
+          <div className="p-4">
             {!todayAttendance ? (
-              <motion.button
-                whileHover={{ scale: canCheckIn() ? 1.02 : 1 }}
-                whileTap={{ scale: canCheckIn() ? 0.98 : 1 }}
+              <button
                 onClick={handleCheckIn}
                 disabled={!canCheckIn()}
-                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${canCheckIn()
-                  ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg hover:shadow-xl text-white"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  }`}
+                className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${
+                  canCheckIn()
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
               >
                 {checking ? (
                   <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Checking In...
                   </div>
                 ) : (
                   "Check In Now"
                 )}
-              </motion.button>
+              </button>
             ) : !todayAttendance.checkOutTime ? (
-              <motion.button
-                whileHover={{ scale: canCheckOut() ? 1.02 : 1 }}
-                whileTap={{ scale: canCheckOut() ? 0.98 : 1 }}
+              <button
                 onClick={handleCheckOut}
                 disabled={!canCheckOut()}
-                className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${canCheckOut()
-                  ? "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg hover:shadow-xl text-white"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  }`}
+                className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${
+                  canCheckOut()
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
               >
                 {checking ? (
                   <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Checking Out...
                   </div>
                 ) : (
                   "Check Out Now"
                 )}
-              </motion.button>
+              </button>
             ) : (
-              <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-green-800 mb-2">
-                  Today's attendance completed
-                </h3>
-                <div className="text-green-700 space-y-1">
-                  <div className="flex items-center justify-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Check-in: {formatTime(todayAttendance.checkInTime)}
-                  </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Check-out: {formatTime(todayAttendance.checkOutTime)}
-                  </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                <h3 className="font-medium text-green-800 mb-1">Attendance Complete</h3>
+                <div className="text-sm text-green-700 space-y-1">
+                  <div>Check-in: {formatTime(todayAttendance.checkInTime)}</div>
+                  <div>Check-out: {formatTime(todayAttendance.checkOutTime)}</div>
                 </div>
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
+
+        {/* Filter and Actions Bar */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilterModalVisible(true)}
+            className="flex-1 bg-white border border-gray-300 rounded-lg p-3 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            {getMonthName(currentFilter.month)} {currentFilter.year}
+          </button>
+          <button
+            onClick={handleLeaveRequestClick}
+            className="flex-1 bg-blue-600 text-white rounded-lg p-3 text-sm font-medium hover:bg-blue-700"
+          >
+            Request Leave
+          </button>
+        </div>
 
         {/* Monthly Summary */}
         {filteredSummary && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Monthly Summary</h3>
             <AttendanceSummary monthlySummary={filteredSummary} filter={currentFilter} />
-          </motion.div>
+          </div>
         )}
 
         {/* Today's Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Today's Status</h3>
           <TodayStatusCard
             todayAttendance={todayAttendance}
             agentShift={agentShift}
             workingTime={workingTime}
           />
-        </motion.div>
+        </div>
 
         {/* Today's Details */}
         {todayAttendance && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
+          <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Today's Details</h3>
             <TodayDetailsCard todayAttendance={todayAttendance} />
-          </motion.div>
+          </div>
         )}
 
         {/* Location Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Location Status</h3>
           <LocationStatusCard
             distance={distance}
             checkRadius={checkRadius}
             loading={loading}
           />
-        </motion.div>
+        </div>
       </div>
 
       {/* Filter Modal */}

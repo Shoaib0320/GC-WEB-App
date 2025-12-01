@@ -1,224 +1,265 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAgent } from "../context/AgentContext";
-import { BarChart3, Clock, DollarSign, Settings, LogOut, Menu, X, User, PanelLeftClose } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  BarChart3, 
+  Clock, 
+  DollarSign, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  X, 
+  User
+} from "lucide-react";
+import { useMediaQuery } from "react-responsive";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import Image from "next/image";
 
-export default function AgentSidebar({ isOpen, setIsOpen, children }) {
+export default function AgentSidebar({ isOpen, setIsOpen, collapsed, setCollapsed, children }) {
   const router = useRouter();
+  const pathname = usePathname(); // Use usePathname hook for Next.js 13+
   const { logout, agent } = useAgent();
-  const [isMobile, setIsMobile] = useState(false);
   const [activePath, setActivePath] = useState("");
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+
+  // Use pathname to detect active page
+  useEffect(() => {
+    if (pathname) {
+      setActivePath(pathname);
+      console.log("Current path:", pathname); // Debug log
+    }
+  }, [pathname]);
 
   useEffect(() => {
-    setActivePath(window.location.pathname);
-  }, []);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (!mobile) setIsOpen(true);
-    };
-
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, [setIsOpen]);
+    if (isMobile) {
+      setIsOpen(false);
+    }
+  }, [isMobile, setIsOpen]);
 
   const handleLogout = async () => {
     await logout();
     router.push("/agent/login");
   };
 
-  const closeSidebar = () => {
-    if (isMobile) setIsOpen(false);
-  };
-
   const navItems = [
-    { href: "/agent/dashboard", icon: BarChart3, label: "Dashboard" },
-    { href: "/agent/attendance", icon: Clock, label: "Attendance" },
-    { href: "/agent/sales", icon: DollarSign, label: "Sales" },
-    { href: "/agent/settings", icon: Settings, label: "Settings" },
+    { label: "Dashboard", href: "/agent/dashboard", icon: BarChart3 },
+    { label: "Attendance", href: "/agent/attendance", icon: Clock },
+    { label: "Sales", href: "/agent/sales", icon: DollarSign },
+    { label: "Settings", href: "/agent/settings", icon: Settings },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-gray-200 z-40 p-4 flex items-center justify-between">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all duration-200"
-          >
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <h1 className="text-lg font-bold text-indigo-800">Agent Panel</h1>
-          <div className="w-9 h-9 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-            <User className="w-4 h-4" />
-          </div>
-        </div>
-      )}
+    <TooltipProvider>
+      <div className="min-h-screen bg-white">
+        {/* Mobile Overlay */}
+        <AnimatePresence>
+          {isMobile && isOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            />
+          )}
+        </AnimatePresence>
 
-      {/* Mobile Overlay */}
-      {isMobile && isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 md:hidden animate-fade-in"
-          onClick={closeSidebar}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`fixed left-0 top-0 h-full bg-gradient-to-b from-white via-white to-blue-50/30 shadow-2xl border-r border-gray-100 transition-all duration-300 z-30 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } ${isMobile ? "w-72" : "w-80"}`}
-      >
-        {/* Sidebar Header */}
-        <div className="flex flex-col p-6 pb-4 border-b border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Agent Panel
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">Professional Dashboard</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              {!isMobile && (
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-110"
-                  title="Close sidebar"
-                >
-                  <PanelLeftClose className="w-4 h-4 text-gray-600" />
-                </button>
-              )}
-              {isMobile && (
-                <button
-                  onClick={closeSidebar}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-110"
-                >
-                  <X className="w-4 h-4 text-gray-600" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* User Info */}
-          <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-100 shadow-sm">
-            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-md">
-              {agent?.name?.charAt(0) || <User className="w-5 h-5" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800 truncate">
-                {agent?.name || "Agent"}
-              </p>
-              <p className="text-xs text-gray-500 truncate">Online</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="p-4 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activePath === item.href;
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeSidebar}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${
-                  isActive
-                    ? "bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 border border-indigo-100 shadow-sm"
-                    : "text-gray-600 hover:text-indigo-600 hover:bg-white hover:shadow-md"
-                }`}
+        {/* Sidebar */}
+        <motion.aside
+          initial={false}
+          animate={{
+            width: isMobile
+              ? (isOpen ? "100vw" : 0)
+              : (collapsed ? 80 : 300),
+            x: isMobile && !isOpen ? "-100%" : 0
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className={cn(
+            "fixed z-50 flex flex-col h-full shadow-xl bg-white/90 backdrop-blur-2xl",
+            "border-gray-200",
+            "lg:left-0 lg:top-0 lg:h-screen lg:rounded-r-2xl",
+            "overflow-hidden",
+            isMobile && !isOpen ? "pointer-events-none" : "",
+            !isMobile && "lg:border-r-0"
+          )}
+        >
+          {/* Mobile Header with Close Button */}
+          {isMobile && isOpen && (
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <Image
+                src="/images/GCLogo.png"
+                alt="GC Logo"
+                width={80}
+                height={80}
+                className="object-contain"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+                className="rounded-full"
               >
-                {/* Animated background effect */}
-                {isActive && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-blue-500/5 animate-pulse" />
-                )}
-                
-                {/* Icon with gradient when active */}
-                <div className={`relative z-10 p-1.5 rounded-lg transition-all duration-200 ${
-                  isActive 
-                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md" 
-                    : "bg-gray-100 text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600"
-                }`}>
-                  <Icon className="w-4 h-4" />
+                <X size={20} />
+              </Button>
+            </div>
+          )}
+
+          {/* Desktop Header */}
+          {!isMobile && (
+            <div
+              className={cn(
+                "flex items-center justify-center py-6 px-4 border-b border-gray-200 transition-all duration-200 gap-8",
+                collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+              )}
+            >
+              <Image
+                src="/images/GCLogo.png"
+                alt="GC Logo"
+                width={70}
+                height={70}
+                className="object-contain"
+              />
+            </div>
+          )}
+
+          {/* Navigation */}
+          <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
+            {navItems.map((item, index) => {
+              // Check if current path matches item href
+              const isActive = pathname === item.href;
+              
+              // For debugging
+              console.log(`Item: ${item.label}, Path: ${pathname}, Active: ${isActive}`);
+
+              return (
+                <Tooltip key={index}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      onClick={() => isMobile && setIsOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium group transition-all duration-200 overflow-hidden",
+                        "relative",
+
+                        // Active styles
+                        isActive
+                          ? "bg-[#10B5DB]/10 text-[#10B5DB] border border-[#10B5DB]/20 shadow-sm"
+                          : "text-gray-700 hover:bg-gray-100/60",
+
+                        // Collapsed icon mode (desktop only)
+                        !isMobile && collapsed ? "justify-center px-3" : "justify-start"
+                      )}
+                    >
+                      {/* Active indicator line - Show on left side */}
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-[#10B5DB] rounded-r-full" />
+                      )}
+
+                      <item.icon
+                        size={22}
+                        className={cn(
+                          "transition-all duration-200",
+                          isActive 
+                            ? "text-[#10B5DB]" 
+                            : "text-gray-600 group-hover:text-[#10B5DB]"
+                        )}
+                      />
+
+                      {(!isMobile || isOpen) && !collapsed && (
+                        <span className="truncate transition-opacity duration-200">
+                          {item.label}
+                          {isActive && (
+                            <span className="ml-2 text-xs text-[#10B5DB]/70">●</span>
+                          )}
+                        </span>
+                      )}
+                    </Link>
+                  </TooltipTrigger>
+
+                  {/* Tooltip only in collapsed mode (desktop only) */}
+                  {!isMobile && collapsed && (
+                    <TooltipContent side="right" className="text-sm">
+                      {item.label}
+                      {isActive && " (Active)"}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              );
+            })}
+          </nav>
+
+          {/* User Info - Moved to bottom */}
+          {(!isMobile || isOpen) && !collapsed && (
+            <div className="mt-auto p-4 border-t border-gray-200">
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-[#10B5DB] rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  {agent?.name?.charAt(0) || <User className="w-5 h-5" />}
                 </div>
-                
-                <span className={`relative z-10 font-medium transition-all duration-200 ${
-                  isActive ? "text-indigo-700" : "group-hover:text-indigo-600"
-                }`}>
-                  {item.label}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {agent?.name || "Agent"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">Agent Dashboard</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-                {/* Active indicator */}
-                {isActive && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full animate-bounce" />
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+          <Separator className="border-gray-200" />
 
-        {/* Logout Button */}
-        <div className="absolute bottom-6 left-6 right-6">
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center space-x-2 w-full bg-gradient-to-r from-gray-50 to-gray-100 hover:from-red-50 hover:to-red-100 text-gray-700 hover:text-red-700 py-3 rounded-xl border border-gray-200 hover:border-red-200 transition-all duration-200 shadow-sm hover:shadow-md font-medium group"
+          {/* Footer Logout */}
+          <div className="p-4">
+            <button
+              onClick={handleLogout}
+              className={cn(
+                "w-full flex items-center gap-3 text-[15px] font-medium rounded-xl px-4 py-3 text-red-600 hover:bg-red-100 transition-colors",
+                !isMobile && collapsed ? "justify-center" : "justify-start"
+              )}
+            >
+              <LogOut size={20} />
+              {(!isMobile || isOpen) && !collapsed && <span>Logout</span>}
+            </button>
+          </div>
+        </motion.aside>
+
+        {/* Desktop Toggle Button */}
+        {!isMobile && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="fixed top-4 left-4 hidden lg:flex z-50"
+            onClick={() => setCollapsed(!collapsed)}
           >
-            <LogOut className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-            <span>Logout</span>
-          </button>
+            <Menu size={20} />
+          </Button>
+        )}
+
+        {/* Page Content */}
+        <div
+          className={cn(
+            "transition-all duration-300 min-h-screen",
+            isMobile
+              ? "pt-14 p-4"
+              : collapsed
+                ? "ml-20 pt-20 p-8"
+                : "ml-80 pt-20 p-8"
+          )}
+        >
+          {children}
         </div>
       </div>
-
-      {/* Page Content */}
-      <div
-        className={`transition-all duration-300 min-h-screen ${
-          isMobile
-            ? "pt-16 p-4"
-            : isOpen
-              ? "ml-80 p-8"
-              : "ml-0 p-8"
-        }`}
-      >
-        {children}
-
-        {/* Toggle Button for Desktop */}
-        {!isMobile && (
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="fixed bottom-4 right-4 z-50 p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
-            title={isOpen ? "Close Sidebar" : "Open Sidebar"}
-          >
-            <Menu className={`w-6 h-6 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
-          </button>
-        )}
-      </div>
-
-      {/* Custom Styles for Animations */}
-      <style jsx global>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
-        }
-      `}</style>
-    </div>
+    </TooltipProvider>
   );
 }

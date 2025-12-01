@@ -164,6 +164,9 @@ export async function POST(request) {
         agentName: agent.agentName,
         agentId: agent.agentId,
         email: agent.email,
+        phone: agent.phone,
+        monthlyTarget: agent.monthlyTarget,
+        isActive: agent.isActive,
         shift: agent.shift
       }
     };

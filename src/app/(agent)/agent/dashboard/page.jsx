@@ -3,32 +3,26 @@
 import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  BarChart3, 
-  MapPin, 
-  Users, 
-  Calendar, 
-  Zap, 
-  Award, 
-  Star, 
-  TrendingUp, 
+import {
+  BarChart3,
+  MapPin,
+  Users,
+  Calendar,
+  Zap,
+  Award,
+  Star,
+  TrendingUp,
   Target,
   ChevronRight,
   Activity,
   DollarSign,
   Clock,
   CheckCircle2,
-  XCircle,
-  Search,
   Filter,
-  Download,
-  Eye,
-  MoreHorizontal,
-  Sparkles
+  Download
 } from 'lucide-react';
 import { AgentContext } from '../../../../context/AgentContext';
 import { useOfficeLocation } from '../../../../context/LocationContext';
-import { ThemeContext } from '../../../../context/ThemeContext';
 import { agentAttendanceService } from '../../../../services/agentAttendenceService';
 import { agentSalesService } from '../../../../services/agentSalesService';
 import { getAddressFromCoords, getCurrentLocation, getDistance } from '../../../../utils/locationUtils';
@@ -58,14 +52,12 @@ const scaleIn = {
 
 const HomeScreen = () => {
   const router = useRouter();
-  const { theme } = useContext(ThemeContext);
   const { agent, isLoggedIn, isLoading: agentLoading } = useContext(AgentContext);
   const { officeLocation, checkRadius } = useOfficeLocation();
 
   const [distance, setDistance] = useState(null);
   const [currentAddress, setCurrentAddress] = useState('');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [isAtOffice, setIsAtOffice] = useState(false);
   const [agentStats, setAgentStats] = useState(null);
   const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
@@ -77,68 +69,18 @@ const HomeScreen = () => {
     lastCheckInTime: null
   });
 
-  // Mock data for UI
+  // Stats data for UI
   const [stats, setStats] = useState({
     totalBookings: 0,
-    monthlyRevenue: 0,
+    monthlyTarget: 0,
+    achievedSales: 0, // Total number of sales achieved
     activeLeads: 0,
     conversionRate: 0
   });
 
   const [recentActivity, setRecentActivity] = useState([]);
 
-  // Helper functions
-  const pickMostRecent = (arr) => {
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    return arr.slice().sort((a, b) => {
-      const aT = (a.checkInTime || a.createdAt) ? new Date(a.checkInTime || a.createdAt).getTime() : 0;
-      const bT = (b.checkInTime || b.createdAt) ? new Date(b.checkInTime || b.createdAt).getTime() : 0;
-      return bT - aT;
-    })[0];
-  };
-
-  const normalizeMonthlyStats = (payload) => {
-    if (!payload) return null;
-    if (payload.summary && typeof payload.summary === 'object') {
-      const s = payload.summary;
-      return {
-        present: s.present ?? s.presentDays ?? 0,
-        late: s.late ?? 0,
-        absent: s.absent ?? 0,
-        completed: s.completed ?? s.completedDays ?? 0,
-        totalLateMinutes: s.totalLateMinutes ?? 0,
-        totalOvertimeMinutes: s.totalOvertimeMinutes ?? 0,
-        raw: payload,
-        records: payload.records ?? []
-      };
-    }
-    if (typeof payload.present === 'number' || typeof payload.late === 'number') {
-      return {
-        present: payload.present ?? 0,
-        late: payload.late ?? 0,
-        absent: payload.absent ?? 0,
-        completed: payload.completed ?? 0,
-        totalLateMinutes: payload.totalLateMinutes ?? 0,
-        totalOvertimeMinutes: payload.totalOvertimeMinutes ?? 0,
-        raw: payload,
-        records: payload.records ?? []
-      };
-    }
-    if (Array.isArray(payload)) {
-      const present = payload.filter(r => r.status === 'present').length;
-      const late = payload.filter(r => r.status === 'late').length;
-      const absent = payload.filter(r => r.status === 'absent').length;
-      const completed = payload.filter(r => r.checkOutTime).length;
-      const totalLateMinutes = payload.reduce((s, r) => s + (r.lateMinutes || 0), 0);
-      const totalOvertimeMinutes = payload.reduce((s, r) => s + (r.overtimeMinutes || 0), 0);
-      return { present, late, absent, completed, totalLateMinutes, totalOvertimeMinutes, raw: payload, records: payload };
-    }
-    if (payload.data) return normalizeMonthlyStats(payload.data);
-    if (payload.result) return normalizeMonthlyStats(payload.result);
-    return null;
-  };
-
-  // Data fetching functions
+  // Fetch attendance data
   const fetchAttendanceData = async () => {
     try {
       const [todayStatusResp, monthlyStatsResp] = await Promise.allSettled([
@@ -148,81 +90,78 @@ const HomeScreen = () => {
 
       let todayStatus = null;
       if (todayStatusResp.status === 'fulfilled') {
-        const t = todayStatusResp.value?.data ?? todayStatusResp.value;
-        if (Array.isArray(t)) {
-          todayStatus = pickMostRecent(t);
-        } else if (t && typeof t === 'object') {
-          todayStatus = t.record ?? t.attendance ?? t;
-        }
+        const data = todayStatusResp.value?.data ?? todayStatusResp.value;
+        todayStatus = Array.isArray(data) ? data[0] : data;
       }
 
       let monthlyStats = null;
       if (monthlyStatsResp.status === 'fulfilled') {
-        const m = monthlyStatsResp.value?.data ?? monthlyStatsResp.value;
-        monthlyStats = normalizeMonthlyStats(m);
+        monthlyStats = monthlyStatsResp.value?.data ?? monthlyStatsResp.value;
       }
-
-      const todaysCheckIns = todayStatus ? 1 : 0;
-      const lastCheckInTime = todayStatus?.checkInTime || todayStatus?.createdAt || null;
 
       setAttendanceData({
         todayStatus,
         monthlyStats,
-        todaysCheckIns,
-        lastCheckInTime
+        todaysCheckIns: todayStatus ? 1 : 0
       });
 
     } catch (error) {
-      console.error('❌ Error fetching attendance:', error);
-      setAttendanceData({
-        todayStatus: null,
-        monthlyStats: null,
-        todaysCheckIns: 0,
-        lastCheckInTime: null
-      });
+      console.error('Error fetching attendance:', error);
     }
   };
-
+  
+  // Fetch agent stats
   const fetchAgentStats = async () => {
     if (!agent?.id && !agent?._id) return;
     
     try {
       const agentId = agent.id || agent._id;
-      const [overviewResponse, statsResponse, bookingsResponse] = await Promise.all([
+      
+      // Get current month's start and end dates
+      const now = new Date();
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      const [overviewResponse, bookingsResponse] = await Promise.all([
         agentSalesService.getAgentSalesOverview(agentId),
-        agentSalesService.getAgentBookingStats(agentId),
-        agentSalesService.getAgentBookings(agentId, { limit: 5 })
+        agentSalesService.getAgentBookings(agentId, { limit: 100 }) // Get more bookings to filter current month
       ]);
 
-      const statsData = {
-        overview: overviewResponse?.overview || {},
-        bookingStats: statsResponse?.overview || {},
-        recentBookings: bookingsResponse?.bookings || bookingsResponse || [],
-        promoCodes: overviewResponse?.promoCodeAnalytics || []
-      };
-
-      setAgentStats(statsData);
-
-      // Update stats for UI
+      const overview = overviewResponse?.data?.overview || {};
+      
+      // Get all bookings
+      const allBookings = Array.isArray(bookingsResponse?.data?.bookings) 
+        ? bookingsResponse.data.bookings 
+        : Array.isArray(bookingsResponse?.bookings) 
+        ? bookingsResponse.bookings 
+        : [];
+      
+      // Filter current month's bookings
+      const currentMonthBookings = allBookings.filter(booking => {
+        const bookingDate = new Date(booking.createdAt);
+        return bookingDate >= currentMonthStart && bookingDate <= currentMonthEnd;
+      });
+      
+      // Filter current month's completed bookings
+      const currentMonthCompletedBookings = currentMonthBookings.filter(booking => 
+        booking.status === 'completed' || booking.status === 'Completed'
+      );
+      
       setStats({
-        totalBookings: statsData.overview.totalBookings || 0,
-        monthlyRevenue: statsData.overview.monthlyRevenue || 0,
-        activeLeads: statsData.overview.activeLeads || 0,
-        conversionRate: statsData.overview.conversionRate || 0
+        totalBookings: currentMonthBookings.length, // Current month's total bookings
+        monthlyTarget: agent.monthlyTarget || 0, // Agent's monthly sales target
+        achievedSales: currentMonthCompletedBookings.length, // Current month's completed bookings
+        activeLeads: overview.activePromoCodes || 0,
+        conversionRate: overview.conversionRate || 0
       });
 
-      // Create recent activity from bookings
-      const activity = statsData.recentBookings.slice(0, 5).map((booking, index) => ({
+      // Create recent activity from latest bookings
+      const activity = allBookings.slice(0, 5).map((booking, index) => ({
         id: booking._id || index,
-        type: 'booking',
-        status: booking.status === 'completed' ? 'success' : 'pending',
-        message: `New booking from ${booking.formData?.firstName || 'Customer'}`,
-        amount: booking.amount || Math.random() * 1000,
-        time: new Date(booking.createdAt).toLocaleDateString('en-IN', { 
-          month: 'short', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
+        message: `New booking from ${booking?.formData?.firstName || booking?.customerName || 'Customer'}`,
+        time: new Date(booking.createdAt).toLocaleDateString('en-IN', {
+          month: 'short',
+          day: 'numeric'
         })
       }));
 
@@ -235,11 +174,9 @@ const HomeScreen = () => {
 
   const fetchLocationData = async () => {
     try {
-      // Get location from agent's current location only (real-time)
       let location = null;
       let address = '';
 
-      // Use agent's current location from context (real-time)
       if (agent?.location?.latitude && agent?.location?.longitude) {
         location = {
           latitude: agent.location.latitude,
@@ -247,12 +184,9 @@ const HomeScreen = () => {
           accuracy: agent.location.accuracy
         };
         address = agent.location.address || '';
-        console.log('✅ Using real-time agent location from context:', location);
       }
-      // If agent doesn't have location yet, try to fetch fresh
       else {
         try {
-          console.log('📍 Agent location not available, fetching fresh...');
           const freshLocation = await getCurrentLocation();
           if (freshLocation) {
             location = freshLocation;
@@ -262,7 +196,6 @@ const HomeScreen = () => {
             } catch (addressError) {
               console.warn('Could not get address:', addressError);
             }
-            console.log('✅ Fetched fresh location from browser:', location);
           }
         } catch (error) {
           console.warn('Failed to get fresh location from browser:', error);
@@ -270,7 +203,6 @@ const HomeScreen = () => {
       }
 
       if (!location || !location.latitude || !location.longitude) {
-        console.warn('❌ No valid location found');
         setCurrentAddress('Location unavailable');
         setIsAtOffice(false);
         setDistance(null);
@@ -279,9 +211,7 @@ const HomeScreen = () => {
         return;
       }
 
-      // If accuracy exists and is too poor, don't use this location
       if (location.accuracy && location.accuracy > ACCURACY_THRESHOLD) {
-        console.warn(`⚠️ Location accuracy ${location.accuracy}m is worse than threshold ${ACCURACY_THRESHOLD}m — ignoring`);
         setCurrentAddress('Location unavailable (low accuracy)');
         setIsAtOffice(false);
         setDistance(null);
@@ -290,15 +220,12 @@ const HomeScreen = () => {
         return;
       }
 
-      // Calculate distance to office
       const dist = getDistance(
         location.latitude,
         location.longitude,
         officeLocation.latitude,
         officeLocation.longitude
       );
-      
-      console.log('📏 Distance to office:', dist, 'meters, Check radius:', checkRadius);
       
       setCurrentAddress(address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
       setIsAtOffice(dist <= checkRadius);
@@ -316,13 +243,11 @@ const HomeScreen = () => {
 
   const fetchAllData = async () => {
     if (!isLoggedIn || agentLoading) {
-      console.log('⏳ Waiting for login or agent to load...');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('🔄 Fetching all dashboard data...');
       await Promise.all([
         fetchLocationData(),
         fetchAttendanceData(),
@@ -352,40 +277,35 @@ const HomeScreen = () => {
   // Watch for agent location changes specifically
   useEffect(() => {
     if (agent?.location && isLoggedIn) {
-      console.log('📍 Agent location updated, refreshing display:', agent.location);
       fetchLocationData();
     }
   }, [agent?.location?.latitude, agent?.location?.longitude]);
 
-  // Show loading while agent context is loading
+  // Redirect if not logged in (must be in useEffect to avoid setState during render)
+  useEffect(() => {
+    if (!agentLoading && !isLoggedIn) {
+      router.push('/agent/login');
+    }
+  }, [isLoggedIn, agentLoading, router]);
+
+  // Show loading
   if (agentLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"
-          />
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-slate-600 text-lg font-medium"
-          >
-            Loading your dashboard...
-          </motion.p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Redirect if not logged in
+  // Return null while redirecting
   if (!isLoggedIn) {
-    router.push('/agent/login');
     return null;
   }
 
-  // UI Helpers
+  // Helper functions
   const formatDistance = (dist) => {
     if (dist == null) return 'Unknown';
     
@@ -410,101 +330,63 @@ const HomeScreen = () => {
   const goToAttendance = () => router.push('/agent/attendance');
   const goToSales = () => router.push('/agent/sales');
 
+  // Calculate progress percentage (sales count based)
+  const progressPercentage = stats.monthlyTarget > 0 
+    ? Math.min(Math.round((stats.achievedSales / stats.monthlyTarget) * 100), 100)
+    : 0;
+
   // Stat cards data
   const statCards = [
     {
-      title: "Today's Check-ins",
-      value: attendanceData.todaysCheckIns?.toString() || '0',
+      title: "Total Bookings",
+      value: stats.totalBookings.toString(),
+      subtitle: "This Month",
       icon: CheckCircle2,
-      color: 'from-emerald-500 to-green-600',
-      bgColor: 'bg-gradient-to-br from-emerald-50 to-green-100',
-      textColor: 'text-emerald-700',
-      onClick: goToAttendance
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      onClick: goToSales
     },
     {
       title: "Present Days",
       value: (attendanceData.monthlyStats?.present || 0).toString(),
       icon: Users,
-      color: 'from-blue-500 to-indigo-600',
-      bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-100',
-      textColor: 'text-blue-700',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
       onClick: goToAttendance
     },
     {
-      title: "Monthly Revenue",
-      value: `₹${stats.monthlyRevenue.toLocaleString()}`,
-      icon: DollarSign,
-      color: 'from-violet-500 to-purple-600',
-      bgColor: 'bg-gradient-to-br from-violet-50 to-purple-100',
-      textColor: 'text-violet-700',
+      title: "Monthly Target",
+      value: stats.monthlyTarget.toString(),
+      subtitle: "Sales Target",
+      icon: Target,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
       onClick: goToSales
     },
     {
-      title: "Active Leads",
-      value: stats.activeLeads.toString(),
+      title: "Completed Sales",
+      value: stats.achievedSales.toString(),
+      subtitle: "This Month",
       icon: TrendingUp,
-      color: 'from-amber-500 to-orange-600',
-      bgColor: 'bg-gradient-to-br from-amber-50 to-orange-100',
-      textColor: 'text-amber-700',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
       onClick: goToSales
     }
   ];
 
-  const getActivityIcon = (type, status) => {
-    const iconProps = { className: "h-5 w-5" };
-    
-    switch (status) {
-      case 'success':
-        return <CheckCircle2 {...iconProps} className="text-emerald-500" />;
-      case 'pending':
-        return <Clock {...iconProps} className="text-amber-500" />;
-      default:
-        return <Activity {...iconProps} className="text-slate-500" />;
-    }
-  };
-
-  // Normalize monthly stats
-  const ms = attendanceData.monthlyStats || {};
-  const presentCount = ms.present ?? 0;
-  const lateCount = ms.late ?? 0;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/10 p-4 sm:p-6 lg:p-8">
-      {/* Header Section */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 lg:mb-8"
-      >
-        <div className="flex-1">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
-            Welcome back, {agent?.agentName || agent?.name || "Agent"}! 👋
-          </h1>
-          <p className="text-slate-600 mt-2 text-lg lg:text-xl max-w-2xl">
-            Here's your performance overview and today's insights
-          </p>
-        </div>
-        
-        {/* Status Badge */}
-        <motion.div 
-          className="flex-shrink-0"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3">
-            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-            <div>
-              <p className="font-semibold text-sm">Online Status</p>
-              <p className="text-xs opacity-90">Active and ready</p>
-            </div>
-            <Sparkles className="h-5 w-5" />
-          </div>
-        </motion.div>
-      </motion.div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="mb-8 p-16">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          Welcome back, {agent?.agentName || agent?.name || "Agent"}!
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Here's your performance overview
+        </p>
+      </div>
 
-      {/* Location Info Card */}
+      {/* Location Card */}
       {(currentAddress || distance !== null) && (
         <motion.div
           initial="hidden"
@@ -565,44 +447,34 @@ const HomeScreen = () => {
       )}
 
       {/* Stats Grid */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={2}
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8"
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat, index) => (
           <motion.div
             key={index}
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            variants={scaleIn}
-            custom={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            whileHover={{ scale: 1.02 }}
             onClick={stat.onClick}
-            className="cursor-pointer group"
+            className="cursor-pointer"
           >
-            <div className={`${stat.bgColor} backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 group-hover:shadow-xl transition-all duration-300 h-full`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-white/80 shadow-sm`}>
-                  <stat.icon className={`h-6 w-6 ${stat.textColor}`} />
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {stat.title}
+                    {stat.subtitle && <span className="text-xs ml-1">({stat.subtitle})</span>}
+                  </p>
                 </div>
-                <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${stat.color}`}></div>
-              </div>
-              <div>
-                <p className="text-2xl lg:text-3xl font-bold text-slate-900 mb-1">
-                  {stat.value}
-                </p>
-                <p className="text-slate-600 text-sm font-medium">{stat.title}</p>
-              </div>
-              <div className="mt-4 flex items-center text-xs text-slate-500">
-                <span>View details</span>
-                <ChevronRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
               </div>
             </div>
           </motion.div>
         ))}
-      </motion.div>
+      </div>
 
       {/* Main Content Grid - UPDATED LAYOUT WITH SHIFT SCHEDULE */}
       <div className="grid grid-cols-1 xl:grid-cols-7 gap-6 lg:gap-8">
@@ -637,73 +509,36 @@ const HomeScreen = () => {
                 </div>
               </div>
             </div>
-
-            {/* Activity List */}
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-4">
+              <div className="space-y-3">
                 {recentActivity.length > 0 ? recentActivity.map((activity, index) => (
                   <motion.div
                     key={activity.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1, duration: 0.4 }}
-                    className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 group"
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
-                    <div className="flex items-center space-x-4 flex-1 min-w-0">
-                      <div className="flex-shrink-0">
-                        {getActivityIcon(activity.type, activity.status)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-semibold text-slate-900 truncate">
-                          {activity.message}
-                        </h4>
-                        <p className="text-sm text-slate-500 mt-1 font-medium">
-                          {activity.time}
-                        </p>
-                      </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{activity.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
                     </div>
-
-                    <div className="flex items-center space-x-3 flex-shrink-0">
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-900">
-                          ₹{activity.amount.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-                        activity.status === 'success'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
-                        {activity.status}
-                      </div>
-                      <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-100 rounded-lg transition-all">
-                        <Eye className="h-4 w-4 text-slate-600" />
-                      </button>
-                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
                   </motion.div>
                 )) : (
-                  <div className="text-center py-12">
-                    <Activity className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                    <p className="text-slate-500 text-lg">No recent activity</p>
-                    <p className="text-slate-400 text-sm mt-2">New activities will appear here</p>
+                  <div className="text-center py-8 text-gray-500">
+                    <Activity className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                    <p>No recent activity</p>
                   </div>
                 )}
               </div>
-
-              {/* View All Button */}
               {recentActivity.length > 0 && (
-                <div className="mt-6">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={goToSales}
-                    className="w-full bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 px-6 py-3 rounded-xl font-semibold text-slate-700 shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    View All Activity
-                    <ChevronRight className="h-4 w-4" />
-                  </motion.button>
-                </div>
+                <button 
+                  onClick={goToSales}
+                  className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  View All Activity
+                </button>
               )}
             </div>
           </div>
@@ -721,112 +556,92 @@ const HomeScreen = () => {
           <ShiftSchedule />
 
           {/* Quick Actions */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
-            <div className="p-6 border-b border-slate-100/50 bg-gradient-to-r from-blue-50 to-indigo-50/50">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-xl mr-3">
-                  <Zap className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">Quick Actions</h3>
-              </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
             </div>
             <div className="p-4 space-y-3">
-              {[
-                { icon: Users, label: "Add New Lead", color: "from-blue-500 to-blue-600", onClick: goToSales },
-                { icon: Calendar, label: "Schedule Follow-up", color: "from-emerald-500 to-emerald-600" },
-                { icon: BarChart3, label: "View Attendance", color: "from-purple-500 to-purple-600", onClick: goToAttendance },
-                { icon: DollarSign, label: "Generate Report", color: "from-amber-500 to-amber-600" }
-              ].map((action, index) => (
-                <motion.button
-                  key={index}
-                  whileHover={{ scale: 1.02, x: 5 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={action.onClick}
-                  className={`w-full text-left bg-gradient-to-r ${action.color} hover:shadow-lg text-white border-0 rounded-xl py-4 font-semibold transition-all duration-200 flex items-center px-4 gap-3`}
-                >
-                  <action.icon className="h-5 w-5" />
-                  {action.label}
-                </motion.button>
-              ))}
+              <button 
+                onClick={goToSales}
+                className="w-full text-left bg-blue-50 hover:bg-blue-100 text-blue-700 p-3 rounded-lg text-sm font-medium transition-colors"
+              >
+                Add New Lead
+              </button>
+              <button 
+                onClick={goToAttendance}
+                className="w-full text-left bg-green-50 hover:bg-green-100 text-green-700 p-3 rounded-lg text-sm font-medium transition-colors"
+              >
+                View Attendance
+              </button>
+              <button className="w-full text-left bg-purple-50 hover:bg-purple-100 text-purple-700 p-3 rounded-lg text-sm font-medium transition-colors">
+                Generate Report
+              </button>
             </div>
           </div>
 
           {/* Monthly Goal */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
-            <div className="p-6 border-b border-slate-100/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="p-2 bg-emerald-100 rounded-xl mr-3">
-                    <Award className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900">Monthly Goal</h3>
-                </div>
-                <div className="bg-emerald-100 text-emerald-800 px-3 py-1 text-sm font-semibold rounded-full">
-                  🎯 Active
-                </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-4 border-b border-gray-200 flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                <Target className="h-5 w-5 text-white" />
               </div>
-            </div>
-            <div className="p-6">
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-slate-700">Revenue Target</span>
-                    <span className="text-sm text-slate-600">₹15,000</span>
-                  </div>
-                  <div className="relative">
-                    <div className="w-full bg-slate-200 rounded-full h-3 shadow-inner">
-                      <motion.div
-                        className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-3 rounded-full shadow-sm"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min((stats.monthlyRevenue / 15000) * 100, 100)}%` }}
-                        transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
-                      ></motion.div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  {[
-                    { value: `₹${stats.monthlyRevenue.toLocaleString()}`, label: "Current" },
-                    { value: `₹${Math.max(0, 15000 - stats.monthlyRevenue).toLocaleString()}`, label: "Remaining" },
-                    { value: `${Math.round(Math.min((stats.monthlyRevenue / 15000) * 100, 100))}%`, label: "Progress" }
-                  ].map((item, index) => (
-                    <div key={index} className="bg-slate-50 rounded-xl p-3">
-                      <p className="text-lg font-bold text-slate-900">{item.value}</p>
-                      <p className="text-xs text-slate-600">{item.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Insights */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
-            <div className="p-6 border-b border-slate-100/50 bg-gradient-to-r from-amber-50 to-orange-50/50">
-              <div className="flex items-center">
-                <div className="p-2 bg-amber-100 rounded-xl mr-3">
-                  <Star className="h-6 w-6 text-amber-600" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">Performance Insights</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Monthly Sales Target</h3>
+                <p className="text-xs text-gray-500">Track your sales count progress</p>
               </div>
             </div>
             <div className="p-4">
-              <div className="space-y-3">
-                {[
-                  { icon: TrendingUp, label: "Best Month", value: "December", color: "emerald" },
-                  { icon: Users, label: "Top Service", value: "Car Detailing", color: "blue" },
-                  { icon: Target, label: "Avg Rating", value: "4.8 ⭐", color: "purple" },
-                  { icon: BarChart3, label: "Conversion Rate", value: `${stats.conversionRate}%`, color: "amber" }
-                ].map((insight, index) => (
-                  <div key={index} className={`flex items-center justify-between p-3 bg-${insight.color}-50 rounded-xl border border-${insight.color}-200`}>
-                    <div className="flex items-center text-sm">
-                      <insight.icon className={`h-4 w-4 mr-2 text-${insight.color}-600`} />
-                      <span className="text-slate-700 font-medium">{insight.label}</span>
-                    </div>
-                    <span className={`font-bold text-${insight.color}-700`}>{insight.value}</span>
+              <div className="mb-4">
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-600 font-medium">Sales Progress</span>
+                  <span className="text-lg font-bold text-purple-600">{progressPercentage}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500 relative"
+                    style={{ width: `${progressPercentage}%` }}
+                  >
+                    {progressPercentage > 10 && (
+                      <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    )}
                   </div>
-                ))}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-3 rounded-lg border border-purple-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target className="h-4 w-4 text-purple-600" />
+                    <p className="text-xs text-gray-600 font-medium">Target</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-lg">{stats.monthlyTarget}</p>
+                  <p className="text-xs text-gray-500">Completed Sales</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-lg border border-green-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <p className="text-xs text-gray-600 font-medium">Completed</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-lg">{stats.achievedSales}</p>
+                  <p className="text-xs text-gray-500">Sales this month</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-3 rounded-lg border border-orange-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="h-4 w-4 text-orange-600" />
+                  <p className="text-xs text-gray-600 font-medium">Remaining</p>
+                </div>
+                <p className="font-bold text-gray-900 text-lg">
+                  {Math.max(0, stats.monthlyTarget - stats.achievedSales)}
+                </p>
+                <p className="text-xs text-gray-500">Completed sales needed</p>
+                {stats.achievedSales >= stats.monthlyTarget && stats.monthlyTarget > 0 && (
+                  <div className="mt-2 flex items-center gap-1 text-green-600">
+                    <Award className="h-4 w-4" />
+                    <span className="text-xs font-semibold">🎉 Monthly Target Achieved!</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -283,10 +283,10 @@ api.interceptors.request.use(
 // ===============================
 api.interceptors.response.use(
   (response) => {
-    console.log("✅ API Success:", {
-      url: response.config.url,
-      status: response.status,
-    });
+    // console.log("✅ API Success:", {
+    //   url: response.config.url,
+    //   status: response.status,
+    // });
     return response;
   },
 

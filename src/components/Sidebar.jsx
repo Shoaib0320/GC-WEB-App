@@ -24,7 +24,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-  import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -56,7 +56,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { label: "Agents", href: "/dashboard/agents", icon: User, permission: { module: "agent", action: "view" } },
     { label: "Promo Code", href: "/dashboard/promo-codes", icon: Code2Icon, permission: { module: "promoCode", action: "view" } },
     { label: "Sales", href: "/dashboard/sales", icon: DollarSign, permission: { module: "sales", action: "view" } },
-    { label: "Attedance", href: "/dashboard/view-attendance", icon: ClipboardList, permission: { module: "attendance", action: "view" } },
+    { label: "Attendance", href: "/dashboard/view-attendance", icon: ClipboardList, permission: { module: "attendance", action: "view" } },
     { label: "Notifications", href: "/dashboard/notifications", icon: Bell, permission: { module: "notification", action: "view" } },
     { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp, permission: { module: "analytics", action: "view" } },
     { label: "Setting", href: "/dashboard/settings", icon: Settings, permission: { module: "settings", action: "view" } },
@@ -156,29 +156,42 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
+                    onClick={() => isMobile && setOpenMobile(false)}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium group transition-all duration-200 overflow-hidden",
+                      "relative",
 
                       // Active styles
                       isActive
-                        ? "bg-[#10B5DB]/10 text-[#10B5DB] dark:text-[#10B5DB] dark:bg-[#10B5DB]/30 border border-[#10B5DB]/20 shadow"
+                        ? "bg-[#10B5DB]/10 text-[#10B5DB] dark:text-[#10B5DB] dark:bg-[#10B5DB]/30 border border-[#10B5DB]/20 shadow-sm"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-slate-800/70",
 
                       // Collapsed icon mode (desktop only)
                       !isMobile && collapsed ? "justify-center px-3" : "justify-start"
                     )}
                   >
+                    {/* Active indicator line */}
+                    {isActive && !isMobile && collapsed && (
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-[#10B5DB] rounded-r-full" />
+                    )}
+
                     <item.icon
                       size={22}
                       className={cn(
-                        "transition-all duration-200",
-                        isActive && "text-[#10B5DB]"
+                        "transition-all duration-200 flex-shrink-0",
+                        isActive 
+                          ? "text-[#10B5DB]" 
+                          : "text-gray-600 dark:text-gray-400 group-hover:text-[#10B5DB]"
                       )}
                     />
 
-                    {(!isMobile || openMobile) && (
+                    {/* Show text only when sidebar is open (not collapsed) OR on mobile when open */}
+                    {((!isMobile && !collapsed) || (isMobile && openMobile)) && (
                       <span className="truncate transition-opacity duration-200">
                         {item.label}
+                        {isActive && (
+                          <span className="ml-2 text-xs text-[#10B5DB]/70">●</span>
+                        )}
                       </span>
                     )}
                   </Link>
@@ -188,6 +201,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                 {!isMobile && collapsed && (
                   <TooltipContent side="right" className="text-sm">
                     {item.label}
+                    {isActive && " (Active)"}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -205,8 +219,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               !isMobile && collapsed ? "justify-center" : "justify-start"
             )}
           >
-            <LogOut size={20} />
-            {(!isMobile || openMobile) && <span>Logout</span>}
+            <LogOut size={20} className="flex-shrink-0" />
+            {/* Show "Logout" text only when sidebar is open (not collapsed) OR on mobile when open */}
+            {((!isMobile && !collapsed) || (isMobile && openMobile)) && <span>Logout</span>}
           </button>
         </div>
       </motion.aside>

@@ -1,9 +1,11 @@
 
 // services/attendanceService.js
+import { useAgent } from '@/context/AgentContext.js';
 import { AUTO_CHECKOUT_CONFIG } from '../config/autoCheckoutConfig.js';
 import api from '../lib/api';
 
 export const agentAttendanceService = {
+
   // =============================
   // HELPER: localStorage methods (Browser environment)
   // =============================
@@ -340,5 +342,190 @@ async removeFromLocal(key) {
       console.error('❌ Error checking shift end time:', error);
       return false;
     }
-  }
+  },
+   // =============================
+  // NEW FUNCTIONS FOR ATTENDANCE FILTER
+  // =============================
+  
+  /**
+   * Get first attendance date for the user
+   */
+  async getFirstAttendanceDate() {
+    try {
+      const token = localStorage.getItem('agentToken') || localStorage.getItem('accessToken');
+      if (!token) {
+        console.error('No token found');
+        throw new Error('No authentication token found');
+      }
+
+      const response = await api.get('/attendance/first-record', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        // Fallback: get from user data
+        return await this.getFirstDateFallback();
+      }
+    } catch (error) {
+      console.error('Error getting first attendance date:', error);
+      return await this.getFirstDateFallback();
+    }
+  },
+
+  /**
+   * Fallback method to get first date from user creation or attendance history
+   */
+  async getFirstDateFallback() {
+    try {
+      // Try to get from attendance history
+      const history = await this.getAttendanceHistory(1, 1);
+      if (history.records && history.records.length > 0) {
+        const sortedRecords = history.records.sort((a, b) => {
+          const dateA = new Date(a.date || a.checkInTime || a.createdAt);
+          const dateB = new Date(b.date || b.checkInTime || b.createdAt);
+          return dateA - dateB;
+        });
+        
+        const firstRecord = sortedRecords[0];
+        const sourceDate = firstRecord.date || firstRecord.checkInTime || firstRecord.createdAt;
+        const date = new Date(sourceDate);
+        
+        return {
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          date: date.toISOString(),
+          readable: date.toLocaleDateString('en-PK', { 
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          source: 'history'
+        };
+      }
+
+      // Fallback to current year - 1
+      const currentDate = new Date();
+      return {
+        year: currentDate.getFullYear() - 1,
+        month: 1,
+        date: new Date(currentDate.getFullYear() - 1, 0, 1).toISOString(),
+        readable: `January ${currentDate.getFullYear() - 1}`,
+        source: 'fallback'
+      };
+    } catch (error) {
+      console.error('Fallback failed:', error);
+      const currentDate = new Date();
+      return {
+        year: currentDate.getFullYear(),
+        month: currentDate.getMonth() + 1,
+        date: currentDate.toISOString(),
+        readable: currentDate.toLocaleDateString('en-PK', { 
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        source: 'current_date'
+      };
+    }
+  },
+
+  /**
+   * Get available years for filtering
+   */
+  async getAvailableYears() {
+    try {
+      const firstDate = await this.getFirstAttendanceDate();
+      const currentYear = new Date().getFullYear();
+      
+      const years = [];
+      for (let y = firstDate.year; y <= currentYear; y += 1) {
+        years.push(y);
+      }
+      return years.length > 0 ? years : [currentYear];
+    } catch (error) {
+      console.error('Error getting available years:', error);
+      const currentYear = new Date().getFullYear();
+      return [currentYear];
+    }
+  },
+
+  /**
+   * Get available months for a specific year
+   */
+  async getAvailableMonths(year) {
+    try {
+      const firstDate = await this.getFirstAttendanceDate();
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+
+      const allMonths = [
+        { id: 1, name: 'January', short: 'Jan' },
+        { id: 2, name: 'February', short: 'Feb' },
+        { id: 3, name: 'March', short: 'Mar' },
+        { id: 4, name: 'April', short: 'Apr' },
+        { id: 5, name: 'May', short: 'May' },
+        { id: 6, name: 'June', short: 'Jun' },
+        { id: 7, name: 'July', short: 'Jul' },
+        { id: 8, name: 'August', short: 'Aug' },
+        { id: 9, name: 'September', short: 'Sep' },
+        { id: 10, name: 'October', short: 'Oct' },
+        { id: 11, name: 'November', short: 'Nov' },
+        { id: 12, name: 'December', short: 'Dec' },
+      ];
+
+      // Filter logic based on first date and current date
+      if (year < firstDate.year) return [];
+
+      if (year > firstDate.year && year < currentYear) return allMonths;
+
+      if (year === firstDate.year && year === currentYear) {
+        return allMonths.filter(m => m.id >= firstDate.month && m.id <= currentMonth);
+      } else if (year === firstDate.year) {
+        return allMonths.filter(m => m.id >= firstDate.month);
+      } else if (year === currentYear) {
+        return allMonths.filter(m => m.id <= currentMonth);
+      }
+
+      return allMonths;
+    } catch (error) {
+      console.error('Error getting available months:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get attendance summary for specific month/year
+   */
+  async getFilteredAttendance(month, year) {
+    try {
+      const response = await api.get(`/attendance/my?month=${month}&year=${year}`);
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          summary: response.data.data?.summary || null,
+          records: response.data.data?.records || []
+        };
+      }
+      
+      return {
+        success: false,
+        data: null,
+        error: response.data.message || 'Failed to get attendance data'
+      };
+    } catch (error) {
+      console.error('Error getting filtered attendance:', error);
+      return {
+        success: false,
+        data: null,
+        error: error.message
+      };
+    }
+  },
 };

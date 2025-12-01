@@ -1,25 +1,9 @@
-//app/(agent)/agent/notification/page.jsx
+// app/(agent)/agent/notification/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Bell, BellRing,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Info,
-  Loader,
-  CheckCheck,
-  Filter,
-  Search,
-  X
-} from "lucide-react";
+import { Bell, BellRing, CheckCircle, Clock, AlertCircle, Info, Loader, Filter, Search, X } from "lucide-react";
 import { useAgent } from "@/context/AgentContext";
 import { agentNotificationService } from "@/services/agentNotificationService";
 
@@ -30,9 +14,8 @@ export default function AgentNotificationPage() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [markingAsRead, setMarkingAsRead] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, unread, read
+  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn && agent) {
@@ -43,39 +26,30 @@ export default function AgentNotificationPage() {
   const loadNotifications = async () => {
     try {
       setLoading(true);
-
-      // Fetch both types of notifications
       const [specificNotifications, allNotifications] = await Promise.all([
-        // Agent-specific notifications
         agentNotificationService.fetchNotificationsForAgent(agent._id || agent.agentId),
-        
-        // All notifications (for all agents)
         agentNotificationService.fetchUserNotifications()
       ]);
 
-      // Combine both types of notifications
       const combinedNotifications = [
         ...specificNotifications.map(notif => ({ ...notif, notificationType: 'specific' })),
         ...allNotifications.map(notif => ({ ...notif, notificationType: 'all' }))
       ];
 
-      // Sort by creation date (newest first)
       combinedNotifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
       setNotifications(combinedNotifications);
     } catch (error) {
       console.error("Error loading notifications:", error);
       
-      // Fallback to mock data if API fails
       const fallbackData = [
         {
           _id: 'mock-1',
           status: 'pending',
-          title: 'New Car Detailing Booking Pending',
-          message: 'BMW X5 interior and exterior detailing scheduled for tomorrow at 10 AM.',
+          title: 'New Car Detailing Booking',
+          message: 'BMW X5 detailing scheduled for tomorrow at 10 AM.',
           isRead: false,
           createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'BMW X5', service: 'Full Detail', price: 250 },
+          data: { vehicle: 'BMW X5', service: 'Full Detail' },
           notificationType: 'specific'
         },
         {
@@ -85,27 +59,17 @@ export default function AgentNotificationPage() {
           message: 'Toyota Camry ceramic coating maintenance check completed.',
           isRead: false,
           createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          data: { vehicle: 'Toyota Camry', service: 'Ceramic Coating Maintenance' },
+          data: { vehicle: 'Toyota Camry', service: 'Ceramic Coating' },
           notificationType: 'specific'
         },
         {
           _id: 'mock-3',
           status: 'announcement',
-          title: 'New Service Training Available',
-          message: 'Advanced ceramic coating training session available next Tuesday for all agents.',
+          title: 'New Training Available',
+          message: 'Advanced ceramic coating training session next Tuesday.',
           isRead: true,
           createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          data: { training: 'Advanced Ceramic Coating', date: 'Next Tuesday' },
-          notificationType: 'all'
-        },
-        {
-          _id: 'mock-4',
-          status: 'info',
-          title: 'System Maintenance Notice',
-          message: 'The booking system will be down for maintenance this Sunday from 2 AM to 4 AM.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          data: { maintenance: 'System Update', duration: '2 hours' },
+          data: { training: 'Advanced Ceramic Coating' },
           notificationType: 'all'
         }
       ];
@@ -119,11 +83,7 @@ export default function AgentNotificationPage() {
   const markAsRead = async (notificationId) => {
     try {
       setMarkingAsRead(notificationId);
-      
-      // Update via API
       await agentNotificationService.markAsRead(notificationId);
-      
-      // Update local state
       setNotifications(prev =>
         prev.map(notif =>
           notif._id === notificationId
@@ -138,76 +98,62 @@ export default function AgentNotificationPage() {
     }
   };
 
-  const getNotificationIcon = (status) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case 'complete':
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
+        return 'text-green-600 bg-green-50';
       case 'pending':
       case 'warning':
-        return <Clock className="h-5 w-5 text-blue-600" />;
+        return 'text-blue-600 bg-blue-50';
       case 'cancel':
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
+        return 'text-red-600 bg-red-50';
       case 'announcement':
-        return <BellRing className="h-5 w-5 text-purple-600" />;
+        return 'text-purple-600 bg-purple-50';
       default:
-        return <Info className="h-5 w-5 text-gray-600" />;
+        return 'text-gray-600 bg-gray-50';
     }
   };
 
-  const getNotificationBadge = (status, notificationType) => {
-    // Type badge
-    const typeBadge = notificationType === 'specific' 
-      ? <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs mr-2">For You</Badge>
-      : <Badge className="bg-gray-100 text-gray-800 border-gray-200 text-xs mr-2">All Agents</Badge>;
-
-    // Status badge
-    let statusBadge;
+  const getStatusIcon = (status) => {
     switch (status) {
       case 'complete':
       case 'success':
-        statusBadge = <Badge className="bg-green-100 text-green-800 border-green-200">Complete</Badge>;
-        break;
+        return <CheckCircle className="h-4 w-4" />;
       case 'pending':
       case 'warning':
-        statusBadge = <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending</Badge>;
-        break;
+        return <Clock className="h-4 w-4" />;
       case 'cancel':
       case 'error':
-        statusBadge = <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
-        break;
+        return <AlertCircle className="h-4 w-4" />;
       case 'announcement':
-        statusBadge = <Badge className="bg-purple-100 text-purple-800 border-purple-200">Announcement</Badge>;
-        break;
+        return <BellRing className="h-4 w-4" />;
       default:
-        statusBadge = <Badge className="bg-gray-100 text-gray-800 border-gray-200">Info</Badge>;
+        return <Info className="h-4 w-4" />;
     }
-
-    return (
-      <div className="flex items-center gap-2">
-        {typeBadge}
-        {statusBadge}
-      </div>
-    );
   };
 
-  const fadeUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i = 1) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
-    }),
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   if (contextLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
           <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-slate-700 font-medium text-base">Loading notifications...</p>
-          <p className="text-slate-500 text-xs mt-2">Preparing your updates</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -215,17 +161,15 @@ export default function AgentNotificationPage() {
 
   if (!isLoggedIn || !agent) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
-          <p className="text-slate-700 font-medium">Please login to view notifications.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-700">Please login to view notifications.</p>
         </div>
       </div>
     );
   }
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  // Filter notifications based on current filter and search
   const filteredNotifications = notifications.filter(notification => {
     const matchesFilter = filter === 'all' ||
       (filter === 'unread' && !notification.isRead) ||
@@ -239,336 +183,201 @@ export default function AgentNotificationPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 p-2 space-y-3 sm:space-y-9 xl:p-10 text-left">
+    <div className="min-h-screen bg-gray-50 p-4">
       {/* Header */}
-      <motion.div
-        animate="visible"
-        variants={fadeUp}
-        custom={1}
-        className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-lg border border-white/20"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center">
-            <div className="p-2 sm:p-3 bg-blue-100 rounded-xl mr-3 sm:mr-4">
-              <Bell className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600" />
-            </div>
+      <div className="bg-white border-b border-gray-200 mb-6">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Notifications
-              </h1>
-              <p className="text-slate-600 mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base">
-                Stay updated with your activities and company announcements
-              </p>
+              <h1 className="text-xl font-bold text-gray-900 pt-6">Notifications</h1>
+              <p className="text-gray-600 text-sm">Stay updated with your activities</p>
             </div>
-          </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                onClick={() => setShowFilters(!showFilters)}
-                variant="outline"
-                className="bg-white/50 border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-xl font-semibold shadow-sm w-full sm:w-auto"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-            </motion.div>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Filters */}
-      {showFilters && (
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          custom={2}
-          className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-xl border border-white/20"
-        >
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search notifications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-              />
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={() => setFilter('all')}
-                variant={filter === 'all' ? 'default' : 'outline'}
-                className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  filter === 'all'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
-                    : 'bg-white border-slate-300 hover:bg-slate-100 text-slate-700'
-                }`}
-              >
-                All ({notifications.length})
-              </Button>
-              <Button
-                onClick={() => setFilter('unread')}
-                variant={filter === 'unread' ? 'default' : 'outline'}
-                className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  filter === 'unread'
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-md'
-                    : 'bg-white border-slate-300 hover:bg-slate-100 text-slate-700'
-                }`}
-              >
-                Unread ({unreadCount})
-              </Button>
-              <Button
-                onClick={() => setFilter('read')}
-                variant={filter === 'read' ? 'default' : 'outline'}
-                className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  filter === 'read'
-                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-md'
-                    : 'bg-white border-slate-300 hover:bg-slate-100 text-slate-700'
-                }`}
-              >
-                Read ({notifications.length - unreadCount})
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {/* Search and Filter */}
+      <div className="mb-6 space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search notifications..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${
+              filter === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilter('unread')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${
+              filter === 'unread'
+                ? 'bg-orange-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Unread ({unreadCount})
+          </button>
+          <button
+            onClick={() => setFilter('read')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${
+              filter === 'read'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Read
+          </button>
+        </div>
+      </div>
 
-      {/* Stats Cards */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={3}
-        className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
-      >
-        <motion.div
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-2xl overflow-hidden h-full">
-            <CardContent className="p-4 sm:p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between flex-1">
-                <div className="flex-1">
-                  <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    Total
-                  </p>
-                  <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
-                    {notifications.length}
-                  </p>
-                </div>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <BellRing className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-2xl overflow-hidden h-full">
-            <CardContent className="p-4 sm:p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between flex-1">
-                <div className="flex-1">
-                  <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    Unread
-                  </p>
-                  <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
-                    {unreadCount}
-                  </p>
-                </div>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-2xl overflow-hidden h-full">
-            <CardContent className="p-4 sm:p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between flex-1">
-                <div className="flex-1">
-                  <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    For You
-                  </p>
-                  <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
-                    {notifications.filter(n => n.notificationType === 'specific').length}
-                  </p>
-                </div>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-green-50 to-green-100 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-2xl overflow-hidden h-full">
-            <CardContent className="p-4 sm:p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between flex-1">
-                <div className="flex-1">
-                  <p className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">
-                    All Agents
-                  </p>
-                  <p className="text-lg sm:text-3xl font-bold text-slate-900 mt-1 sm:mt-2">
-                    {notifications.filter(n => n.notificationType === 'all').length}
-                  </p>
-                </div>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 shadow-lg flex items-center justify-center flex-shrink-0">
-                  <BellRing className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-600 mb-1">Total</p>
+          <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-600 mb-1">Unread</p>
+          <p className="text-2xl font-bold text-gray-900">{unreadCount}</p>
+        </div>
+      </div>
 
       {/* Notifications List */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={4}
-        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden"
-      >
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100/50 pb-4 sm:pb-6">
-          <CardTitle className="flex items-center text-lg sm:text-xl font-bold text-slate-800">
-            <div className="p-2 bg-blue-100 rounded-lg mr-3">
-              <Bell className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-            </div>
-            Recent Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
+      <div className="bg-white border border-gray-200 rounded-lg">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Notifications</h2>
+        </div>
+        
+        <div className="divide-y divide-gray-200">
           {loading ? (
-            <div className="text-center py-8">
-              <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-slate-600">Loading notifications...</p>
+            <div className="p-8 text-center">
+              <Loader className="h-6 w-6 animate-spin mx-auto mb-2 text-gray-400" />
+              <p className="text-gray-600">Loading notifications...</p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="text-center py-12">
-              <Bell className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">
+            <div className="p-8 text-center">
+              <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-gray-700 font-medium mb-1">
                 {searchTerm || filter !== 'all' ? 'No matching notifications' : 'No notifications yet'}
-              </h3>
-              <p className="text-slate-600">
+              </p>
+              <p className="text-gray-500 text-sm">
                 {searchTerm || filter !== 'all'
                   ? 'Try adjusting your filters or search terms.'
-                  : 'You\'ll see your notifications here when you have any updates.'
+                  : 'You\'ll see notifications here when you have updates.'
                 }
               </p>
               {(searchTerm || filter !== 'all') && (
-                <Button
+                <button
                   onClick={() => {
                     setSearchTerm('');
                     setFilter('all');
                   }}
-                  variant="outline"
-                  className="mt-4 bg-white/50 border-slate-300 hover:bg-slate-50"
+                  className="mt-3 text-sm text-blue-600 hover:text-blue-800"
                 >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Filters
-                </Button>
+                  Clear filters
+                </button>
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredNotifications.map((notification, index) => (
-                <motion.div
-                  key={notification._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.4 }}
-                  className={`p-4 sm:p-6 rounded-xl border transition-all duration-300 ${
-                    notification.isRead
-                      ? 'bg-slate-50/50 border-slate-200/50 hover:bg-slate-100/50'
-                      : 'bg-blue-50/50 border-blue-200/50 hover:bg-blue-100/50'
-                  } shadow-sm hover:shadow-md`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
-                      <div className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.status)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                          <div className="flex items-center space-x-2">
-                            {getNotificationBadge(notification.status, notification.notificationType)}
-                            {!notification.isRead && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                            )}
-                          </div>
-                          <span className="text-sm text-slate-500 font-medium">
-                            {new Date(notification.createdAt).toLocaleDateString()} at{' '}
-                            {new Date(notification.createdAt).toLocaleTimeString()}
-                          </span>
-                        </div>
-
-                        <h4 className={`text-sm sm:text-base font-semibold mb-2 ${
-                          notification.isRead ? 'text-slate-900' : 'text-slate-900'
+            filteredNotifications.map((notification) => (
+              <div
+                key={notification._id}
+                className={`p-4 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${getStatusColor(notification.status).split(' ')[1]}`}>
+                    {getStatusIcon(notification.status)}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${
+                          notification.notificationType === 'specific' 
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {notification.title}
-                        </h4>
-
-                        <p className={`text-sm leading-relaxed ${
-                          notification.isRead ? 'text-slate-600' : 'text-slate-700'
-                        }`}>
-                          {notification.message}
-                        </p>
-
-                        {notification.data && (
-                          <div className="mt-3 p-3 bg-white/50 rounded-lg border text-xs">
-                            <pre className="whitespace-pre-wrap text-slate-600">
-                              {JSON.stringify(notification.data, null, 2)}
-                            </pre>
-                          </div>
+                          {notification.notificationType === 'specific' ? 'For You' : 'All Agents'}
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(notification.status)}`}>
+                          {notification.status}
+                        </span>
+                        {!notification.isRead && (
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                         )}
                       </div>
+                      <span className="text-xs text-gray-500">
+                        {formatTime(notification.createdAt)}
+                      </span>
                     </div>
-
-                    {!notification.isRead && (
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button
+                    
+                    <h3 className="font-medium text-gray-900 mb-1">
+                      {notification.title}
+                    </h3>
+                    
+                    <p className="text-sm text-gray-600 mb-2">
+                      {notification.message}
+                    </p>
+                    
+                    {notification.data && (
+                      <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                        {JSON.stringify(notification.data)}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-gray-500">
+                        Submitted: {new Date(notification.createdAt).toLocaleDateString()}
+                      </span>
+                      
+                      {!notification.isRead && (
+                        <button
                           onClick={() => markAsRead(notification._id)}
                           disabled={markingAsRead === notification._id}
-                          size="sm"
-                          variant="outline"
-                          className="ml-3 flex-shrink-0 bg-white/50 border-slate-300 hover:bg-slate-50 rounded-xl"
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                         >
-                          {markingAsRead === notification._id ? (
-                            <Loader className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </motion.div>
-                    )}
+                          {markingAsRead === notification._id ? 'Marking...' : 'Mark as read'}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </motion.div>
-              ))}
-            </div>
+                </div>
+              </div>
+            ))
           )}
-        </CardContent>
-      </motion.div>
+        </div>
+        
+        {!loading && filteredNotifications.length > 0 && (
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={loadNotifications}
+              className="w-full text-sm text-gray-600 hover:text-gray-800 font-medium"
+            >
+              Refresh list
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

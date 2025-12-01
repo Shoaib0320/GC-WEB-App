@@ -56,7 +56,7 @@ const SalesScreen = () => {
     visible: (custom = 0) => ({
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, delay: custom * 0.1, ease: "easeOut" }
+      transition: { duration: 0.4, delay: custom * 0.1, ease: "easeOut" }
     })
   };
 
@@ -240,19 +240,11 @@ const SalesScreen = () => {
   // Show loading while agent context is loading
   if (agentLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"
-          />
-          <p className="text-slate-600 text-lg font-medium">Loading sales data...</p>
-        </motion.div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading sales data...</p>
+        </div>
       </div>
     );
   }
@@ -260,83 +252,54 @@ const SalesScreen = () => {
   // Redirect if not logged in
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50">
-            <BarChart3 className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Access Required</h3>
-            <p className="text-slate-600">Please login to view sales data</p>
-          </div>
-        </motion.div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center bg-white rounded-lg p-6 shadow-sm max-w-sm">
+          <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Access Required</h3>
+          <p className="text-gray-600 text-sm">Please login to view sales data</p>
+        </div>
       </div>
     );
   }
 
   if (loading && !refreshing) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"
-          />
-          <p className="text-slate-600 text-lg font-medium">Loading sales data...</p>
-        </motion.div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading sales data...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-4 sm:p-6 lg:p-8">
-      {/* Header Section */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 lg:mb-8"
-      >
-        <div className="flex-1">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
-            Sales Dashboard
-          </h1>
-          <p className="text-slate-600 mt-2 text-lg lg:text-xl max-w-2xl">
+    <div className="min-h-screen bg-gray-50 p-4">
+      {/* Header Section - Simplified */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex-1 p-12">
+          <h1 className="text-2xl font-bold text-gray-900">Sales Dashboard</h1>
+          <p className="text-gray-600 mt-1">
             Track your performance and revenue metrics
           </p>
         </div>
         
         {/* Refresh Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={() => fetchSalesData(true)}
           disabled={refreshing}
-          className="flex-shrink-0 bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
+          className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
         >
-          <RefreshCw className={`h-5 w-5 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="font-medium text-slate-700 text-sm">Refresh</span>
-        </motion.button>
-      </motion.div>
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
 
-      {/* Main Content Grid */}
-      <div className="space-y-6 lg:space-y-8">
+      {/* Main Content */}
+      <div className="space-y-6">
         {/* Monthly Progress & Selector Row */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          custom={1}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-        >
-          {/* Monthly Progress - 2/3 width */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Monthly Progress */}
           <div className="lg:col-span-2">
             <MonthlyTargetProgress
               monthlyTarget={monthlyProgress.monthlyTarget}
@@ -346,7 +309,7 @@ const SalesScreen = () => {
             />
           </div>
 
-          {/* Month Selector - 1/3 width */}
+          {/* Month Selector */}
           <div className="lg:col-span-1">
             <MonthSelector
               currentMonth={selectedMonth}
@@ -354,7 +317,7 @@ const SalesScreen = () => {
               theme={theme}
             />
           </div>
-        </motion.div>
+        </div>
 
         {/* Sales Overview */}
         <AnimatePresence>
@@ -363,7 +326,6 @@ const SalesScreen = () => {
               initial="hidden"
               animate="visible"
               variants={fadeUp}
-              custom={2}
             >
               <SalesOverview
                 data={salesOverview}
@@ -377,98 +339,74 @@ const SalesScreen = () => {
         {/* Booking Stats */}
         <AnimatePresence>
           {bookingStats && (
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-              custom={3}
-            >
-              <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-xl">
-                      <BarChart3 className="h-6 w-6 text-blue-600" />
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Sales Statistics</h2>
+                  <p className="text-gray-600 text-sm">Overview of your booking performance</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { 
+                    label: "Total Sales", 
+                    value: bookingStats.overview?.totalBookings || 0, 
+                    icon: TrendingUp,
+                    color: "text-blue-600",
+                    bgColor: "bg-blue-50"
+                  },
+                  { 
+                    label: "Completed", 
+                    value: bookingStats.overview?.completedBookings || 0, 
+                    icon: CheckCircle,
+                    color: "text-green-600",
+                    bgColor: "bg-green-50"
+                  },
+                  { 
+                    label: "Pending", 
+                    value: bookingStats.overview?.pendingBookings || 0, 
+                    icon: Clock,
+                    color: "text-orange-600",
+                    bgColor: "bg-orange-50"
+                  },
+                  { 
+                    label: "Cancelled", 
+                    value: bookingStats.overview?.cancelledBookings || 0, 
+                    icon: XCircle,
+                    color: "text-red-600",
+                    bgColor: "bg-red-50"
+                  },
+                ].map((item, index) => (
+                  <div
+                    key={item.label}
+                    className="bg-gray-50 rounded-lg p-3 border border-gray-100"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`p-1.5 rounded-md ${item.bgColor}`}>
+                        <item.icon className={`h-4 w-4 ${item.color}`} />
+                      </div>
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900">Sales Statistics</h2>
-                      <p className="text-slate-600 text-sm">Overview of your booking performance</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {item.value}
+                      </p>
+                      <p className="text-gray-600 text-sm">
+                        {item.label}
+                      </p>
                     </div>
                   </div>
-                </div>
-
-                <motion.div
-                  variants={staggerChildren}
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-2 lg:grid-cols-4 gap-4"
-                >
-                  {[
-                    { 
-                      label: "Total Sales", 
-                      value: bookingStats.overview?.totalBookings || 0, 
-                      icon: TrendingUp,
-                      color: "from-blue-500 to-blue-600",
-                      bgColor: "bg-blue-50"
-                    },
-                    { 
-                      label: "Completed", 
-                      value: bookingStats.overview?.completedBookings || 0, 
-                      icon: CheckCircle,
-                      color: "from-emerald-500 to-green-600",
-                      bgColor: "bg-emerald-50"
-                    },
-                    { 
-                      label: "Pending", 
-                      value: bookingStats.overview?.pendingBookings || 0, 
-                      icon: Clock,
-                      color: "from-amber-500 to-orange-600",
-                      bgColor: "bg-amber-50"
-                    },
-                    { 
-                      label: "Cancelled", 
-                      value: bookingStats.overview?.cancelledBookings || 0, 
-                      icon: XCircle,
-                      color: "from-red-500 to-pink-600",
-                      bgColor: "bg-red-50"
-                    },
-                  ].map((item, index) => (
-                    <motion.div
-                      key={item.label}
-                      variants={fadeUp}
-                      custom={index}
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-all duration-200"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className={`p-2 rounded-lg ${item.bgColor}`}>
-                          <item.icon className={`h-5 w-5 bg-gradient-to-r ${item.color} bg-clip-text text-transparent`} />
-                        </div>
-                        <ArrowUpRight className="h-4 w-4 text-slate-400" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-slate-900 mb-1">
-                          {item.value}
-                        </p>
-                        <p className="text-slate-600 text-sm font-medium">
-                          {item.label}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </section>
-            </motion.div>
+                ))}
+              </div>
+            </div>
           )}
         </AnimatePresence>
 
         {/* Promo Codes & Recent Bookings Grid */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          custom={4}
-          className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8"
-        >
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Promo Codes */}
           <div>
             <PromoCodesList promoCodes={promoCodes} theme={theme} />
@@ -478,33 +416,26 @@ const SalesScreen = () => {
           <div>
             <RecentBookings bookings={recentBookings} theme={theme} />
           </div>
-        </motion.div>
+        </div>
 
         {/* Empty State */}
         <AnimatePresence>
           {!salesOverview && promoCodes.length === 0 && recentBookings.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center py-16"
-            >
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 max-w-md mx-auto">
-                <BarChart3 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-slate-800 mb-2">No Data Available</h3>
-                <p className="text-slate-600 mb-6">
+            <div className="text-center py-8">
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 max-w-sm mx-auto">
+                <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">No Data Available</h3>
+                <p className="text-gray-600 text-sm mb-4">
                   No sales data available for the selected period
                 </p>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={() => fetchSalesData(true)}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
                 >
                   Try Again
-                </motion.button>
+                </button>
               </div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </div>

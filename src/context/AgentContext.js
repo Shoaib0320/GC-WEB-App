@@ -64,107 +64,6 @@ export const AgentProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [locationWatchId, setLocationWatchId] = useState(null);
 
-  // // Validate JWT Token
-  // const validateToken = (token) => {
-  //   try {
-  //     if (!token) return false;
-  //     const parts = token.split(".");
-  //     if (parts.length !== 3) return false;
-  //     const payload = JSON.parse(atob(parts[1]));
-  //     if (payload.exp && payload.exp * 1000 < Date.now()) return false;
-  //     if (!payload.id && !payload.agentId) return false;
-  //     return true;
-  //   } catch {
-  //     return false;
-  //   }
-  // };
-
-  // // Load Auth on Refresh
-  // useEffect(() => {
-  //   const loadAuth = async () => {
-  //     try {
-  //       setIsLoading(true);
-  //       const savedToken = localStorage.getItem("agentToken");
-
-  //       if (!savedToken) {
-  //         const savedCreds = localStorage.getItem("agentCredentials");
-  //         if (savedCreds) {
-  //           const { agentId, password } = JSON.parse(savedCreds);
-  //           const autoLogin = await login(agentId, password, true);
-  //           if (autoLogin.success) {
-  //             setIsLoading(false);
-  //             return;
-  //           }
-  //         }
-  //         setIsLoggedIn(false);
-  //         setIsLoading(false);
-  //         return;
-  //       }
-
-  //       // Validate Token
-  //       const valid = validateToken(savedToken);
-  //       if (!valid) {
-  //         const savedCreds = localStorage.getItem("agentCredentials");
-  //         if (savedCreds) {
-  //           const { agentId, password } = JSON.parse(savedCreds);
-  //           const autoLogin = await login(agentId, password, true);
-  //           if (autoLogin.success) {
-  //             setIsLoading(false);
-  //             return;
-  //           }
-  //         }
-  //         await logout();
-  //         setIsLoading(false);
-  //         return;
-  //       }
-
-  //       // Token valid - load profile
-  //       setToken(savedToken);
-  //       const profileStr = localStorage.getItem("agentData");
-  //       let profileAgent = null;
-  //       if (profileStr) {
-  //         try {
-  //           profileAgent = JSON.parse(profileStr);
-  //         } catch {
-  //           profileAgent = null;
-  //         }
-  //       }
-
-  //       if (profileAgent) {
-  //         setAgent(profileAgent);
-  //         setIsLoggedIn(true);
-
-  //         // Fetch fresh location if missing or old
-  //         if (!profileAgent.location ||
-  //           !profileAgent.location.timestamp ||
-  //           Date.now() - profileAgent.location.timestamp > 5 * 60 * 1000) {
-  //           try {
-  //             const freshLocation = await getEnhancedLocation();
-  //             setAgent((prev) => ({
-  //               ...prev,
-  //               location: freshLocation,
-  //             }));
-  //           } catch (locationError) {
-  //             console.error('Failed to get fresh location:', locationError);
-  //           }
-  //         }
-
-  //         // Start location tracking
-  //         startLocationTracking();
-  //       } else {
-  //         await logout();
-  //       }
-  //     } catch {
-  //       await logout();
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   loadAuth();
-  // }, []);
-
-
   // Start Location Tracking
   const startLocationTracking = () => {
     if (navigator.geolocation) {
@@ -468,13 +367,6 @@ useEffect(() => {
       return false;
     }
   };
-
-  // // Check Token Validity
-  // const checkTokenValidity = () => {
-  //   const savedToken = localStorage.getItem("agentToken");
-  //   if (!savedToken) return false;
-  //   return validateToken(savedToken);
-  // };
 
   return (
     <AgentContext.Provider

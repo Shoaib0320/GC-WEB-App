@@ -379,8 +379,6 @@
 // export default LeaveRequestsList;
 
 
-
-
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
@@ -555,13 +553,20 @@ const LeaveRequestsList = () => {
             }}>
               {paginatedRequests.map((request, index) => {
                 const globalIndex = (currentPage - 1) * requestsPerPage + index;
+                
+                // REDUCE PADDING FOR PENDING AND APPROVED
+                const isPendingOrApproved = request.status === 'pending' || request.status === 'approved';
+                const cardPadding = isPendingOrApproved ? 8 : 12;
+                const statusButtonPadding = isPendingOrApproved ? '4px 8px' : '6px 10px';
+                
                 return (
                   <div
                     key={request._id || globalIndex}
                     style={{
                       flexShrink: 0,
                       width: Math.min(360, window.innerWidth * 0.88),
-                      padding: 12,
+                      // REDUCED PADDING FOR PENDING/APPROVED:
+                      padding: cardPadding,
                       borderRadius: 12,
                       marginRight: 12,
                       borderLeft: `4px solid ${getStatusColor(request.status)}`,
@@ -601,7 +606,8 @@ const LeaveRequestsList = () => {
                       <div style={{
                         backgroundColor: getStatusColor(request.status),
                         borderRadius: 16,
-                        padding: '6px 10px',
+                        // REDUCED PADDING FOR STATUS BUTTON:
+                        padding: statusButtonPadding,
                         marginLeft: 8,
                         display: 'flex',
                         alignItems: 'center',

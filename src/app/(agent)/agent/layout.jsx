@@ -225,6 +225,7 @@ function AgentLayoutContent({ children }) {
   const pathname = usePathname();
   const { isLoggedIn, isLoading, agent } = useAgent();
   const [isOpen, setIsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [hasCheckedLocation, setHasCheckedLocation] = useState(false);
 
@@ -308,15 +309,13 @@ function AgentLayoutContent({ children }) {
   if (isLoggedIn) {
     return (
       <>
-        <AgentSidebar isOpen={isOpen} setIsOpen={setIsOpen}>
-          <div className="flex flex-col h-full">
-            <AgentTopbar toggleSidebar={toggleSidebar} />
-            <main className="flex-1 p-0 md:p-6">{children}</main>
-          </div>
+        <AgentTopbar toggleSidebar={toggleSidebar} collapsed={collapsed} isOpen={isOpen} />
+        <AgentSidebar isOpen={isOpen} setIsOpen={setIsOpen} collapsed={collapsed} setCollapsed={setCollapsed}>
+          {children}
         </AgentSidebar>
 
         {/* Location Permission Prompt */}
-        <LocationPermissionPrompt 
+        <LocationPermissionPrompt
           visible={showLocationPrompt}
           onClose={() => {
             console.log('📍 Prompt closed by user');
@@ -325,22 +324,22 @@ function AgentLayoutContent({ children }) {
           onPermissionGranted={(coords) => {
             console.log('📍 Location permission granted with coords:', coords);
             setShowLocationPrompt(false);
-            
+
             // Trigger location refresh in all components
             if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('locationPermissionGranted', { 
-                detail: { coords } 
+              window.dispatchEvent(new CustomEvent('locationPermissionGranted', {
+                detail: { coords }
               }));
             }
           }}
           onPermissionDenied={(error) => {
             console.log('📍 Location permission denied:', error);
             setShowLocationPrompt(false);
-            
+
             // Show notification about limited functionality
             if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('locationPermissionDenied', { 
-                detail: { error } 
+              window.dispatchEvent(new CustomEvent('locationPermissionDenied', {
+                detail: { error }
               }));
             }
           }}
