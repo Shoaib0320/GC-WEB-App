@@ -62,6 +62,7 @@ export default function BookingDetailsDialog({
     discountApplied,
     discountPercent,
     promoCode,
+    promoCodeId,
     submittedAt,
     webName,
     vendorName,
@@ -105,63 +106,169 @@ export default function BookingDetailsDialog({
   const renderBookingDetails = () => {
     switch (bookingType) {
       case "vehicle":
+        // ✅ Check if using new bookingDetails format or old vehicleBookings format
+        if (formData.bookingDetails) {
+          // New format - single service booking
+          const details = formData.bookingDetails;
+          return (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Car className="w-5 h-5 text-blue-600" />
+                Vehicle Details
+              </h3>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between mb-3 pb-3 border-b">
+                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Car className="w-4 h-4 text-blue-500" />
+                    {details.serviceName || "Vehicle Service"}
+                  </h4>
+                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                    {details.variant ? details.variant.toUpperCase() : bookingType.toUpperCase()}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Service Type</p>
+                    <p className="text-gray-900">{details.serviceName || details.serviceType || "—"}</p>
+                  </div>
+                  {details.variant && (
+                    <div className="space-y-1">
+                      <p className="text-gray-600 font-medium">Vehicle Variant</p>
+                      <p className="text-gray-900 capitalize">{details.variant}</p>
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Package</p>
+                    <p className="text-gray-900">{details.packageName || details.package || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Make & Model</p>
+                    <p className="text-gray-900">{details.vehicleMake} {details.vehicleModel}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Year</p>
+                    <p className="text-gray-900">{details.vehicleYear || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Color</p>
+                    <p className="text-gray-900 capitalize">{details.vehicleColor || "—"}</p>
+                  </div>
+                  {details.vehicleLength && (
+                    <div className="space-y-1">
+                      <p className="text-gray-600 font-medium">Vehicle Length</p>
+                      <p className="text-gray-900">{details.vehicleLength} feet</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Services */}
+                {details.additionalServices && details.additionalServices.length > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-3">
+                    <p className="text-sm text-blue-700 font-medium mb-2">Additional Services</p>
+                    <div className="flex flex-wrap gap-2">
+                      {details.additionalServices.map((service, idx) => (
+                        <span key={idx} className="bg-white text-blue-700 px-2 py-1 rounded text-xs border border-blue-300">
+                          {service}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Special Requirements */}
+                {details.specialRequirements && (
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-3">
+                    <p className="text-sm text-yellow-700 font-medium">Special Requirements</p>
+                    <p className="text-yellow-800 mt-1 text-sm">{details.specialRequirements}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+        
+        // Old format - multiple vehicle bookings
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Car className="w-5 h-5 text-blue-600" />
-              Vehicle Details
+              Vehicle Details ({vehicleCount} {vehicleCount === 1 ? 'Vehicle' : 'Vehicles'})
             </h3>
             {formData.vehicleBookings?.map((v, index) => (
               <div
                 key={v.id || index}
                 className="bg-white border border-gray-200 rounded-lg p-4 space-y-3"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-3 pb-3 border-b">
                   <h4 className="font-medium text-gray-900 flex items-center gap-2">
                     <Car className="w-4 h-4 text-blue-500" />
                     Vehicle #{index + 1}
                   </h4>
-                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium">
-                    {v.serviceType}
+                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                    {v.variant ? v.variant.toUpperCase() : v.serviceType.toUpperCase()}
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                   <div className="space-y-1">
-                    <p className="text-gray-600">Main Service</p>
-                    <p className="font-medium text-gray-900">{v.mainService || "—"}</p>
+                    <p className="text-gray-600 font-medium">Service Type</p>
+                    <p className="text-gray-900">{v.serviceType || "—"}</p>
+                  </div>
+                  {v.variant && (
+                    <div className="space-y-1">
+                      <p className="text-gray-600 font-medium">Vehicle Variant</p>
+                      <p className="text-gray-900 capitalize">{v.variant}</p>
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Main Service</p>
+                    <p className="text-gray-900">{v.mainService || "—"}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-600">Variant</p>
-                    <p className="font-medium text-gray-900">{v.variant || "—"}</p>
+                    <p className="text-gray-600 font-medium">Package</p>
+                    <p className="text-gray-900">{v.package || "—"}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-600">Package</p>
-                    <p className="font-medium text-gray-900">{v.package || "—"}</p>
+                    <p className="text-gray-600 font-medium">Make & Model</p>
+                    <p className="text-gray-900">{v.vehicleMake} {v.vehicleModel}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-600">Additional Services</p>
-                    <p className="font-medium text-gray-900">
-                      {v.additionalServices?.length > 0
-                        ? v.additionalServices.join(", ")
-                        : "None"}
-                    </p>
+                    <p className="text-gray-600 font-medium">Year</p>
+                    <p className="text-gray-900">{v.vehicleYear || "—"}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-600">Make & Model</p>
-                    <p className="font-medium text-gray-900">{v.vehicleMake} {v.vehicleModel}</p>
+                    <p className="text-gray-600 font-medium">Color</p>
+                    <p className="text-gray-900 capitalize">{v.vehicleColor || "—"}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-gray-600">Year & Color</p>
-                    <p className="font-medium text-gray-900">{v.vehicleYear} • {v.vehicleColor}</p>
-                  </div>
+                  {v.vehicleLength && (
+                    <div className="space-y-1">
+                      <p className="text-gray-600 font-medium">Vehicle Length</p>
+                      <p className="text-gray-900">{v.vehicleLength} feet</p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Additional Services */}
+                {v.additionalServices && v.additionalServices.length > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mt-3">
+                    <p className="text-sm text-blue-700 font-medium mb-2">Additional Services</p>
+                    <div className="flex flex-wrap gap-2">
+                      {v.additionalServices.map((service, idx) => (
+                        <span key={idx} className="bg-white text-blue-700 px-2 py-1 rounded text-xs border border-blue-300">
+                          {service}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         );
 
       case "chimney":
+        const chimneyDetails = formData.bookingDetails || {};
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -169,40 +276,64 @@ export default function BookingDetailsDialog({
               Chimney Cleaning Details
             </h3>
             <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="space-y-1">
-                  <p className="text-gray-600">Service Type</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.serviceType || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Chimney Type</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.chimneyType || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Package</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.package || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Chimney Size</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.chimneySize || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Location</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.location || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Additional Services</p>
-                  <p className="font-medium text-gray-900">
-                    {formData.bookingDetails?.additionalServices?.length > 0
-                      ? formData.bookingDetails.additionalServices.join(", ")
-                      : "None"}
-                  </p>
-                </div>
+              <div className="flex items-center justify-between mb-3 pb-3 border-b">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Home className="w-4 h-4 text-orange-500" />
+                  {chimneyDetails.serviceName || "Chimney Service"}
+                </h4>
+                <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-xs font-medium">
+                  CHIMNEY
+                </span>
               </div>
-              {formData.bookingDetails?.specialRequirements && (
-                <div className="bg-orange-50 p-3 rounded border border-orange-200">
-                  <p className="text-sm text-orange-700 font-medium">Special Requirements</p>
-                  <p className="text-orange-800 mt-1 text-sm">{formData.bookingDetails.specialRequirements}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="text-gray-600 font-medium">Service Type</p>
+                  <p className="text-gray-900">{chimneyDetails.serviceName || chimneyDetails.serviceType || "—"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-gray-600 font-medium">Package</p>
+                  <p className="text-gray-900">{chimneyDetails.packageName || chimneyDetails.package || "—"}</p>
+                </div>
+                {chimneyDetails.chimneyType && (
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Chimney Type</p>
+                    <p className="text-gray-900 capitalize">{chimneyDetails.chimneyType}</p>
+                  </div>
+                )}
+                {chimneyDetails.chimneySize && (
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Chimney Size</p>
+                    <p className="text-gray-900 capitalize">{chimneyDetails.chimneySize}</p>
+                  </div>
+                )}
+                {chimneyDetails.location && (
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Location in Property</p>
+                    <p className="text-gray-900">{chimneyDetails.location}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Services */}
+              {chimneyDetails.additionalServices && chimneyDetails.additionalServices.length > 0 && (
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mt-3">
+                  <p className="text-sm text-orange-700 font-medium mb-2">Additional Services</p>
+                  <div className="flex flex-wrap gap-2">
+                    {chimneyDetails.additionalServices.map((service, idx) => (
+                      <span key={idx} className="bg-white text-orange-700 px-2 py-1 rounded text-xs border border-orange-300">
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Special Requirements */}
+              {chimneyDetails.specialRequirements && (
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-3">
+                  <p className="text-sm text-yellow-700 font-medium">Special Requirements</p>
+                  <p className="text-yellow-800 mt-1 text-sm">{chimneyDetails.specialRequirements}</p>
                 </div>
               )}
             </div>
@@ -210,43 +341,66 @@ export default function BookingDetailsDialog({
         );
 
       case "duck-cleaning":
+        const duckDetails = formData.bookingDetails || {};
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Bird className="w-5 h-5 text-green-600" />
-              Duck Cleaning Details
+              Duck Cleaning / Pond Maintenance Details
             </h3>
             <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="space-y-1">
-                  <p className="text-gray-600">Service Type</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.serviceType || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Package</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.package || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Duck Count</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.duckCount || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Area Size</p>
-                  <p className="font-medium text-gray-900">{formData.bookingDetails?.areaSize || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-gray-600">Additional Services</p>
-                  <p className="font-medium text-gray-900">
-                    {formData.bookingDetails?.additionalServices?.length > 0
-                      ? formData.bookingDetails.additionalServices.join(", ")
-                      : "None"}
-                  </p>
-                </div>
+              <div className="flex items-center justify-between mb-3 pb-3 border-b">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Bird className="w-4 h-4 text-green-500" />
+                  {duckDetails.serviceName || "Duck Cleaning Service"}
+                </h4>
+                <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                  DUCK CLEANING
+                </span>
               </div>
-              {formData.bookingDetails?.specialRequirements && (
-                <div className="bg-green-50 p-3 rounded border border-green-200">
-                  <p className="text-sm text-green-700 font-medium">Special Requirements</p>
-                  <p className="text-green-800 mt-1 text-sm">{formData.bookingDetails.specialRequirements}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="text-gray-600 font-medium">Service Type</p>
+                  <p className="text-gray-900">{duckDetails.serviceName || duckDetails.serviceType || "—"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-gray-600 font-medium">Package</p>
+                  <p className="text-gray-900">{duckDetails.packageName || duckDetails.package || "—"}</p>
+                </div>
+                {duckDetails.duckCount && (
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Duck Count</p>
+                    <p className="text-gray-900">{duckDetails.duckCount} ducks</p>
+                  </div>
+                )}
+                {duckDetails.areaSize && (
+                  <div className="space-y-1">
+                    <p className="text-gray-600 font-medium">Area Size</p>
+                    <p className="text-gray-900 capitalize">{duckDetails.areaSize}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Services */}
+              {duckDetails.additionalServices && duckDetails.additionalServices.length > 0 && (
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200 mt-3">
+                  <p className="text-sm text-green-700 font-medium mb-2">Additional Services</p>
+                  <div className="flex flex-wrap gap-2">
+                    {duckDetails.additionalServices.map((service, idx) => (
+                      <span key={idx} className="bg-white text-green-700 px-2 py-1 rounded text-xs border border-green-300">
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Special Requirements */}
+              {duckDetails.specialRequirements && (
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-3">
+                  <p className="text-sm text-yellow-700 font-medium">Special Requirements</p>
+                  <p className="text-yellow-800 mt-1 text-sm">{duckDetails.specialRequirements}</p>
                 </div>
               )}
             </div>
@@ -430,15 +584,30 @@ export default function BookingDetailsDialog({
           <div className="flex-1 overflow-auto">
             <div className="p-6 space-y-6">
               {/* Quick Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Booking Type Card */}
+                <div className={`${bookingTypeInfo.bgColor} border border-gray-200 rounded-lg p-4`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookingTypeIcon className={`w-4 h-4 ${bookingTypeInfo.color}`} />
+                    <h3 className="font-medium text-gray-900 text-sm">Service Type</h3>
+                  </div>
+                  <p className={`text-sm font-semibold ${bookingTypeInfo.color}`}>{bookingTypeInfo.label}</p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    {bookingType === 'vehicle' 
+                      ? `${vehicleCount || serviceCount} ${vehicleCount === 1 ? 'Vehicle' : 'Vehicles'}`
+                      : `${serviceCount} Service${serviceCount === 1 ? '' : 's'}`
+                    }
+                  </p>
+                </div>
+
                 {/* Appointment Card */}
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <h3 className="font-medium text-gray-900 text-sm">Appointment</h3>
                   </div>
-                  <p className="text-lg font-semibold text-gray-900">{formData.date}</p>
-                  <p className="text-gray-600 text-sm">{formData.timeSlot}</p>
+                  <p className="text-sm font-semibold text-gray-900">{formData.date}</p>
+                  <p className="text-gray-600 text-xs mt-1">{formData.timeSlot}</p>
                 </div>
 
                 {/* Customer Card */}
@@ -447,17 +616,11 @@ export default function BookingDetailsDialog({
                     <User className="w-4 h-4 text-green-600" />
                     <h3 className="font-medium text-gray-900 text-sm">Customer</h3>
                   </div>
-                  <p className="font-semibold text-gray-900">{formData.firstName} {formData.lastName}</p>
-                  <div className="space-y-1 mt-1">
-                    <p className="text-gray-600 text-sm flex items-center gap-1">
-                      <Phone className="w-3 h-3" />
-                      {formData.phone}
-                    </p>
-                    <p className="text-gray-600 text-sm flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      {formData.email}
-                    </p>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-900">{formData.firstName} {formData.lastName}</p>
+                  <p className="text-gray-600 text-xs mt-1 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    {formData.phone}
+                  </p>
                 </div>
 
                 {/* Pricing Card */}
@@ -467,23 +630,53 @@ export default function BookingDetailsDialog({
                     <h3 className="font-medium text-gray-900 text-sm">Payment</h3>
                   </div>
                   <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600 text-sm">Total:</span>
-                      <span className="font-semibold text-gray-900">${totalPrice}</span>
-                    </div>
-                    {discountApplied && (
+                    {discountApplied ? (
+                      <>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-600">Original:</span>
+                          <span className="line-through text-gray-500">${totalPrice}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-green-600">Saved:</span>
+                          <span className="font-semibold text-green-600">-${(totalPrice - discountedPrice).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1 border-t">
+                          <span className="text-gray-700 text-xs font-medium">Final:</span>
+                          <span className="text-sm font-bold text-purple-600">${discountedPrice}</span>
+                        </div>
+                      </>
+                    ) : (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Discount:</span>
-                        <span className="font-semibold text-green-600">-${totalPrice - discountedPrice}</span>
+                        <span className="text-gray-700 text-xs font-medium">Total:</span>
+                        <span className="text-sm font-bold text-purple-600">${totalPrice}</span>
                       </div>
                     )}
-                    <div className="flex justify-between items-center border-t pt-1">
-                      <span className="text-gray-700 text-sm font-medium">Final:</span>
-                      <span className="text-lg font-bold text-purple-600">${discountedPrice}</span>
-                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Promo Code Info */}
+              {promoCodeId && discountApplied && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-green-900">Promo Code Applied</p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          Code: <span className="font-mono font-bold">{promoCodeId.promoCode}</span> • {discountPercent}% discount
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-green-600">-${(totalPrice - discountedPrice).toFixed(2)}</p>
+                      <p className="text-xs text-green-700">You saved!</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <Separator />
 
@@ -501,21 +694,51 @@ export default function BookingDetailsDialog({
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="space-y-1">
-                      <p className="text-gray-600">Address</p>
-                      <p className="font-medium text-gray-900">{formData.address}</p>
+                      <p className="text-gray-600 font-medium">Street Address</p>
+                      <p className="text-gray-900">{formData.address || "—"}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <p className="text-gray-600">City</p>
-                        <p className="font-medium text-gray-900">{formData.city}</p>
+                        <p className="text-gray-600 font-medium">City</p>
+                        <p className="text-gray-900">{formData.city || "—"}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-gray-600">State</p>
-                        <p className="font-medium text-gray-900">{formData.state}</p>
+                        <p className="text-gray-600 font-medium">State</p>
+                        <p className="text-gray-900">{formData.state || "—"}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-gray-600">ZIP</p>
-                        <p className="font-medium text-gray-900">{formData.zip}</p>
+                        <p className="text-gray-600 font-medium">ZIP</p>
+                        <p className="text-gray-900">{formData.zip || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-blue-600" />
+                  Contact Information
+                </h3>
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-50 p-2 rounded-lg">
+                        <Mail className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Email Address</p>
+                        <p className="text-sm text-gray-900 font-medium">{formData.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-50 p-2 rounded-lg">
+                        <Phone className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Phone Number</p>
+                        <p className="text-sm text-gray-900 font-medium">{formData.phone}</p>
                       </div>
                     </div>
                   </div>

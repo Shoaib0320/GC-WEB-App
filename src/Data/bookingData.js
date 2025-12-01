@@ -754,6 +754,42 @@ export const ALL_SERVICES = {
           { id: "rv-tank-cleaning", name: "Water Tank Cleaning", price: 79, description: "Fresh water tank cleaning and sanitization" }
         ]
       },
+      {
+        id: "motorcycle",
+        name: "Motorcycle Detailing",
+        vehicleTypes: ["motorcycle"],
+        packages: [
+          {
+            id: "bike-full",
+            name: "Full Bike Detailing",
+            price: 169,
+            description: "Complete motorcycle detailing package",
+            pricingType: "fixed",
+            includes: ["Bike Exterior Services", "Bike Detailing & Protection"]
+          },
+          {
+            id: "bike-basic",
+            name: "Basic Bike Detailing",
+            price: 129,
+            description: "Basic motorcycle cleaning and detailing",
+            pricingType: "fixed",
+            includes: ["Basic Exterior Cleaning", "Basic Protection"]
+          },
+          {
+            id: "bike-premium",
+            name: "Premium Bike Detailing",
+            price: 199,
+            description: "Premium motorcycle detailing with ceramic coating",
+            pricingType: "fixed",
+            includes: ["Complete Detailing", "Ceramic Coating", "Chrome Polish"]
+          }
+        ],
+        additionalServices: [
+          { id: "bike-chain-service", name: "Chain Service", price: 29, description: "Complete chain cleaning and lubrication" },
+          { id: "bike-chrome-polish", name: "Chrome Polish", price: 44, description: "Premium chrome polishing and protection" },
+          { id: "bike-engine-detail", name: "Engine Detailing", price: 59, description: "Detailed engine cleaning and degreasing" }
+        ]
+      }
     ]
   },
 
@@ -810,55 +846,7 @@ export const ALL_SERVICES = {
   },
 
   // ✅ DUCK CLEANING SERVICES
-  DUCK_CLEANING: {
-    id: "duck-cleaning",
-    name: "Duck Cleaning",
-    icon: "Bird",
-    services: [
-      {
-        id: "pond-maintenance",
-        name: "Pond Maintenance",
-        packages: [
-          {
-            id: "duck-basic",
-            name: "Basic Package",
-            price: 1500,
-            description: "Basic pond cleaning and maintenance",
-            pricingType: "fixed",
-          },
-          {
-            id: "duck-premium",
-            name: "Premium Package",
-            price: 2500,
-            description: "Premium pond cleaning with water testing",
-            pricingType: "fixed",
-          },
-          {
-            id: "duck-deluxe",
-            name: "Deluxe Package",
-            price: 3500,
-            description: "Complete pond ecosystem maintenance",
-            pricingType: "fixed",
-          }
-        ],
-        additionalServices: [
-          { id: "water-testing", name: "Water Testing", price: 100 },
-          { id: "algae-removal", name: "Algae Removal", price: 300 },
-          { id: "feeding-service", name: "Feeding Service", price: 150 },
-          { id: "health-check", name: "Health Check", price: 200 }
-        ],
-        // Duck cleaning specific fields
-        areaSizes: [
-          { id: "small-pond", name: "Small Pond" },
-          { id: "medium-pond", name: "Medium Pond" },
-          { id: "large-pond", name: "Large Pond" },
-          { id: "lake", name: "Lake" }
-        ]
-      }
-    ]
-  },
-    // ✅ DUCK CLEANING SERVICES
-  DUCK_CLEANING: {
+  "DUCK-CLEANING": {
     id: "duck-cleaning",
     name: "Duck Cleaning",
     icon: "Bird",

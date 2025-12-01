@@ -15,11 +15,9 @@ export function AuthProvider({ children }) {
 
   const router = useRouter();
 
-
   useEffect(() => {
     checkAuthStatus();
   }, []);
-
 
   const checkAuthStatus = async () => {
     try {
