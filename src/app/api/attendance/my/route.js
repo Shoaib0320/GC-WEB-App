@@ -1,373 +1,3 @@
-// // // app/api/attendance/my/route.js
-// // import { NextResponse } from "next/server";
-// // import connectDB from "@/lib/mongodb";
-// // import Attendance from "@/Models/Attendance";
-// // import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
-// // import Holiday from "@/Models/Holiday";
-// // import WeeklyOff from "@/Models/WeeklyOff";
-// // import Shift from "@/Models/Shift";
-// // import Agent from "@/Models/Agent";
-// // import User from "@/Models/User";
-
-// // /** ---------- Pakistan Time Utilities ---------- **/
-
-// // // Convert to Pakistan Time (Asia/Karachi)
-// // function toPakistanDate(date) {
-// //   return new Date(
-// //     new Date(date).toLocaleString("en-US", { timeZone: "Asia/Karachi" })
-// //   );
-// // }
-
-// // // Stable Key in Pakistan Time (YYYY-MM-DD)
-// // function toKeyPKT(date) {
-// //   const d = toPakistanDate(date);
-// //   const yyyy = d.getFullYear();
-// //   const mm = String(d.getMonth() + 1).padStart(2, "0");
-// //   const dd = String(d.getDate()).padStart(2, "0");
-// //   return `${yyyy}-${mm}-${dd}`;
-// // }
-
-// // // Get all month dates from user creation to today (Pakistan)
-// // function getDatesFromUserCreationPKT(year, month, userCreationDate) {
-// //   const dates = [];
-// //   const today = toPakistanDate(new Date());
-// //   const userCreated = toPakistanDate(userCreationDate);
-
-// //   // month is 1-indexed
-// //   const startDate = new Date(year, month - 1, 1);
-// //   const actualStart = userCreated > startDate ? userCreated : startDate;
-
-// //   const lastDay =
-// //     today.getFullYear() === year && today.getMonth() + 1 === month
-// //       ? today.getDate()
-// //       : new Date(year, month, 0).getDate();
-
-// //   for (let d = actualStart.getDate(); d <= lastDay; d++) {
-// //     dates.push(new Date(year, month - 1, d));
-// //   }
-// //   return dates;
-// // }
-
-// // // Get day name in lowercase
-// // function getDayName(date) {
-// //   return toPakistanDate(date).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
-// // }
-
-// // // Normalize status strings to canonical values used in stats
-// // function normalizeStatus(s) {
-// //   if (!s) return "absent";
-// //   const str = String(s).toLowerCase();
-// //   if (["halfday", "half_day", "half-day"].includes(str)) return "half_day";
-// //   if (["present"].includes(str)) return "present";
-// //   if (["late"].includes(str)) return "late";
-// //   if (["absent"].includes(str)) return "absent";
-// //   if (["holiday"].includes(str)) return "holiday";
-// //   if (["weekly_off", "weeklyoff", "weekly-off"].includes(str)) return "weekly_off";
-// //   if (["approved_leave", "pending_leave", "leave"].includes(str)) return str;
-// //   return str;
-// // }
-
-// // /** ---------- Main API ---------- **/
-
-// // export async function GET(request) {
-// //   try {
-// //     await connectDB();
-// //     console.log("📅 Attendance Monthly Route Triggered (Pakistan Time)");
-
-// //     const authHeader = request.headers.get("authorization");
-// //     if (!authHeader?.startsWith("Bearer ")) {
-// //       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-// //     }
-
-// //     const token = authHeader.split(" ")[1];
-// //     const decoded = verifyToken(token);
-// //     if (!decoded) {
-// //       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
-// //     }
-
-// //     const userId = getUserIdFromToken(decoded);
-// //     const userType = decoded.type || "agent";
-
-// //     const { searchParams } = new URL(request.url);
-// //     const month = parseInt(searchParams.get("month"));
-// //     const year = parseInt(searchParams.get("year"));
-// //     if (!month || !year) {
-// //       return NextResponse.json({ success: false, message: "Month and Year are required" }, { status: 400 });
-// //     }
-
-// //     const queryField = userType === "agent" ? "agent" : "user";
-
-// //     // fetch user creation date
-// //     let userCreationDate;
-// //     if (userType === "agent") {
-// //       const agent = await Agent.findById(userId);
-// //       userCreationDate = agent?.createdAt || new Date();
-// //     } else {
-// //       const user = await User.findById(userId);
-// //       userCreationDate = user?.createdAt || new Date();
-// //     }
-
-// //     console.log(`👤 User Creation Date: ${userCreationDate}`);
-// //     console.log(`📊 Requested Month: ${month}-${year}`);
-
-// //     // Range in UTC (safe for DB query)
-// //     const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-// //     const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
-
-// //     // Attendance records for the month (either date or checkInTime falls in range)
-// //     const attends = await Attendance.find({
-// //       [queryField]: userId,
-// //       $or: [
-// //         { date: { $gte: monthStart, $lt: monthEnd } },
-// //         { checkInTime: { $gte: monthStart, $lt: monthEnd } },
-// //       ],
-// //     })
-// //       .populate("shift", "name startTime endTime hours days")
-// //       .sort({ date: 1, checkInTime: 1 });
-
-// //     // Map attendance by PKT key (if multiple per day we keep the latest found)
-// //     const attendanceMap = {};
-// //     attends.forEach(att => {
-// //       const source = att.date || att.checkInTime || att.createdAt;
-// //       if (!source) return;
-// //       const key = toKeyPKT(source);
-// //       attendanceMap[key] = att; // last one wins (should be fine for single-day records)
-// //     });
-
-// //     const todayPK = toPakistanDate(new Date());
-// //     const todayKey = toKeyPKT(todayPK);
-
-// //     // Dates to include starting from user's creation (ensuring we don't show before creation)
-// //     const datesFromCreation = getDatesFromUserCreationPKT(year, month, userCreationDate);
-
-// //     // Collect keys (datesFromCreation) + any attendance days outside (future/past) within month
-// //     const mergedKeysSet = new Set(datesFromCreation.map(d => toKeyPKT(d)));
-// //     Object.keys(attendanceMap).forEach(k => mergedKeysSet.add(k));
-// //     const mergedKeys = Array.from(mergedKeysSet);
-
-// //     // Separate keys into past/today and future, then order:
-// //     // - past/today: descending (today -> older)
-// //     // - future: ascending (soonest future first)
-// //     const pastAndToday = mergedKeys.filter(k => k <= todayKey).sort((a, b) => b.localeCompare(a));
-// //     const futureKeys = mergedKeys.filter(k => k > todayKey).sort((a, b) => a.localeCompare(b));
-// //     const finalKeys = [...pastAndToday, ...futureKeys];
-
-// //     // Weekly Offs & Holidays (month-wide)
-// //     const weeklyOffDocs = await WeeklyOff.find({ isActive: true });
-// //     const weeklyOffSet = new Set(weeklyOffDocs.map(w => w.day.toLowerCase()));
-
-// //     const holidayDocs = await Holiday.find({
-// //       $or: [
-// //         { date: { $gte: monthStart, $lt: monthEnd } },
-// //         { isRecurring: true }
-// //       ],
-// //       isActive: true
-// //     });
-
-// //     const holidaysSet = new Set();
-// //     for (const h of holidayDocs) {
-// //       if (h.isRecurring && h.date) {
-// //         // recurring: add by month-day for matching in same month
-// //         const recKey = toKeyPKT(h.date); // will include year though; recurring handling might require different model
-// //         // we'll add exact date if provided; recurring handling ideally needs separate logic (out of scope)
-// //         holidaysSet.add(recKey);
-// //       } else if (h.date) {
-// //         holidaysSet.add(toKeyPKT(h.date));
-// //       }
-// //     }
-
-// //     /** ---------------- Build Final Data ---------------- **/
-// //     const tableData = [];
-// //     let stats = {
-// //       present: 0,
-// //       late: 0,
-// //       half_day: 0,
-// //       absent: 0,
-// //       holiday: 0,
-// //       weeklyOff: 0,
-// //       leave: 0,
-// //       totalWorkingDays: 0,
-// //       totalPresentDays: 0
-// //     };
-
-// //     const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
-// //     const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
-
-// //     for (const key of finalKeys) {
-// //       const dateObj = new Date(`${key}T00:00:00`);
-// //       const isFuture = key > todayKey;
-
-// //       // skip dates before user creation
-// //       const userCreatedPK = toPakistanDate(userCreationDate);
-// //       const currentDatePK = toPakistanDate(dateObj);
-// //       const isBeforeUserCreation = currentDatePK < userCreatedPK;
-
-// //       if (isBeforeUserCreation) {
-// //         tableData.push({
-// //           date: key,
-// //           day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
-// //           status: "not_applicable",
-// //           checkInTime: null,
-// //           checkOutTime: null,
-// //           remarks: "User not created",
-// //           lateMinutes: 0,
-// //           overtimeMinutes: 0,
-// //           rawRecord: null,
-// //           isHoliday: false,
-// //           isWeeklyOff: false,
-// //           isWorkingDay: false
-// //         });
-// //         continue;
-// //       }
-
-// //       const record = attendanceMap[key];
-// //       // default
-// //       let status = "absent";
-// //       let remarks = "";
-// //       let checkInTime = null;
-// //       let checkOutTime = null;
-// //       let lateMinutes = 0;
-// //       let overtimeMinutes = 0;
-
-// //       const isHoliday = holidaysSet.has(key);
-// //       const isWeeklyOff = weeklyOffSet.has(getDayName(dateObj));
-
-// //       if (record) {
-// //         // use record status but normalize
-// //         status = normalizeStatus(record.status || "present");
-
-// //         checkInTime = record.checkInTime
-// //           ? toPakistanDate(record.checkInTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
-// //           : null;
-// //         checkOutTime = record.checkOutTime
-// //           ? toPakistanDate(record.checkOutTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
-// //           : null;
-
-// //         lateMinutes = record.lateMinutes || 0;
-// //         overtimeMinutes = record.overtimeMinutes || 0;
-
-// //         // If day is holiday / weekly off, override status label but keep record saved times
-// //         if (isHoliday) {
-// //           remarks = "Holiday (Attendance recorded)";
-// //           status = "holiday";
-// //         } else if (isWeeklyOff) {
-// //           remarks = "Weekly Off (Attendance recorded)";
-// //           status = "weekly_off";
-// //         }
-// //       } else {
-// //         // no record
-// //         if (isHoliday) {
-// //           status = "holiday";
-// //           remarks = "Holiday";
-// //         } else if (isWeeklyOff) {
-// //           status = "weekly_off";
-// //           remarks = "Weekly Off";
-// //         } else {
-// //           status = "absent";
-// //           remarks = "No Attendance Record";
-// //         }
-// //       }
-
-// //       // Stats calculation (only up to today, exclude future and before-creation)
-// //       if (!isFuture && !isBeforeUserCreation) {
-// //         const isWorkingDay = !isHoliday && !isWeeklyOff;
-// //         if (isWorkingDay) stats.totalWorkingDays++;
-
-// //         // Treat present/late/half_day as present
-// //         if (["present", "late", "half_day"].includes(status)) {
-// //           stats.totalPresentDays++;
-// //           if (status === "present") stats.present++;
-// //           else if (status === "late") stats.late++;
-// //           else if (status === "half_day") stats.half_day++;
-// //         } else if (status === "absent") {
-// //           stats.absent++;
-// //         } else if (status === "holiday") {
-// //           stats.holiday++;
-// //         } else if (status === "weekly_off") {
-// //           stats.weeklyOff++;
-// //         } else if (["approved_leave", "pending_leave", "leave"].includes(status)) {
-// //           stats.leave++;
-// //         }
-// //       }
-
-// //       tableData.push({
-// //         date: key,
-// //         day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
-// //         status,
-// //         checkInTime,
-// //         checkOutTime,
-// //         remarks,
-// //         lateMinutes,
-// //         overtimeMinutes,
-// //         rawRecord: record || null,
-// //         isHoliday,
-// //         isWeeklyOff,
-// //         isWorkingDay: !isHoliday && !isWeeklyOff
-// //       });
-// //     }
-
-// //     // Final derived stats
-// //     const workingDays = stats.totalWorkingDays;
-// //     const totalPresentDays = stats.present + stats.late + stats.half_day;
-// //     const totalAbsentDays = stats.absent;
-// //     const totalNonWorkingDays = stats.holiday + stats.weeklyOff + stats.leave;
-
-// //     const attendanceRate = workingDays > 0
-// //       ? ((totalPresentDays / workingDays) * 100).toFixed(2)
-// //       : "0.00";
-
-// //     return NextResponse.json({
-// //       success: true,
-// //       data: {
-// //         month,
-// //         year,
-// //         timezone: "Asia/Karachi",
-// //         userCreated: userCreationDate,
-// //         generatedAt: toPakistanDate(new Date()).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
-// //         summary: {
-// //           present: stats.present,
-// //           late: stats.late,
-// //           half_day: stats.half_day,
-// //           absent: stats.absent,
-// //           holiday: stats.holiday,
-// //           weeklyOff: stats.weeklyOff,
-// //           leave: stats.leave,
-// //           totalPresentDays,
-// //           totalAbsentDays,
-// //           totalWorkingDays: stats.totalWorkingDays,
-// //           totalNonWorkingDays,
-// //           totalLateMinutes,
-// //           totalOvertimeMinutes,
-// //           attendanceRate,
-// //           presentPercentage: workingDays > 0 ? ((totalPresentDays / workingDays) * 100).toFixed(2) : "0.00",
-// //           absentPercentage: workingDays > 0 ? ((stats.absent / workingDays) * 100).toFixed(2) : "0.00",
-// //         },
-// //         records: tableData,
-// //         calculationNotes: {
-// //           presentIncludes: "present, late, and half_day statuses",
-// //           workingDaysExcludes: "holidays, weekly offs, and leaves",
-// //           absentCountedOnlyFor: "working days without attendance records",
-// //           ordering: "Dates for the requested month are ordered with today first (newest->oldest), future dates shown after."
-// //         }
-// //       }
-// //     });
-// //   } catch (error) {
-// //     console.error("❌ Attendance GET error:", error);
-// //     return NextResponse.json(
-// //       { success: false, message: "Server error", error: error.message },
-// //       { status: 500 }
-// //     );
-// //   }
-// // }
-
-
-
-
-
-
-
-
-
 // // app/api/attendance/my/route.js
 // import { NextResponse } from "next/server";
 // import connectDB from "@/lib/mongodb";
@@ -397,25 +27,45 @@
 //   return `${yyyy}-${mm}-${dd}`;
 // }
 
-// // Get all month dates from user creation to today (Pakistan)
-// function getDatesFromUserCreationPKT(year, month, userCreationDate) {
+// // Get dates between start and end (inclusive)
+// function getDatesBetween(startDate, endDate) {
 //   const dates = [];
-//   const today = toPakistanDate(new Date());
-//   const userCreated = toPakistanDate(userCreationDate);
-
-//   // month is 1-indexed
-//   const startDate = new Date(year, month - 1, 1);
-//   const actualStart = userCreated > startDate ? userCreated : startDate;
-
-//   const lastDay =
-//     today.getFullYear() === year && today.getMonth() + 1 === month
-//       ? today.getDate()
-//       : new Date(year, month, 0).getDate();
-
-//   for (let d = actualStart.getDate(); d <= lastDay; d++) {
-//     dates.push(new Date(year, month - 1, d));
+//   const current = new Date(startDate);
+//   const end = new Date(endDate);
+  
+//   // Reset time to 00:00:00
+//   current.setHours(0, 0, 0, 0);
+//   end.setHours(0, 0, 0, 0);
+  
+//   while (current <= end) {
+//     dates.push(new Date(current));
+//     current.setDate(current.getDate() + 1);
 //   }
+  
 //   return dates;
+// }
+
+// // Get first attendance date from DB
+// async function getFirstAttendanceDate(userId, userType) {
+//   const queryField = userType === "agent" ? "agent" : "user";
+  
+//   const firstRecord = await Attendance.findOne({ [queryField]: userId })
+//     .sort({ date: 1, createdAt: 1, checkInTime: 1 })
+//     .select('date createdAt checkInTime');
+    
+//   if (firstRecord) {
+//     const date = firstRecord.date || firstRecord.createdAt || firstRecord.checkInTime;
+//     return toPakistanDate(date);
+//   }
+  
+//   // If no attendance record, get user creation date
+//   if (userType === "agent") {
+//     const agent = await Agent.findById(userId).select('createdAt');
+//     return agent?.createdAt ? toPakistanDate(agent.createdAt) : toPakistanDate(new Date());
+//   } else {
+//     const user = await User.findById(userId).select('createdAt');
+//     return user?.createdAt ? toPakistanDate(user.createdAt) : toPakistanDate(new Date());
+//   }
 // }
 
 // // Get day name in lowercase
@@ -423,45 +73,52 @@
 //   return toPakistanDate(date).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 // }
 
-// // Normalize status strings to canonical values used in stats
+// // Normalize status strings
 // function normalizeStatus(s) {
 //   if (!s) return "absent";
 //   const str = String(s).toLowerCase();
-//   if (["halfday", "half_day", "half-day"].includes(str)) return "half_day";
+  
+//   // Present categories
 //   if (["present"].includes(str)) return "present";
 //   if (["late"].includes(str)) return "late";
-//   if (["absent"].includes(str)) return "absent";
+//   if (["halfday", "half_day", "half-day", "half day"].includes(str)) return "half_day";
+  
+//   // Leave categories
+//   if (["approved_leave", "approved leave", "leave_approved", "leave approved"].includes(str)) return "approved_leave";
+//   if (["pending_leave", "pending leave", "leave_pending", "leave pending"].includes(str)) return "pending_leave";
+//   if (["leave"].includes(str)) return "approved_leave";
+  
+//   // Non-working days
 //   if (["holiday"].includes(str)) return "holiday";
-//   if (["weekly_off", "weeklyoff", "weekly-off"].includes(str)) return "weekly_off";
-//   if (["approved_leave", "pending_leave", "leave"].includes(str)) return str;
-//   return str;
+//   if (["weekly_off", "weeklyoff", "weekly-off", "weekly off"].includes(str)) return "weekly_off";
+  
+//   // Absent
+//   if (["absent"].includes(str)) return "absent";
+  
+//   return "present";
 // }
 
-// // Check if shift has started for today
-// function hasShiftStartedToday(userShift) {
-//   if (!userShift || !userShift.startTime) return false;
-  
-//   const now = toPakistanDate(new Date());
-//   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-//   // Parse shift start time (format: "HH:MM")
-//   const [startHour, startMinute] = userShift.startTime.split(':').map(Number);
-//   const shiftStartTime = new Date(todayStart);
-//   shiftStartTime.setHours(startHour, startMinute, 0, 0);
-  
-//   return now >= shiftStartTime;
+// // Check if today's shift has started
+// function isShiftStartedToday(userShiftStartTime) {
+//   try {
+//     const now = toPakistanDate(new Date());
+//     const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    
+//     if (!userShiftStartTime || userShiftStartTime === "00:00") return true;
+    
+//     const [shiftHour, shiftMinute] = userShiftStartTime.split(':').map(Number);
+//     const shiftStartMinutes = shiftHour * 60 + shiftMinute;
+    
+//     return nowMinutes >= shiftStartMinutes;
+//   } catch (error) {
+//     return true;
+//   }
 // }
 
-// // Check if today is a future date (after today)
-// function isFutureDate(date) {
-//   const today = toPakistanDate(new Date());
-//   const checkDate = toPakistanDate(date);
-  
-//   // Set both to start of day for comparison
-//   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-//   const checkDateStart = new Date(checkDate.getFullYear(), checkDate.getMonth(), checkDate.getDate());
-  
-//   return checkDateStart > todayStart;
+// // Check if date is within requested month
+// function isDateInMonth(date, year, month) {
+//   const dateObj = new Date(date);
+//   return dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month;
 // }
 
 // /** ---------- Main API ---------- **/
@@ -494,69 +151,81 @@
 
 //     const queryField = userType === "agent" ? "agent" : "user";
 
-//     // fetch user data and shift information
-//     let userData, userShift, userCreationDate;
+//     // Fetch user/agent data
+//     let userData, userShiftStartTime;
 //     if (userType === "agent") {
-//       userData = await Agent.findById(userId);
-//       userShift = await Shift.findById(userData?.shift);
-//       userCreationDate = userData?.createdAt || new Date();
+//       userData = await Agent.findById(userId)
+//         .populate("shift", "startTime endTime name");
+//       userShiftStartTime = userData?.shift?.startTime || "09:00";
 //     } else {
-//       userData = await User.findById(userId);
-//       userShift = await Shift.findById(userData?.shift);
-//       userCreationDate = userData?.createdAt || new Date();
+//       userData = await User.findById(userId)
+//         .populate("shift", "startTime endTime name");
+//       userShiftStartTime = userData?.shift?.startTime || "09:00";
 //     }
 
-//     console.log(`👤 User Creation Date: ${userCreationDate}`);
+//     // Get first attendance date
+//     const firstAttendanceDatePK = await getFirstAttendanceDate(userId, userType);
+//     console.log(`📅 First Attendance Date: ${firstAttendanceDatePK.toISOString()}`);
+    
+//     // Get today's date in PKT
+//     const todayPK = toPakistanDate(new Date());
+//     const todayKey = toKeyPKT(todayPK);
+    
 //     console.log(`📊 Requested Month: ${month}-${year}`);
-//     console.log(`⏰ User Shift:`, userShift);
+//     console.log(`📅 Today: ${todayKey}`);
 
-//     // Range in UTC (safe for DB query)
+//     // Calculate date range for this month
 //     const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
 //     const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    
+//     // Calculate actual start date (first attendance date or month start, whichever is later)
+//     const actualStartDate = firstAttendanceDatePK > monthStart ? firstAttendanceDatePK : monthStart;
+    
+//     // Calculate actual end date (today or month end, whichever is earlier)
+//     const actualEndDate = todayPK < monthEnd ? todayPK : new Date(monthEnd.getTime() - 1);
+    
+//     console.log(`📅 Date Range: ${actualStartDate.toISOString()} to ${actualEndDate.toISOString()}`);
 
-//     // Attendance records for the month (either date or checkInTime falls in range)
+//     // Get attendance records for the date range
 //     const attends = await Attendance.find({
 //       [queryField]: userId,
 //       $or: [
-//         { date: { $gte: monthStart, $lt: monthEnd } },
-//         { checkInTime: { $gte: monthStart, $lt: monthEnd } },
+//         { date: { $gte: actualStartDate, $lte: actualEndDate } },
+//         { checkInTime: { $gte: actualStartDate, $lte: actualEndDate } },
 //       ],
 //     })
-//       .populate("shift", "name startTime endTime hours days")
-//       .sort({ date: 1, checkInTime: 1 });
+//       .populate("shift", "name startTime endTime")
+//       .sort({ date: 1 });
 
-//     // Map attendance by PKT key (if multiple per day we keep the latest found)
+//     console.log(`📊 Found ${attends.length} attendance records in range`);
+
+//     // Map attendance by PKT key
 //     const attendanceMap = {};
 //     attends.forEach(att => {
 //       const source = att.date || att.checkInTime || att.createdAt;
 //       if (!source) return;
 //       const key = toKeyPKT(source);
-//       attendanceMap[key] = att; // last one wins (should be fine for single-day records)
+      
+//       if (!attendanceMap[key]) {
+//         attendanceMap[key] = att;
+//       }
 //     });
 
-//     const todayPK = toPakistanDate(new Date());
-//     const todayKey = toKeyPKT(todayPK);
-//     const hasTodayShiftStarted = hasShiftStartedToday(userShift);
+//     // Get all dates from first attendance to today (within requested month)
+//     const allDatesInRange = getDatesBetween(actualStartDate, actualEndDate);
+    
+//     // Filter dates to only include those in requested month
+//     const filteredDates = allDatesInRange.filter(date => 
+//       isDateInMonth(date, year, month)
+//     );
+    
+//     console.log(`📅 Total dates in range: ${filteredDates.length}`);
 
-//     console.log(`✅ Today's date: ${todayKey}`);
-//     console.log(`⏰ Has shift started today: ${hasTodayShiftStarted}`);
+//     // Check if today's shift has started (only if today is in requested month)
+//     const isCurrentMonth = (year === todayPK.getFullYear() && month === todayPK.getMonth() + 1);
+//     const todayShiftStarted = isCurrentMonth ? isShiftStartedToday(userShiftStartTime) : true;
 
-//     // Dates to include starting from user's creation (ensuring we don't show before creation)
-//     const datesFromCreation = getDatesFromUserCreationPKT(year, month, userCreationDate);
-
-//     // Collect keys (datesFromCreation) + any attendance days outside (future/past) within month
-//     const mergedKeysSet = new Set(datesFromCreation.map(d => toKeyPKT(d)));
-//     Object.keys(attendanceMap).forEach(k => mergedKeysSet.add(k));
-//     const mergedKeys = Array.from(mergedKeysSet);
-
-//     // Separate keys into past/today and future, then order:
-//     // - past/today: descending (today -> older)
-//     // - future: ascending (soonest future first)
-//     const pastAndToday = mergedKeys.filter(k => k <= todayKey).sort((a, b) => b.localeCompare(a));
-//     const futureKeys = mergedKeys.filter(k => k > todayKey).sort((a, b) => a.localeCompare(b));
-//     const finalKeys = [...pastAndToday, ...futureKeys];
-
-//     // Weekly Offs & Holidays (month-wide)
+//     // Weekly Offs & Holidays
 //     const weeklyOffDocs = await WeeklyOff.find({ isActive: true });
 //     const weeklyOffSet = new Set(weeklyOffDocs.map(w => w.day.toLowerCase()));
 
@@ -571,8 +240,8 @@
 //     const holidaysSet = new Set();
 //     for (const h of holidayDocs) {
 //       if (h.isRecurring && h.date) {
-//         // recurring: add by month-day for matching in same month
-//         const recKey = toKeyPKT(h.date);
+//         const recDate = new Date(h.date);
+//         const recKey = `${recDate.getMonth() + 1}-${recDate.getDate()}`;
 //         holidaysSet.add(recKey);
 //       } else if (h.date) {
 //         holidaysSet.add(toKeyPKT(h.date));
@@ -585,167 +254,126 @@
 //       present: 0,
 //       late: 0,
 //       half_day: 0,
+//       approved_leave: 0,
+//       pending_leave: 0,
 //       absent: 0,
 //       holiday: 0,
 //       weeklyOff: 0,
-//       approved_leave: 0,  // ✅ Separate approved leave
-//       pending_leave: 0,   // ✅ Separate pending leave
 //       totalWorkingDays: 0,
 //       totalPresentDays: 0,
+//       totalAbsentDays: 0,
 //       totalLeaveDays: 0
 //     };
 
 //     const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
 //     const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
 
-//     for (const key of finalKeys) {
-//       const dateObj = new Date(`${key}T00:00:00`);
+//     // Process each date in chronological order
+//     const sortedDates = filteredDates.sort((a, b) => a - b);
+    
+//     for (const dateObj of sortedDates) {
+//       const key = toKeyPKT(dateObj);
 //       const isToday = key === todayKey;
-//       const isFuture = key > todayKey;
-
-//       // skip dates before user creation
-//       const userCreatedPK = toPakistanDate(userCreationDate);
-//       const currentDatePK = toPakistanDate(dateObj);
-//       const isBeforeUserCreation = currentDatePK < userCreatedPK;
-
-//       if (isBeforeUserCreation) {
-//         tableData.push({
-//           date: key,
-//           day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
-//           status: "not_applicable",
-//           checkInTime: null,
-//           checkOutTime: null,
-//           remarks: "User not created",
-//           lateMinutes: 0,
-//           overtimeMinutes: 0,
-//           rawRecord: null,
-//           isHoliday: false,
-//           isWeeklyOff: false,
-//           isWorkingDay: false
-//         });
-//         continue;
-//       }
-
-//       const record = attendanceMap[key];
       
-//       // default values
+//       const record = attendanceMap[key];
+//       const isHoliday = holidaysSet.has(key) || holidaysSet.has(`${dateObj.getMonth() + 1}-${dateObj.getDate()}`);
+//       const isWeeklyOff = weeklyOffSet.has(getDayName(dateObj));
+      
 //       let status = "absent";
 //       let remarks = "";
 //       let checkInTime = null;
 //       let checkOutTime = null;
 //       let lateMinutes = 0;
 //       let overtimeMinutes = 0;
-
-//       const isHoliday = holidaysSet.has(key);
-//       const isWeeklyOff = weeklyOffSet.has(getDayName(dateObj));
+//       let isLeaveDay = false;
 
 //       if (record) {
-//         // use record status but normalize
-//         status = normalizeStatus(record.status || "present");
+//         // Get status from record
+//         const recordStatus = record.status || "present";
+//         status = normalizeStatus(recordStatus);
+        
+//         isLeaveDay = ["approved_leave", "pending_leave", "leave"].includes(recordStatus.toLowerCase());
 
 //         checkInTime = record.checkInTime
-//           ? toPakistanDate(record.checkInTime).toLocaleTimeString("en-PK", { 
-//               hour: "2-digit", 
-//               minute: "2-digit", 
-//               hour12: true 
-//             })
+//           ? toPakistanDate(record.checkInTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
 //           : null;
 //         checkOutTime = record.checkOutTime
-//           ? toPakistanDate(record.checkOutTime).toLocaleTimeString("en-PK", { 
-//               hour: "2-digit", 
-//               minute: "2-digit", 
-//               hour12: true 
-//             })
+//           ? toPakistanDate(record.checkOutTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
 //           : null;
 
 //         lateMinutes = record.lateMinutes || 0;
 //         overtimeMinutes = record.overtimeMinutes || 0;
 
-//         // If day is holiday / weekly off, override status label but keep record saved times
-//         if (isHoliday) {
-//           remarks = "Holiday (Attendance recorded)";
+//         // Override if holiday/weekly off but still show leave if applicable
+//         if (isHoliday && !isLeaveDay) {
 //           status = "holiday";
-//         } else if (isWeeklyOff) {
-//           remarks = "Weekly Off (Attendance recorded)";
+//           remarks = "Public Holiday" + (record.notes ? ` - ${record.notes}` : "");
+//         } else if (isWeeklyOff && !isLeaveDay) {
 //           status = "weekly_off";
+//           remarks = "Weekly Off" + (record.notes ? ` - ${record.notes}` : "");
+//         } else {
+//           remarks = record.notes || "";
 //         }
 //       } else {
-//         // no record found
+//         // No attendance record
 //         if (isHoliday) {
 //           status = "holiday";
-//           remarks = "Holiday";
+//           remarks = "Public Holiday";
 //         } else if (isWeeklyOff) {
 //           status = "weekly_off";
 //           remarks = "Weekly Off";
-//         } else {
-//           // ✅ FIXED: For today, if shift hasn't started yet, show "pending" instead of "absent"
-//           if (isToday && !hasTodayShiftStarted) {
-//             status = "pending";
+//         } else if (isToday && isCurrentMonth) {
+//           // Special handling for today
+//           if (!todayShiftStarted) {
+//             status = "not_started";
 //             remarks = "Shift not started yet";
 //           } else {
 //             status = "absent";
 //             remarks = "No Attendance Record";
 //           }
+//         } else {
+//           status = "absent";
+//           remarks = "No Attendance Record";
 //         }
 //       }
 
-//       // ✅ FIXED: Stats calculation - ONLY FOR PAST DAYS (not today or future)
-//       if (!isFuture && !isBeforeUserCreation && !isToday) {
-//         const isWorkingDay = !isHoliday && !isWeeklyOff;
-        
-//         if (isWorkingDay) {
-//           stats.totalWorkingDays++;
-          
-//           // ✅ FIXED: Present statuses
-//           if (["present", "late", "half_day"].includes(status)) {
-//             stats.totalPresentDays++;
-//             if (status === "present") stats.present++;
-//             else if (status === "late") stats.late++;
-//             else if (status === "half_day") stats.half_day++;
-//           } 
-//           // ✅ FIXED: Leave handling - separate approved and pending
-//           else if (status === "approved_leave") {
-//             stats.approved_leave++;
-//             stats.totalLeaveDays++;
-//           } 
-//           else if (status === "pending_leave") {
-//             stats.pending_leave++;
-//             stats.totalLeaveDays++;
-//           }
-//           else if (status === "leave") {
-//             // Default leave as approved
-//             stats.approved_leave++;
-//             stats.totalLeaveDays++;
-//           }
-//           // ✅ FIXED: Only count as absent for working days without any record
-//           else if (status === "absent" && isWorkingDay) {
-//             stats.absent++;
-//           }
-//         }
-//         // For non-working days
-//         else {
-//           if (status === "holiday") {
-//             stats.holiday++;
-//           } else if (status === "weekly_off") {
-//             stats.weeklyOff++;
-//           }
+//       // Stats calculation (all dates in range are past/today, no future)
+//       const isWorkingDay = !isHoliday && !isWeeklyOff && 
+//                          !["approved_leave", "pending_leave", "holiday", "weekly_off", "not_started"].includes(status);
+      
+//       if (isWorkingDay) {
+//         stats.totalWorkingDays++;
+//       }
+
+//       // Count present statuses
+//       if (["present", "late", "half_day"].includes(status)) {
+//         stats.totalPresentDays++;
+//         if (status === "present") stats.present++;
+//         else if (status === "late") stats.late++;
+//         else if (status === "half_day") stats.half_day++;
+//       }
+//       // Count leave statuses
+//       else if (status === "approved_leave") {
+//         stats.approved_leave++;
+//         stats.totalLeaveDays++;
+//       }
+//       else if (status === "pending_leave") {
+//         stats.pending_leave++;
+//         stats.totalLeaveDays++;
+//       }
+//       // Count absent only for working days (not today if shift not started)
+//       else if (status === "absent") {
+//         if (isWorkingDay && !(isToday && !todayShiftStarted)) {
+//           stats.absent++;
+//           stats.totalAbsentDays++;
 //         }
 //       }
-      
-//       // ✅ For today, handle specially
-//       if (isToday) {
-//         if (isHoliday) {
-//           status = "holiday";
-//           remarks = "Today is a holiday";
-//         } else if (isWeeklyOff) {
-//           status = "weekly_off";
-//           remarks = "Today is weekly off";
-//         }
-//         // If today is a working day and no record yet
-//         else if (!record && !hasTodayShiftStarted) {
-//           status = "pending";
-//           remarks = "Today - Shift not started yet";
-//         }
+//       // Count non-working days
+//       else if (status === "holiday") {
+//         stats.holiday++;
+//       }
+//       else if (status === "weekly_off") {
+//         stats.weeklyOff++;
 //       }
 
 //       tableData.push({
@@ -760,39 +388,29 @@
 //         rawRecord: record || null,
 //         isHoliday,
 //         isWeeklyOff,
-//         isWorkingDay: !isHoliday && !isWeeklyOff,
-//         isToday: isToday,
-//         isFuture: isFuture,
-//         shiftStartedToday: isToday ? hasTodayShiftStarted : null
+//         isLeaveDay,
+//         isWorkingDay,
+//         isToday,
+//         shiftStarted: isToday ? todayShiftStarted : true,
+//         dateObj: dateObj.toISOString()
 //       });
 //     }
 
-//     // ✅ FIXED: Final derived stats
-//     const workingDays = stats.totalWorkingDays;
+//     // Final derived stats
 //     const totalPresentDays = stats.present + stats.late + stats.half_day;
-//     const totalAbsentDays = stats.absent;
-//     const totalLeaveDays = stats.approved_leave + stats.pending_leave;
-//     const totalNonWorkingDays = stats.holiday + stats.weeklyOff + totalLeaveDays;
-
-//     // ✅ FIXED: Calculate percentages correctly
-//     const attendanceRate = workingDays > 0
-//       ? ((totalPresentDays / workingDays) * 100).toFixed(2)
+    
+//     // Calculate percentages
+//     const attendanceRate = stats.totalWorkingDays > 0
+//       ? ((totalPresentDays / stats.totalWorkingDays) * 100).toFixed(2)
 //       : "0.00";
-
-//     const presentPercentage = workingDays > 0
-//       ? ((totalPresentDays / workingDays) * 100).toFixed(2)
+    
+//     const absentRate = stats.totalWorkingDays > 0
+//       ? ((stats.totalAbsentDays / stats.totalWorkingDays) * 100).toFixed(2)
 //       : "0.00";
-
-//     const absentPercentage = workingDays > 0
-//       ? ((stats.absent / workingDays) * 100).toFixed(2)
+    
+//     const leaveRate = tableData.length > 0
+//       ? ((stats.totalLeaveDays / tableData.length) * 100).toFixed(2)
 //       : "0.00";
-
-//     const leavePercentage = workingDays > 0
-//       ? ((totalLeaveDays / workingDays) * 100).toFixed(2)
-//       : "0.00";
-
-//     // ✅ Total days in the month (for reference)
-//     const totalDaysInMonth = new Date(year, month, 0).getDate();
 
 //     return NextResponse.json({
 //       success: true,
@@ -800,56 +418,63 @@
 //         month,
 //         year,
 //         timezone: "Asia/Karachi",
-//         userCreated: userCreationDate,
-//         userShift: userShift || null,
+//         firstAttendanceDate: firstAttendanceDatePK.toISOString(),
+//         dateRange: {
+//           start: actualStartDate.toISOString(),
+//           end: actualEndDate.toISOString(),
+//           totalDays: tableData.length
+//         },
+//         userShift: {
+//           startTime: userShiftStartTime,
+//           name: userData?.shift?.name || "Default Shift"
+//         },
 //         generatedAt: toPakistanDate(new Date()).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
 //         summary: {
-//           // ✅ Present Counts (all counted as present)
+//           // Present counts
 //           present: stats.present,
 //           late: stats.late,
 //           half_day: stats.half_day,
 //           totalPresentDays: totalPresentDays,
           
-//           // ✅ Absent Counts
-//           absent: stats.absent,
-          
-//           // ✅ Leave Counts (separated)
+//           // Leave counts
 //           approved_leave: stats.approved_leave,
 //           pending_leave: stats.pending_leave,
-//           totalLeaveDays: totalLeaveDays,
+//           totalLeaveDays: stats.totalLeaveDays,
           
-//           // ✅ Non-working days
+//           // Absent counts
+//           absent: stats.totalAbsentDays,
+//           totalAbsentDays: stats.totalAbsentDays,
+          
+//           // Non-working days
 //           holiday: stats.holiday,
 //           weeklyOff: stats.weeklyOff,
           
-//           // ✅ Totals
+//           // Totals
 //           totalWorkingDays: stats.totalWorkingDays,
-//           totalNonWorkingDays: totalNonWorkingDays,
+//           totalNonWorkingDays: stats.holiday + stats.weeklyOff + stats.totalLeaveDays,
+//           totalDays: tableData.length,
+          
+//           // Minutes
 //           totalLateMinutes,
 //           totalOvertimeMinutes,
           
-//           // ✅ Rates
+//           // Rates
 //           attendanceRate,
-//           presentPercentage,
-//           absentPercentage,
-//           leavePercentage,
-          
-//           // ✅ Today's status
-//           today: {
-//             date: todayKey,
-//             shiftStarted: hasTodayShiftStarted,
-//             isHoliday: holidaysSet.has(todayKey),
-//             isWeeklyOff: weeklyOffSet.has(getDayName(todayPK))
-//           }
+//           absentRate,
+//           leaveRate,
+//           presentPercentage: attendanceRate,
+//           absentPercentage: absentRate,
+//           leavePercentage: leaveRate
 //         },
 //         records: tableData,
 //         calculationNotes: {
-//           presentIncludes: "present, late, and half_day statuses are all counted as present",
+//           calculationStartDate: `Data calculated from first attendance: ${firstAttendanceDatePK.toLocaleDateString('en-PK')}`,
+//           calculationEndDate: `Data calculated up to: ${actualEndDate.toLocaleDateString('en-PK')}`,
+//           presentIncludes: "present, late, and half_day statuses",
+//           leaveIncludes: "approved_leave and pending_leave (NOT counted as absent)",
 //           workingDaysExcludes: "holidays, weekly offs, and all types of leaves",
-//           leaveHandling: "approved_leave and pending_leave are NOT counted as absent or present",
-//           todayHandling: "Today shows as 'pending' if shift hasn't started yet and no attendance recorded",
-//           absentCountedOnlyFor: "working days without attendance records (excluding today if shift hasn't started)",
-//           statsBasedOn: "Only past days (excluding today and future dates)"
+//           todaySpecialCase: "If shift hasn't started yet, today is marked as 'not_started' not 'absent'",
+//           ordering: "Dates shown in chronological order (oldest to newest)"
 //         }
 //       }
 //     });
@@ -861,11 +486,6 @@
 //     );
 //   }
 // }
-
-
-
-
-
 
 
 // app/api/attendance/my/route.js
@@ -897,25 +517,45 @@ function toKeyPKT(date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// Get all month dates from user creation to today (Pakistan)
-function getDatesFromUserCreationPKT(year, month, userCreationDate) {
+// Get dates between start and end (inclusive)
+function getDatesBetween(startDate, endDate) {
   const dates = [];
-  const today = toPakistanDate(new Date());
-  const userCreated = toPakistanDate(userCreationDate);
-
-  // month is 1-indexed
-  const startDate = new Date(year, month - 1, 1);
-  const actualStart = userCreated > startDate ? userCreated : startDate;
-
-  const lastDay =
-    today.getFullYear() === year && today.getMonth() + 1 === month
-      ? today.getDate()
-      : new Date(year, month, 0).getDate();
-
-  for (let d = actualStart.getDate(); d <= lastDay; d++) {
-    dates.push(new Date(year, month - 1, d));
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Reset time to 00:00:00
+  current.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
+  while (current <= end) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
   }
+  
   return dates;
+}
+
+// Get first attendance date from DB
+async function getFirstAttendanceDate(userId, userType) {
+  const queryField = userType === "agent" ? "agent" : "user";
+  
+  const firstRecord = await Attendance.findOne({ [queryField]: userId })
+    .sort({ date: 1, createdAt: 1, checkInTime: 1 })
+    .select('date createdAt checkInTime');
+    
+  if (firstRecord) {
+    const date = firstRecord.date || firstRecord.createdAt || firstRecord.checkInTime;
+    return toPakistanDate(date);
+  }
+  
+  // If no attendance record, get user creation date
+  if (userType === "agent") {
+    const agent = await Agent.findById(userId).select('createdAt');
+    return agent?.createdAt ? toPakistanDate(agent.createdAt) : toPakistanDate(new Date());
+  } else {
+    const user = await User.findById(userId).select('createdAt');
+    return user?.createdAt ? toPakistanDate(user.createdAt) : toPakistanDate(new Date());
+  }
 }
 
 // Get day name in lowercase
@@ -923,43 +563,52 @@ function getDayName(date) {
   return toPakistanDate(date).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 }
 
-// Normalize status strings to canonical values
+// Normalize status strings
 function normalizeStatus(s) {
   if (!s) return "absent";
   const str = String(s).toLowerCase();
   
-  if (["halfday", "half_day", "half-day"].includes(str)) return "half_day";
+  // Present categories
   if (["present"].includes(str)) return "present";
   if (["late"].includes(str)) return "late";
-  if (["absent"].includes(str)) return "absent";
-  if (["holiday"].includes(str)) return "holiday";
-  if (["weekly_off", "weeklyoff", "weekly-off"].includes(str)) return "weekly_off";
-  if (["approved_leave"].includes(str)) return "approved_leave";
-  if (["pending_leave"].includes(str)) return "pending_leave";
-  if (["leave"].includes(str)) return "approved_leave"; // Default leave to approved
+  if (["halfday", "half_day", "half-day", "half day"].includes(str)) return "half_day";
   
-  return str;
+  // Leave categories
+  if (["approved_leave", "approved leave", "leave_approved", "leave approved"].includes(str)) return "approved_leave";
+  if (["pending_leave", "pending leave", "leave_pending", "leave pending"].includes(str)) return "pending_leave";
+  if (["leave"].includes(str)) return "approved_leave";
+  
+  // Non-working days
+  if (["holiday"].includes(str)) return "holiday";
+  if (["weekly_off", "weeklyoff", "weekly-off", "weekly off"].includes(str)) return "weekly_off";
+  
+  // Absent
+  if (["absent"].includes(str)) return "absent";
+  
+  return "present";
 }
 
-// Check if shift time has started for today
-function hasShiftStartedToday(userShift) {
-  if (!userShift || !userShift.startTime) return true; // If no shift, assume started
-  
-  const now = toPakistanDate(new Date());
-  const today = toKeyPKT(now);
-  
-  // Get today's date components
-  const todayDate = new Date(today);
-  
-  // Parse shift start time
-  const [startHour, startMinute] = userShift.startTime.split(':').map(Number);
-  
-  // Create shift start time for today
-  const shiftStartTime = new Date(todayDate);
-  shiftStartTime.setHours(startHour, startMinute, 0, 0);
-  
-  // Check if current time is after shift start time
-  return now >= shiftStartTime;
+// Check if today's shift has started
+function isShiftStartedToday(userShiftStartTime) {
+  try {
+    const now = toPakistanDate(new Date());
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    if (!userShiftStartTime || userShiftStartTime === "00:00") return true;
+    
+    const [shiftHour, shiftMinute] = userShiftStartTime.split(':').map(Number);
+    const shiftStartMinutes = shiftHour * 60 + shiftMinute;
+    
+    return nowMinutes >= shiftStartMinutes;
+  } catch (error) {
+    return true;
+  }
+}
+
+// Check if date is within requested month
+function isDateInMonth(date, year, month) {
+  const dateObj = new Date(date);
+  return dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month;
 }
 
 /** ---------- Main API ---------- **/
@@ -992,37 +641,53 @@ export async function GET(request) {
 
     const queryField = userType === "agent" ? "agent" : "user";
 
-    // Fetch user data with shift info
-    let userData, userShift, userCreationDate;
-    
+    // Fetch user/agent data
+    let userData, userShiftStartTime;
     if (userType === "agent") {
-      userData = await Agent.findById(userId).populate("shift", "name startTime endTime");
-      userShift = userData?.shift;
-      userCreationDate = userData?.createdAt || new Date();
+      userData = await Agent.findById(userId)
+        .populate("shift", "startTime endTime name");
+      userShiftStartTime = userData?.shift?.startTime || "09:00";
     } else {
-      userData = await User.findById(userId).populate("shift", "name startTime endTime");
-      userShift = userData?.shift;
-      userCreationDate = userData?.createdAt || new Date();
+      userData = await User.findById(userId)
+        .populate("shift", "startTime endTime name");
+      userShiftStartTime = userData?.shift?.startTime || "09:00";
     }
 
-    console.log(`👤 User Creation Date: ${userCreationDate}`);
+    // Get first attendance date
+    const firstAttendanceDatePK = await getFirstAttendanceDate(userId, userType);
+    console.log(`📅 First Attendance Date: ${firstAttendanceDatePK.toISOString()}`);
+    
+    // Get today's date in PKT
+    const todayPK = toPakistanDate(new Date());
+    const todayKey = toKeyPKT(todayPK);
+    
     console.log(`📊 Requested Month: ${month}-${year}`);
-    console.log(`🕒 User Shift: ${JSON.stringify(userShift)}`);
+    console.log(`📅 Today: ${todayKey}`);
 
-    // Range in UTC (safe for DB query)
+    // Calculate date range for this month
     const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
     const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    
+    // Calculate actual start date (first attendance date or month start, whichever is later)
+    const actualStartDate = firstAttendanceDatePK > monthStart ? firstAttendanceDatePK : monthStart;
+    
+    // Calculate actual end date (today or month end, whichever is earlier)
+    const actualEndDate = todayPK < monthEnd ? todayPK : new Date(monthEnd.getTime() - 1);
+    
+    console.log(`📅 Date Range: ${actualStartDate.toISOString()} to ${actualEndDate.toISOString()}`);
 
-    // Attendance records for the month
+    // Get attendance records for the date range
     const attends = await Attendance.find({
       [queryField]: userId,
       $or: [
-        { date: { $gte: monthStart, $lt: monthEnd } },
-        { checkInTime: { $gte: monthStart, $lt: monthEnd } },
+        { date: { $gte: actualStartDate, $lte: actualEndDate } },
+        { checkInTime: { $gte: actualStartDate, $lte: actualEndDate } },
       ],
     })
-      .populate("shift", "name startTime endTime hours days")
-      .sort({ date: 1, checkInTime: 1 });
+      .populate("shift", "name startTime endTime")
+      .sort({ date: -1 }); // Sort by date descending for better performance
+
+    console.log(`📊 Found ${attends.length} attendance records in range`);
 
     // Map attendance by PKT key
     const attendanceMap = {};
@@ -1030,35 +695,27 @@ export async function GET(request) {
       const source = att.date || att.checkInTime || att.createdAt;
       if (!source) return;
       const key = toKeyPKT(source);
-      // If multiple records for same day, keep the latest one
-      if (!attendanceMap[key] || new Date(source) > new Date(attendanceMap[key].date || attendanceMap[key].createdAt)) {
+      
+      if (!attendanceMap[key]) {
         attendanceMap[key] = att;
       }
     });
 
-    const todayPK = toPakistanDate(new Date());
-    const todayKey = toKeyPKT(todayPK);
-    const todayDateObj = new Date(todayKey);
-    const isTodayInRequestedMonth = 
-      todayDateObj.getFullYear() === year && 
-      todayDateObj.getMonth() + 1 === month;
+    // Get all dates from first attendance to today (within requested month)
+    const allDatesInRange = getDatesBetween(actualStartDate, actualEndDate);
+    
+    // Filter dates to only include those in requested month
+    const filteredDates = allDatesInRange.filter(date => 
+      isDateInMonth(date, year, month)
+    );
+    
+    console.log(`📅 Total dates in range: ${filteredDates.length}`);
 
-    console.log(`📅 Today: ${todayKey}, In requested month: ${isTodayInRequestedMonth}`);
+    // Check if today's shift has started (only if today is in requested month)
+    const isCurrentMonth = (year === todayPK.getFullYear() && month === todayPK.getMonth() + 1);
+    const todayShiftStarted = isCurrentMonth ? isShiftStartedToday(userShiftStartTime) : true;
 
-    // Dates to include starting from user's creation
-    const datesFromCreation = getDatesFromUserCreationPKT(year, month, userCreationDate);
-
-    // Collect keys (datesFromCreation) + any attendance days
-    const mergedKeysSet = new Set(datesFromCreation.map(d => toKeyPKT(d)));
-    Object.keys(attendanceMap).forEach(k => mergedKeysSet.add(k));
-    const mergedKeys = Array.from(mergedKeysSet);
-
-    // Separate keys into past/today and future
-    const pastAndToday = mergedKeys.filter(k => k <= todayKey).sort((a, b) => b.localeCompare(a));
-    const futureKeys = mergedKeys.filter(k => k > todayKey).sort((a, b) => a.localeCompare(b));
-    const finalKeys = [...pastAndToday, ...futureKeys];
-
-    // Weekly Offs & Holidays (month-wide)
+    // Weekly Offs & Holidays
     const weeklyOffDocs = await WeeklyOff.find({ isActive: true });
     const weeklyOffSet = new Set(weeklyOffDocs.map(w => w.day.toLowerCase()));
 
@@ -1074,9 +731,8 @@ export async function GET(request) {
     for (const h of holidayDocs) {
       if (h.isRecurring && h.date) {
         const recDate = new Date(h.date);
-        if (recDate.getMonth() + 1 === month) {
-          holidaysSet.add(toKeyPKT(new Date(year, month - 1, recDate.getDate())));
-        }
+        const recKey = `${recDate.getMonth() + 1}-${recDate.getDate()}`;
+        holidaysSet.add(recKey);
       } else if (h.date) {
         holidaysSet.add(toKeyPKT(h.date));
       }
@@ -1088,67 +744,45 @@ export async function GET(request) {
       present: 0,
       late: 0,
       half_day: 0,
+      approved_leave: 0,
+      pending_leave: 0,
       absent: 0,
       holiday: 0,
       weeklyOff: 0,
-      approved_leave: 0,
-      pending_leave: 0,
       totalWorkingDays: 0,
       totalPresentDays: 0,
+      totalAbsentDays: 0,
       totalLeaveDays: 0
     };
 
     const totalLateMinutes = attends.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
     const totalOvertimeMinutes = attends.reduce((sum, a) => sum + (a.overtimeMinutes || 0), 0);
 
-    for (const key of finalKeys) {
-      const dateObj = new Date(`${key}T00:00:00`);
-      const isFuture = key > todayKey;
+    // Process each date in REVERSE chronological order (newest to oldest)
+    const sortedDates = filteredDates.sort((a, b) => b - a); // DESCENDING order
+    
+    for (const dateObj of sortedDates) {
+      const key = toKeyPKT(dateObj);
       const isToday = key === todayKey;
-
-      // Check if today's shift has started
-      const isShiftStarted = isToday ? hasShiftStartedToday(userShift) : true;
-
-      // Skip dates before user creation
-      const userCreatedPK = toPakistanDate(userCreationDate);
-      const currentDatePK = toPakistanDate(dateObj);
-      const isBeforeUserCreation = currentDatePK < userCreatedPK;
-
-      if (isBeforeUserCreation) {
-        tableData.push({
-          date: key,
-          day: toPakistanDate(dateObj).toLocaleDateString("en-PK", { weekday: "short" }),
-          status: "not_applicable",
-          checkInTime: null,
-          checkOutTime: null,
-          remarks: "User not created",
-          lateMinutes: 0,
-          overtimeMinutes: 0,
-          rawRecord: null,
-          isHoliday: false,
-          isWeeklyOff: false,
-          isWorkingDay: false,
-          isToday: isToday
-        });
-        continue;
-      }
-
+      
       const record = attendanceMap[key];
-      // Default values
+      const isHoliday = holidaysSet.has(key) || holidaysSet.has(`${dateObj.getMonth() + 1}-${dateObj.getDate()}`);
+      const isWeeklyOff = weeklyOffSet.has(getDayName(dateObj));
+      
       let status = "absent";
       let remarks = "";
       let checkInTime = null;
       let checkOutTime = null;
       let lateMinutes = 0;
       let overtimeMinutes = 0;
-
-      const isHoliday = holidaysSet.has(key);
-      const isWeeklyOff = weeklyOffSet.has(getDayName(dateObj));
-      const isWorkingDay = !isHoliday && !isWeeklyOff;
+      let isLeaveDay = false;
 
       if (record) {
-        // Use record status but normalize
-        status = normalizeStatus(record.status || "present");
+        // Get status from record
+        const recordStatus = record.status || "present";
+        status = normalizeStatus(recordStatus);
+        
+        isLeaveDay = ["approved_leave", "pending_leave", "leave"].includes(recordStatus.toLowerCase());
 
         checkInTime = record.checkInTime
           ? toPakistanDate(record.checkInTime).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true })
@@ -1160,68 +794,76 @@ export async function GET(request) {
         lateMinutes = record.lateMinutes || 0;
         overtimeMinutes = record.overtimeMinutes || 0;
 
-        // If day is holiday/weekly off but attendance recorded
-        if (isHoliday) {
-          remarks = "Holiday (Attendance recorded)";
+        // Override if holiday/weekly off but still show leave if applicable
+        if (isHoliday && !isLeaveDay) {
           status = "holiday";
-        } else if (isWeeklyOff) {
-          remarks = "Weekly Off (Attendance recorded)";
+          remarks = "Public Holiday" + (record.notes ? ` - ${record.notes}` : "");
+        } else if (isWeeklyOff && !isLeaveDay) {
           status = "weekly_off";
-        } else if (status === "approved_leave" || status === "pending_leave") {
-          remarks = `${status.replace('_', ' ').toUpperCase()} (Attendance exempted)`;
+          remarks = "Weekly Off" + (record.notes ? ` - ${record.notes}` : "");
+        } else {
+          remarks = record.notes || "";
         }
       } else {
-        // No record
+        // No attendance record
         if (isHoliday) {
           status = "holiday";
-          remarks = "Holiday";
+          remarks = "Public Holiday";
         } else if (isWeeklyOff) {
           status = "weekly_off";
           remarks = "Weekly Off";
-        } else if (isToday && !isShiftStarted) {
-          // Today's shift hasn't started yet - show as pending
-          status = "pending";
-          remarks = "Shift not started yet";
+        } else if (isToday && isCurrentMonth) {
+          // Special handling for today
+          if (!todayShiftStarted) {
+            status = "not_started";
+            remarks = "Shift not started yet";
+          } else {
+            status = "absent";
+            remarks = "No Attendance Record";
+          }
         } else {
           status = "absent";
           remarks = "No Attendance Record";
         }
       }
 
-      // Stats calculation (only up to yesterday, exclude today if shift hasn't started)
-      const shouldCountForStats = !isFuture && 
-                                  !isBeforeUserCreation && 
-                                  !(isToday && !isShiftStarted && status === "pending");
+      // Stats calculation (all dates in range are past/today, no future)
+      const isWorkingDay = !isHoliday && !isWeeklyOff && 
+                         !["approved_leave", "pending_leave", "holiday", "weekly_off", "not_started"].includes(status);
+      
+      if (isWorkingDay) {
+        stats.totalWorkingDays++;
+      }
 
-      if (shouldCountForStats) {
-        if (isWorkingDay) stats.totalWorkingDays++;
-
-        // Treat present/late/half_day as present
-        if (["present", "late", "half_day"].includes(status)) {
-          stats.totalPresentDays++;
-          if (status === "present") stats.present++;
-          else if (status === "late") stats.late++;
-          else if (status === "half_day") stats.half_day++;
-        } 
-        // Leaves are NOT counted as absent
-        else if (status === "approved_leave") {
-          stats.approved_leave++;
-          stats.totalLeaveDays++;
-        }
-        else if (status === "pending_leave") {
-          stats.pending_leave++;
-          stats.totalLeaveDays++;
-        }
-        // Only count as absent if it's a working day without leave
-        else if (status === "absent" && isWorkingDay) {
+      // Count present statuses
+      if (["present", "late", "half_day"].includes(status)) {
+        stats.totalPresentDays++;
+        if (status === "present") stats.present++;
+        else if (status === "late") stats.late++;
+        else if (status === "half_day") stats.half_day++;
+      }
+      // Count leave statuses
+      else if (status === "approved_leave") {
+        stats.approved_leave++;
+        stats.totalLeaveDays++;
+      }
+      else if (status === "pending_leave") {
+        stats.pending_leave++;
+        stats.totalLeaveDays++;
+      }
+      // Count absent only for working days (not today if shift not started)
+      else if (status === "absent") {
+        if (isWorkingDay && !(isToday && !todayShiftStarted)) {
           stats.absent++;
+          stats.totalAbsentDays++;
         }
-        else if (status === "holiday") {
-          stats.holiday++;
-        }
-        else if (status === "weekly_off") {
-          stats.weeklyOff++;
-        }
+      }
+      // Count non-working days
+      else if (status === "holiday") {
+        stats.holiday++;
+      }
+      else if (status === "weekly_off") {
+        stats.weeklyOff++;
       }
 
       tableData.push({
@@ -1236,44 +878,29 @@ export async function GET(request) {
         rawRecord: record || null,
         isHoliday,
         isWeeklyOff,
+        isLeaveDay,
         isWorkingDay,
         isToday,
-        shiftStarted: isShiftStarted
+        shiftStarted: isToday ? todayShiftStarted : true,
+        dateObj: dateObj.toISOString()
       });
     }
 
     // Final derived stats
-    const workingDays = stats.totalWorkingDays;
     const totalPresentDays = stats.present + stats.late + stats.half_day;
-    const totalAbsentDays = stats.absent;
-    const totalLeaveDays = stats.approved_leave + stats.pending_leave;
-    const totalNonWorkingDays = stats.holiday + stats.weeklyOff + totalLeaveDays;
-
-    // Calculate rates
-    const attendanceRate = workingDays > 0
-      ? ((totalPresentDays / workingDays) * 100).toFixed(2)
+    
+    // Calculate percentages
+    const attendanceRate = stats.totalWorkingDays > 0
+      ? ((totalPresentDays / stats.totalWorkingDays) * 100).toFixed(2)
       : "0.00";
-
-    const presentPercentage = workingDays > 0
-      ? ((totalPresentDays / workingDays) * 100).toFixed(2)
+    
+    const absentRate = stats.totalWorkingDays > 0
+      ? ((stats.totalAbsentDays / stats.totalWorkingDays) * 100).toFixed(2)
       : "0.00";
-
-    const absentPercentage = workingDays > 0
-      ? ((stats.absent / workingDays) * 100).toFixed(2)
+    
+    const leaveRate = tableData.length > 0
+      ? ((stats.totalLeaveDays / tableData.length) * 100).toFixed(2)
       : "0.00";
-
-    const leavePercentage = (workingDays + totalLeaveDays) > 0
-      ? ((totalLeaveDays / (workingDays + totalLeaveDays)) * 100).toFixed(2)
-      : "0.00";
-
-    // Get first attendance date for the user
-    const firstAttendance = await Attendance.findOne({
-      [queryField]: userId
-    }).sort({ createdAt: 1, date: 1 });
-
-    const firstAttendanceDate = firstAttendance ? 
-      (firstAttendance.date || firstAttendance.createdAt) : 
-      userCreationDate;
 
     return NextResponse.json({
       success: true,
@@ -1281,14 +908,17 @@ export async function GET(request) {
         month,
         year,
         timezone: "Asia/Karachi",
-        userCreated: userCreationDate,
-        firstAttendanceDate: firstAttendanceDate,
+        firstAttendanceDate: firstAttendanceDatePK.toISOString(),
+        dateRange: {
+          start: actualStartDate.toISOString(),
+          end: actualEndDate.toISOString(),
+          totalDays: tableData.length
+        },
+        userShift: {
+          startTime: userShiftStartTime,
+          name: userData?.shift?.name || "Default Shift"
+        },
         generatedAt: toPakistanDate(new Date()).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
-        userShift: userShift ? {
-          name: userShift.name,
-          startTime: userShift.startTime,
-          endTime: userShift.endTime
-        } : null,
         summary: {
           // Present counts
           present: stats.present,
@@ -1296,42 +926,45 @@ export async function GET(request) {
           half_day: stats.half_day,
           totalPresentDays: totalPresentDays,
           
-          // Absent counts (only working days without leave)
-          absent: stats.absent,
-          totalAbsentDays: totalAbsentDays,
-          
-          // Leave counts (separated)
+          // Leave counts
           approved_leave: stats.approved_leave,
           pending_leave: stats.pending_leave,
-          totalLeaveDays: totalLeaveDays,
+          totalLeaveDays: stats.totalLeaveDays,
+          
+          // Absent counts
+          absent: stats.totalAbsentDays,
+          totalAbsentDays: stats.totalAbsentDays,
           
           // Non-working days
           holiday: stats.holiday,
           weeklyOff: stats.weeklyOff,
-          totalNonWorkingDays: totalNonWorkingDays,
           
           // Totals
-          totalWorkingDays: workingDays,
-          totalDaysInMonth: new Date(year, month, 0).getDate(),
+          totalWorkingDays: stats.totalWorkingDays,
+          totalNonWorkingDays: stats.holiday + stats.weeklyOff + stats.totalLeaveDays,
+          totalDays: tableData.length,
+          
+          // Minutes
           totalLateMinutes,
           totalOvertimeMinutes,
           
           // Rates
           attendanceRate,
-          presentPercentage,
-          absentPercentage,
-          leavePercentage,
-          workingDaysPercentage: ((workingDays / new Date(year, month, 0).getDate()) * 100).toFixed(2)
+          absentRate,
+          leaveRate,
+          presentPercentage: attendanceRate,
+          absentPercentage: absentRate,
+          leavePercentage: leaveRate
         },
-        records: tableData,
+        records: tableData, // Already in descending order (newest to oldest)
         calculationNotes: {
-          firstAttendanceDate: "Data shown from user's first attendance record",
+          calculationStartDate: `Data calculated from first attendance: ${firstAttendanceDatePK.toLocaleDateString('en-PK')}`,
+          calculationEndDate: `Data calculated up to: ${actualEndDate.toLocaleDateString('en-PK')}`,
           presentIncludes: "present, late, and half_day statuses",
+          leaveIncludes: "approved_leave and pending_leave (NOT counted as absent)",
           workingDaysExcludes: "holidays, weekly offs, and all types of leaves",
-          leaveHandling: "approved_leave and pending_leave are NOT counted as absent",
-          todayHandling: "Today shows as 'pending' if shift hasn't started yet",
-          absentCountedOnlyFor: "working days without attendance records and without leave status",
-          ordering: "Dates for the requested month are ordered with today first (newest->oldest), future dates shown after."
+          todaySpecialCase: "If shift hasn't started yet, today is marked as 'not_started' not 'absent'",
+          ordering: "Dates shown in descending order (newest to oldest) - Today first, then older dates"
         }
       }
     });
