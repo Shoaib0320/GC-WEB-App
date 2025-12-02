@@ -62,13 +62,12 @@ export const emailTemplates = {
               <h3>Login Credentials:</h3>
               <p><strong>Agent ID:</strong> ${agentId}</p>
               <p><strong>Password:</strong> ${password}</p>
-              <p><strong>Login URL:</strong> ${process.env.FRONTEND_URL}/login</p>
+              <p><strong>Login URL:</strong> ${process.env.NEXTAUTH_URL}/login</p>
             </div>
 
             <p><strong>Important Security Notes:</strong></p>
             <ul>
               <li>Keep your credentials secure and do not share with anyone</li>
-              <li>Change your password after first login</li>
               <li>Use the Agent ID (not email) to login</li>
             </ul>
 
