@@ -7,7 +7,7 @@ export async function PATCH(request, { params }) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const { isActive } = await request.json();
 
     // Validation

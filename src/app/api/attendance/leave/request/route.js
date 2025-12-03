@@ -201,3 +201,59 @@ export async function POST(request) {
     }, { status: 500 });
   }
 }
+
+export async function GET(request) {
+  try {
+    await connectDB();
+
+    // Same token extraction logic for GET request
+    const authHeader = request.headers.get('authorization');
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '');
+    } else {
+      token = request.cookies.get("token")?.value;
+    }
+
+    if (!token) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Not authenticated" 
+      }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Invalid token" 
+      }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const userType = searchParams.get("userType") || 'user';
+
+    const query = {};
+    if (userType === 'agent') {
+      query.agent = decoded.id || decoded.userId; // ✅ id use karo
+    } else {
+      query.user = decoded.id || decoded.userId; // ✅ id use karo
+    }
+
+    const leaveRequests = await LeaveRequest.find(query)
+      .populate("user", "firstName lastName email")
+      .populate("agent", "agentName agentId email")
+      .populate("reviewedBy", "firstName lastName email")
+      .sort({ createdAt: -1 });
+    
+    return NextResponse.json({ success: true, data: leaveRequests });
+  } catch (error) {
+    console.error("GET /api/attendance/leave/request error:", error);
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message 
+    }, { status: 500 });
+  }
+}
+
