@@ -2698,7 +2698,7 @@ export default function AdminAttendancePage() {
               : a.agent?.agentName || "—"}
           </div>
           <div className="text-xs text-muted-foreground">
-            {a.user ? "User" : "Agent"} • {a.user ? a.user.email : a.agent?.email || ""}
+            {a.user ? "User" : "Agent"} • {a.user ? a.user.agentId : a.agent?.email || ""}
           </div>
         </div>
       ),
