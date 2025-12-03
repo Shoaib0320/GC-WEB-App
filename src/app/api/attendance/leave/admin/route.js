@@ -1,3 +1,4 @@
+// src/app/api/attendance/leave/admin/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import LeaveRequest from "@/Models/LeaveRequest";
@@ -40,6 +41,104 @@ export async function GET(request) {
   }
 }
 
+// //
+// export async function PUT(request) {
+//   try {
+//     await connectDB();
+
+//     const token = request.cookies.get("token")?.value;
+//     if (!token) return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+
+//     const decoded = verifyToken(token);
+//     if (!decoded) return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+
+//     const body = await request.json();
+//     const { leaveRequestId, status, comments } = body;
+
+//     if (!leaveRequestId || !status) {
+//       return NextResponse.json({ success: false, message: "Leave request ID and status are required" }, { status: 400 });
+//     }
+
+//     const leaveRequest = await LeaveRequest.findById(leaveRequestId)
+//       .populate("user")
+//       .populate("agent");
+
+//     if (!leaveRequest) {
+//       return NextResponse.json({ success: false, message: "Leave request not found" }, { status: 404 });
+//     }
+
+//     leaveRequest.status = status;
+//     leaveRequest.reviewedBy = decoded.userId;
+//     leaveRequest.reviewedAt = new Date();
+//     leaveRequest.comments = comments || "";
+
+//     await leaveRequest.save();
+
+//     // If approved, create attendance records for each day
+//     if (status === "approved") {
+//       const startDate = new Date(leaveRequest.startDate);
+//       const endDate = new Date(leaveRequest.endDate);
+      
+//       for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+//         const attendanceData = {
+//           shift: null, // You might want to get the user's default shift
+//           status: "approved_leave",
+//           leaveReason: leaveRequest.reason,
+//           leaveType: leaveRequest.leaveType,
+//         };
+
+//         if (leaveRequest.user) {
+//           attendanceData.user = leaveRequest.user._id;
+//         } else if (leaveRequest.agent) {
+//           attendanceData.agent = leaveRequest.agent._id;
+//         }
+
+//         // Check if attendance record already exists for this date
+//         const dateStart = new Date(date);
+//         dateStart.setHours(0, 0, 0, 0);
+//         const dateEnd = new Date(dateStart);
+//         dateEnd.setDate(dateEnd.getDate() + 1);
+
+//         const existingQuery = {
+//           createdAt: { $gte: dateStart, $lt: dateEnd }
+//         };
+
+//         if (leaveRequest.user) {
+//           existingQuery.user = leaveRequest.user._id;
+//         } else if (leaveRequest.agent) {
+//           existingQuery.agent = leaveRequest.agent._id;
+//         }
+
+//         const existingAttendance = await Attendance.findOne(existingQuery);
+
+//         if (existingAttendance) {
+//           existingAttendance.status = "approved_leave";
+//           existingAttendance.leaveReason = leaveRequest.reason;
+//           existingAttendance.leaveType = leaveRequest.leaveType;
+//           await existingAttendance.save();
+//         } else {
+//           await Attendance.create({
+//             ...attendanceData,
+//             date: dateStart,
+//             createdAt: date,
+//             updatedAt: date
+//           });
+//         }
+//       }
+//     }
+
+//     return NextResponse.json({ 
+//       success: true, 
+//       message: `Leave request ${status} successfully`,
+//       data: leaveRequest 
+//     });
+//   } catch (error) {
+//     console.error("PUT /api/attendance/leave/admin error:", error);
+//     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+//   }
+// }
+
+// src/app/api/attendance/leave/admin/route.js - PUT method only
 export async function PUT(request) {
   try {
     await connectDB();
@@ -65,6 +164,14 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, message: "Leave request not found" }, { status: 404 });
     }
 
+    // If already approved/rejected, prevent changes
+    if (leaveRequest.status === 'approved' || leaveRequest.status === 'rejected') {
+      return NextResponse.json({ 
+        success: false, 
+        message: `Leave request is already ${leaveRequest.status}` 
+      }, { status: 400 });
+    }
+
     leaveRequest.status = status;
     leaveRequest.reviewedBy = decoded.userId;
     leaveRequest.reviewedAt = new Date();
@@ -72,26 +179,12 @@ export async function PUT(request) {
 
     await leaveRequest.save();
 
-    // If approved, create attendance records for each day
+    // If approved, create/update attendance records
     if (status === "approved") {
       const startDate = new Date(leaveRequest.startDate);
       const endDate = new Date(leaveRequest.endDate);
       
       for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-        const attendanceData = {
-          shift: null, // You might want to get the user's default shift
-          status: "approved_leave",
-          leaveReason: leaveRequest.reason,
-          leaveType: leaveRequest.leaveType,
-        };
-
-        if (leaveRequest.user) {
-          attendanceData.user = leaveRequest.user._id;
-        } else if (leaveRequest.agent) {
-          attendanceData.agent = leaveRequest.agent._id;
-        }
-
-        // Check if attendance record already exists for this date
         const dateStart = new Date(date);
         dateStart.setHours(0, 0, 0, 0);
         const dateEnd = new Date(dateStart);
@@ -109,18 +202,66 @@ export async function PUT(request) {
 
         const existingAttendance = await Attendance.findOne(existingQuery);
 
+        const attendanceData = {
+          shift: leaveRequest.shift, // 🔴 Use shift from leave request
+          status: "approved_leave",
+          leaveReason: leaveRequest.reason,
+          leaveType: leaveRequest.leaveType,
+          leaveRequest: leaveRequest._id,
+        };
+
+        if (leaveRequest.user) {
+          attendanceData.user = leaveRequest.user._id;
+        } else if (leaveRequest.agent) {
+          attendanceData.agent = leaveRequest.agent._id;
+        }
+
         if (existingAttendance) {
-          existingAttendance.status = "approved_leave";
-          existingAttendance.leaveReason = leaveRequest.reason;
-          existingAttendance.leaveType = leaveRequest.leaveType;
+          // If attendance exists (user checked in), update it
+          attendanceData.checkOutTime = null; // Clear check out time
+          Object.assign(existingAttendance, attendanceData);
           await existingAttendance.save();
         } else {
+          // Create new attendance record
           await Attendance.create({
             ...attendanceData,
             date: dateStart,
-            createdAt: date,
-            updatedAt: date
+            createdAt: dateStart,
+            updatedAt: new Date()
           });
+        }
+      }
+    } else if (status === "rejected") {
+      // If rejected, remove any pending_leave status from attendance
+      const startDate = new Date(leaveRequest.startDate);
+      const endDate = new Date(leaveRequest.endDate);
+      
+      for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+        const dateStart = new Date(date);
+        dateStart.setHours(0, 0, 0, 0);
+        const dateEnd = new Date(dateStart);
+        dateEnd.setDate(dateEnd.getDate() + 1);
+
+        const query = {
+          createdAt: { $gte: dateStart, $lt: dateEnd },
+          status: "pending_leave",
+          leaveRequest: leaveRequest._id
+        };
+
+        const pendingAttendance = await Attendance.findOne(query);
+        
+        if (pendingAttendance) {
+          // Restore original status if user had checked in
+          if (pendingAttendance.checkInTime) {
+            pendingAttendance.status = "present";
+            pendingAttendance.leaveReason = undefined;
+            pendingAttendance.leaveType = undefined;
+            pendingAttendance.leaveRequest = undefined;
+          } else {
+            // If no check in, delete the record
+            await Attendance.deleteOne({ _id: pendingAttendance._id });
+          }
+          await pendingAttendance.save();
         }
       }
     }

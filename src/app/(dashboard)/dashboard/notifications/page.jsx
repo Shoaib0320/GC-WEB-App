@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Plus, Edit, Trash2, Bell } from "lucide-react";
+import { toast } from "sonner";
 
 export default function NotificationsAdminPage() {
   const { user, hasPermission } = useAuth();
@@ -159,6 +160,7 @@ export default function NotificationsAdminPage() {
       }
 
       if (result.success) {
+        toast.success(editingNotification ? "Notification updated successfully" : "Notification created successfully");
         setSuccess(result.message);
         resetForm();
         setIsModalOpen(false);
@@ -187,6 +189,7 @@ export default function NotificationsAdminPage() {
     const result = await notificationService.deleteNotification(id);
 
     if (result.success) {
+      toast.success("Notification deleted successfully");
       setSuccess("Notification deleted successfully");
       fetchNotifications(viewAgent === 'all' ? null : viewAgent); // Refresh list
       setTimeout(() => setSuccess(""), 3000);
@@ -194,19 +197,6 @@ export default function NotificationsAdminPage() {
       setError(result.message);
     }
   };
-
-  // // Check admin permissions
-  // if (!hasPermission("notifications", "create")) {
-  //   return (
-  //     <div className="container mx-auto p-6">
-  //       <Alert variant="destructive">
-  //         <AlertDescription>
-  //           You don't have permission to access notifications management.
-  //         </AlertDescription>
-  //       </Alert>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="container mx-auto p-6 space-y-6">

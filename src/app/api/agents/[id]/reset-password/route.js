@@ -7,7 +7,7 @@ export async function POST(request, { params }) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const { newPassword } = await request.json();
 
     if (!id || !newPassword) {
