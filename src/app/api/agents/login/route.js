@@ -90,7 +90,10 @@ export async function POST(request) {
     if (agent.isActive === false) {
       console.log('❌ Agent account is inactive');
       return NextResponse.json(
-        { error: 'Account is deactivated' },
+        {
+          error: 'Account is deactivated',
+          accountStatus: 'deactivated'  // ✅ Ye field add karo
+        },
         { status: 401 }
       );
     }
