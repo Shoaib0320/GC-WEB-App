@@ -166,6 +166,9 @@ export async function POST(request) {
         email: agent.email,
         phone: agent.phone,
         monthlyTarget: agent.monthlyTarget,
+        employeeType: agent.employeeType,
+        designation: agent.designation,
+        profileImage: agent.profileImage,
         isActive: agent.isActive,
         shift: agent.shift
       }
@@ -209,3 +212,7 @@ export async function POST(request) {
     );
   }
 }
+
+
+
+

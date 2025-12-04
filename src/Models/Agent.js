@@ -35,6 +35,17 @@ const agentSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+    // ✅ نئی فیلڈز شامل کریں
+  employeeType: {
+    type: String,
+    enum: ['full-time', 'part-time', 'contract', 'intern'],
+    default: 'full-time'
+  },
+  designation: {
+    type: String,
+    enum: ['agent', 'team-leader', 'supervisor', 'manager'],
+    default: 'agent'
+  },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   isActive: {
