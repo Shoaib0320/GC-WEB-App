@@ -25,7 +25,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     // Validate ID
     if (!id || id === 'undefined' || id === 'null') {

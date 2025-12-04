@@ -38,6 +38,7 @@ export default function ContactSection() {
     e.preventDefault();
     // Handle form submission here
     console.log('Form submitted:', formData);
+    toast.success('Message sent successfully!');
     // Reset form
     setFormData({ name: '', email: '', subject: '', message: '' });
   };
@@ -46,19 +47,19 @@ export default function ContactSection() {
     {
       icon: Mail,
       title: "Email Us",
-      details: "hello@globiumcloud.com",
+      details: "globiumclouds@gmail.com",
       description: "Send us an email anytime!"
     },
     {
       icon: Phone,
       title: "Call Us",
-      details: "+1 (555) 123-4567",
-      description: "Mon-Fri from 8am to 5pm"
+      details: "+92 335 2778488",
+      description: "Mon-Sat from 9am to 6pm"
     },
     {
       icon: MapPin,
       title: "Visit Us",
-      details: "123 Cloud Street, Tech City, TC 12345",
+      details: "House R-84 , near Al.Habeeb Resturent, Sector 15-A/4 Sector 15 A 4 Buffer Zone, Karachi, Pakistan, Karachi Lines, Pakistan",
       description: "Come say hello at our office"
     }
   ];

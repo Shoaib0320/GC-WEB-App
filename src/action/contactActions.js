@@ -68,6 +68,26 @@ export async function deleteContact(contactId) {
   return json;
 }
 
+// ✅ Update contact status (new, read, replied, archived, resolved)
+export async function updateContactStatus(contactId, status) {
+  const response = await fetch(`/api/contact/${contactId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) throw new Error("Failed to update contact status");
+  const json = await response.json();
+  try {
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      const bc = new BroadcastChannel("contacts-updates");
+      bc.postMessage({ type: "contacts:update", action: "status-updated", id: contactId, status, timestamp: Date.now() });
+      bc.close();
+    }
+  } catch (e) {}
+  return json;
+}
+
 // ✅ Reply to a contact (sends reply email / marks as replied)
 export async function replyContact(contactId, subject, message) {
   const response = await fetch(`/api/contact/reply`, {

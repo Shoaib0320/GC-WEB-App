@@ -18,7 +18,7 @@ export async function PATCH(request, { params }) {
     const canChangeRole = currentUser?.role?.permissions?.user?.change_role || currentUser?.role?.permissions?.role?.manage_roles || currentUser?.role?.permissions?.user?.edit;
     if (!canChangeRole) return NextResponse.json({ success: false, error: 'Insufficient permissions' }, { status: 403 });
 
-  const { id } = await params;
+    const { id } = await params;
     const body = await request.json();
     const { roleId } = body;
     if (!roleId) return NextResponse.json({ success: false, error: 'roleId is required' }, { status: 400 });

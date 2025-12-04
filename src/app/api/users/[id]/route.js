@@ -1,3 +1,4 @@
+// src/app/api/users/%5Bid%5D/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import User from "@/Models/User";
@@ -10,7 +11,7 @@ export async function GET(request, { params }) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const user = await User.findById(id).populate("role").select("-password");
 
     if (!user) {
@@ -42,7 +43,7 @@ export async function PUT(request, { params }) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Verify token and check permissions
@@ -174,7 +175,7 @@ export async function DELETE(request, { params }) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
 
     const user = await User.findByIdAndDelete(id);
 

@@ -1,3 +1,4 @@
+//src/app/(dashboard)/dashboard/users/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,8 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.j
 import { Alert, AlertDescription } from "@/components/ui/alert.jsx";
 import { Input } from "@/components/ui/input.jsx";
 import { Label } from "@/components/ui/label.jsx";
-import { User, Shield, CheckSquare, Square, Plus, Trash2, Power, Edit, X, MoreVertical } from "lucide-react";
-import GlobalData from "@/components/common/GlobalData";
+import { User, Shield, CheckSquare, Square, Plus, Trash2, Power, Edit, X, MoreVertical, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { userService } from '@/services/userService';
 import { roleService } from '@/services/roleService';
 import {
@@ -28,13 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 export default function Users() {
@@ -56,9 +49,23 @@ export default function Users() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Users state
-  const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
+  // Users state - ALL data loaded
+  const [allUsers, setAllUsers] = useState([]);
+  const [allRoles, setAllRoles] = useState([]);
+  
+  // Pagination states - CLIENT SIDE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [currentRolePage, setCurrentRolePage] = useState(1);
+  const [totalRoles, setTotalRoles] = useState(0);
+  
+  // Search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleSearchQuery, setRoleSearchQuery] = useState("");
+  
+  // Status filter states
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [roleStatusFilter, setRoleStatusFilter] = useState("all");
 
   // Dialog states
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -92,18 +99,8 @@ export default function Users() {
     user: { view: false, create: false, edit: false, delete: false, export: false, approve: false, change_role: false },
     analytics: { view: false, export: false },
     settings: { view: false, edit: false, manage_roles: false },
-
-    // 🆕 NEW: Sales Permissions
     sales: { view: false, create: false, edit: false, delete: false, export: false, approve: false, analytics: false },
     sales_analytics: { view: false, export: false, manage: false },
-    // hr: { view: false, create: false, edit: false, delete: false, payroll: false, attendance: false, leave_approve: false },
-    // finance: { view: false, create: false, edit: false, delete: false, approve_payments: false, export_reports: false },
-    // crm: {
-    //   clients: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    //   leads: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    //   tickets: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
-    // },
-
     website_bookings: { view: false, edit: false, manage_status: false, export: false, delete: false },
     reports: { sales: false, finance: false, hr: false, performance: false, export_all: false },
     progress: { view_own: false, view_all: false, export: false },
@@ -126,35 +123,59 @@ export default function Users() {
     permissions: JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS))
   });
 
-  // Load users and roles
+  // Load ALL users and roles initially
   useEffect(() => {
-    loadUsers();
-    loadRoles();
+    loadAllUsers();
+    loadAllRoles();
   }, []);
 
-  const loadUsers = async () => {
+  // Load ALL users data (without pagination)
+  const loadAllUsers = async () => {
     try {
-      const response = await fetch('/api/users');
-      const data = await response.json();
-      console.log('User Data', data);
+      setLoading(true);
+      // Load ALL users at once
+      const data = await userService.getAll();
+      
       if (data.success) {
-        setUsers(data.data.users || []);
+        const userData = data.data?.users || data.users || [];
+        setAllUsers(userData);
+        setTotalUsers(userData.length);
+      } else {
+        setAllUsers([]);
+        setTotalUsers(0);
       }
     } catch (error) {
+      console.error('Error loading users:', error);
       toast.error('Failed to load users');
-      showMessage('error', 'Failed to load users');
+      setAllUsers([]);
+      setTotalUsers(0);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loadRoles = async () => {
+  // Load ALL roles data (without pagination)
+  const loadAllRoles = async () => {
     try {
+      setLoading(true);
+      // Load ALL roles at once
       const data = await roleService.getAll();
+      
       if (data.success) {
-        setRoles(data.data || []);
+        const roleData = data.data || data.roles || [];
+        setAllRoles(roleData);
+        setTotalRoles(roleData.length);
+      } else {
+        setAllRoles([]);
+        setTotalRoles(0);
       }
     } catch (error) {
+      console.error('Error loading roles:', error);
       toast.error('Failed to load roles');
-      showMessage('error', 'Failed to load roles');
+      setAllRoles([]);
+      setTotalRoles(0);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,6 +183,89 @@ export default function Users() {
     setMessage({ type, text });
     setTimeout(() => setMessage({ type: '', text: '' }), 5000);
   };
+
+  // Filter and paginate users CLIENT SIDE
+  const getFilteredAndPaginatedUsers = () => {
+    // Filter users based on search and status
+    let filtered = allUsers;
+    
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(user => 
+        user.firstName?.toLowerCase().includes(query) ||
+        user.lastName?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        user.phone?.includes(query) ||
+        user.role?.name?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter === "active") {
+      filtered = filtered.filter(user => user.isActive === true);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter(user => user.isActive === false);
+    }
+    
+    // Calculate pagination
+    const itemsPerPage = 5;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    // Get current page items
+    const paginatedUsers = filtered.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    
+    return {
+      users: paginatedUsers,
+      total: filtered.length,
+      totalPages: totalPages
+    };
+  };
+
+  // Filter and paginate roles CLIENT SIDE
+  const getFilteredAndPaginatedRoles = () => {
+    // Filter roles based on search and status
+    let filtered = allRoles;
+    
+    // Apply search filter
+    if (roleSearchQuery) {
+      const query = roleSearchQuery.toLowerCase();
+      filtered = filtered.filter(role => 
+        role.name?.toLowerCase().includes(query) ||
+        role.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply status filter
+    if (roleStatusFilter === "active") {
+      filtered = filtered.filter(role => role.isActive === true);
+    } else if (roleStatusFilter === "inactive") {
+      filtered = filtered.filter(role => role.isActive === false);
+    }
+    
+    // Calculate pagination
+    const itemsPerPage = 5;
+    const startIndex = (currentRolePage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    // Get current page items
+    const paginatedRoles = filtered.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    
+    return {
+      roles: paginatedRoles,
+      total: filtered.length,
+      totalPages: totalPages
+    };
+  };
+
+  // Get current users for display
+  const { users: currentUsers, total: filteredUserTotal, totalPages: userTotalPages } = getFilteredAndPaginatedUsers();
+  
+  // Get current roles for display
+  const { roles: currentRoles, total: filteredRoleTotal, totalPages: roleTotalPages } = getFilteredAndPaginatedRoles();
 
   // User form handlers
   const handleUserFormChange = (e) => {
@@ -190,7 +294,7 @@ export default function Users() {
         showMessage('success', 'User created successfully');
         resetUserForm();
         setUserDialogOpen(false);
-        loadUsers();
+        loadAllUsers(); // Reload all users
       } else {
         toast.error('Failed to create user');
         showMessage('error', data.error || 'Failed to create user');
@@ -233,7 +337,7 @@ export default function Users() {
         showMessage('success', 'User updated successfully');
         resetUserForm();
         setUserDialogOpen(false);
-        loadUsers();
+        loadAllUsers(); // Reload all users
       } else {
         toast.error('Failed to update user');
         showMessage('error', data.error || 'Failed to update user');
@@ -276,7 +380,6 @@ export default function Users() {
     const { name, value, type, checked } = e.target;
     if (name.startsWith('permissions.')) {
       const parts = name.split('.');
-      // supports: permissions.module.action  OR permissions.module.action.subaction
       if (parts.length === 3) {
         const [, module, action] = parts;
         setRoleForm(prev => ({
@@ -323,7 +426,6 @@ export default function Users() {
       const newModule = keys.reduce((acc, action) => {
         const current = prev.permissions?.[module]?.[action];
         if (current && typeof current === 'object') {
-          // set all nested sub-permissions to true
           acc[action] = Object.keys(current).reduce((s, k) => { s[k] = true; return s; }, {});
         } else {
           acc[action] = true;
@@ -406,10 +508,8 @@ export default function Users() {
       const payload = { ...roleForm, permissions: normalizePermissions(roleForm.permissions) };
 
       if (editingRole) {
-        // update via roleService
         var data = await roleService.update(editingRole._id, payload);
       } else {
-        // create via roleService
         var data = await roleService.create(payload);
       }
 
@@ -419,7 +519,7 @@ export default function Users() {
         resetRoleForm();
         setRoleDialogOpen(false);
         setEditingRole(null);
-        loadRoles();
+        loadAllRoles(); // Reload all roles
       } else {
         toast.error('Failed to save role');
         showMessage('error', data.error || 'Failed to save role');
@@ -443,7 +543,6 @@ export default function Users() {
 
   const handleEditRole = (role) => {
     setEditingRole(role);
-    // populate roleForm from role
     setRoleForm(prev => ({
       ...prev,
       name: role.name || '',
@@ -459,7 +558,7 @@ export default function Users() {
       const data = await roleService.delete(roleId);
       if (data.success) {
         showMessage('success', 'Role deleted');
-        loadRoles();
+        loadAllRoles(); // Reload all roles
       } else {
         showMessage('error', data.error || 'Failed to delete role');
       }
@@ -480,7 +579,7 @@ export default function Users() {
       const data = await userService.delete(userId);
       if (data.success) {
         showMessage('success', 'User deleted successfully');
-        loadUsers();
+        loadAllUsers(); // Reload all users
       } else {
         showMessage('error', data.error || 'Failed to delete user');
       }
@@ -494,13 +593,24 @@ export default function Users() {
       const data = await userService.updateStatus(userId, !currentStatus);
       if (data.success) {
         showMessage('success', `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-        loadUsers();
+        loadAllUsers(); // Reload all users
       } else {
         showMessage('error', data.error || 'Failed to update user status');
       }
     } catch (error) {
       showMessage('error', 'Failed to update user status');
     }
+  };
+
+  // Handle search - triggers client-side filtering
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleRoleSearch = (e) => {
+    e.preventDefault();
+    setCurrentRolePage(1); // Reset to first page when searching
   };
 
   // Permission module configuration
@@ -529,15 +639,12 @@ export default function Users() {
       description: 'Manage agents and their profiles',
       permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
     },
-    // 🆕 NEW: Sales Management
     {
       name: 'sales',
       title: 'Sales Management',
       description: 'Manage sales, orders and transactions',
       permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve', 'analytics']
     },
-
-    // 🆕 NEW: Sales Analytics
     {
       name: 'sales_analytics',
       title: 'Sales Analytics',
@@ -622,7 +729,7 @@ export default function Users() {
             <div className="text-sm font-semibold text-gray-900 truncate">{u.firstName} {u.lastName}</div>
             <div className="text-xs text-gray-500 truncate">{u.email}</div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-600 capitalize truncate">{u.role?.name}</span>
+              <span className="text-xs text-gray-600 capitalize truncate">{u.role?.name || 'No role'}</span>
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                 {u.isActive ? 'Active' : 'Inactive'}
               </span>
@@ -636,33 +743,63 @@ export default function Users() {
       key: 'actions',
       align: 'right',
       render: (u) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {canEditUser ? (
-            <button onClick={() => handleEditUser(u, 'edit')} className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200">
-              <Edit className="h-4 w-4 mr-1" /> Edit
-            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditUser(u, 'edit')}
+              className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+            >
+              <Edit className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Edit</span>
+            </Button>
           ) : canViewUser ? (
-            <button onClick={() => handleEditUser(u, 'view')} className="inline-flex items-center px-3 py-2 bg-white text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors border border-gray-200">
-              <User className="h-4 w-4 mr-1" /> View
-            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditUser(u, 'view')}
+              className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+            >
+              <User className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">View</span>
+            </Button>
           ) : null}
 
           {canEditUser && (
-            <button onClick={() => handleToggleUserStatus(u._id, u.isActive)} className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${u.isActive ? 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}`}>
-              <Power className="h-4 w-4 mr-1" /> {u.isActive ? 'Deactivate' : 'Activate'}
-            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleToggleUserStatus(u._id, u.isActive)}
+              className={`h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2 ${u.isActive ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}`}
+            >
+              <Power className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">{u.isActive ? 'Deactivate' : 'Activate'}</span>
+            </Button>
           )}
 
           {canDeleteUser && (
-            <button onClick={() => handleDeleteUser(u._id)} className="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors border border-red-200">
-              <Trash2 className="h-4 w-4 mr-1" /> Delete
-            </button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDeleteUser(u._id)}
+              className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+            >
+              <Trash2 className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Delete</span>
+            </Button>
           )}
 
           {canChangeRole && (
-            <button onClick={() => { setRoleChangeUser(u); setRoleChangeValue(u.role?._id || ''); setRoleChangeOpen(true); }} className="inline-flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors border border-indigo-200">
-              <Shield className="h-4 w-4 mr-1" /> Change Role
-            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setRoleChangeUser(u); setRoleChangeValue(u.role?._id || ''); setRoleChangeOpen(true); }}
+              className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+            >
+              <Shield className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Change Role</span>
+            </Button>
           )}
         </div>
       ),
@@ -695,19 +832,104 @@ export default function Users() {
       render: (r) => (
         <div className="flex items-center justify-end gap-2">
           {canEditRole && (
-            <button onClick={() => handleEditRole(r)} className="inline-flex items-center px-2 py-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded text-xs font-medium transition-colors border border-yellow-200">
-              <Edit className="h-3 w-3 mr-1" /> Edit
-            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditRole(r)}
+              className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+            >
+              <Edit className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Edit</span>
+            </Button>
           )}
           {canDeleteRole && (
-            <button onClick={() => handleDeleteRole(r._id)} className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-200">
-              <Trash2 className="h-3 w-3 mr-1" /> Delete
-            </button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDeleteRole(r._id)}
+              className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+            >
+              <Trash2 className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Delete</span>
+            </Button>
           )}
         </div>
       )
     }
   ];
+
+  // Pagination component
+  const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    const getPageNumbers = () => {
+      const pages = [];
+      if (totalPages <= 5) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+      return pages;
+    };
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 border-t pt-6">
+        <div className="text-sm text-gray-700">
+          Showing <span className="font-medium">{startItem}</span> to{" "}
+          <span className="font-medium">{endItem}</span> of{" "}
+          <span className="font-medium">{totalItems}</span> items
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Previous</span>
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map((page, index) => (
+              page === '...' ? (
+                <span key={`dots-${index}`} className="px-2 py-1">...</span>
+              ) : (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPageChange(page)}
+                  className={`h-8 w-8 p-0 ${
+                    currentPage === page ? 'bg-[#10B5DB] text-white hover:bg-[#10B5DB]' : ''
+                  }`}
+                >
+                  {page}
+                </Button>
+              )
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1"
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-6">
@@ -742,7 +964,7 @@ export default function Users() {
                     <User className="h-4 w-4" />
                     <span className="hidden xs:inline">Users</span>
                     <span className="bg-[#10B5DB]/10 text-[#10B5DB] px-2 py-0.5 rounded-full text-xs font-medium">
-                      {users.length}
+                      {allUsers.length} {/* Show total count */}
                     </span>
                   </TabsTrigger>
                   {showRolesTab && (
@@ -753,7 +975,7 @@ export default function Users() {
                       <Shield className="h-4 w-4" />
                       <span className="hidden xs:inline">Roles</span>
                       <span className="bg-[#10B5DB]/10 text-[#10B5DB] px-2 py-0.5 rounded-full text-xs font-medium">
-                        {roles.length}
+                        {allRoles.length} {/* Show total count */}
                       </span>
                     </TabsTrigger>
                   )}
@@ -801,26 +1023,100 @@ export default function Users() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-4 md:pt-6 px-0 md:px-6">
-                      <div className="overflow-x-auto">
-                        <GlobalData
-                          title="All Users"
-                          icon={User}
-                          fetcher={async (params) => {
-                            const res = await userService.getAll(params);
-                            const users = res?.data?.users ?? res?.users ?? [];
-                            const pagination = res?.data?.pagination ?? res?.pagination ?? null;
-                            if (pagination) {
-                              return { data: users, meta: pagination };
-                            }
-                            return users;
+                      {/* Search and Filter Controls */}
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 px-4">
+                        <div className="relative w-full md:w-64">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search users..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
+                            className="pl-9 w-full"
+                          />
+                        </div>
+                        
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => {
+                            setStatusFilter(e.target.value);
+                            setCurrentPage(1);
                           }}
-                          columns={userColumns}
-                          serverSide={true}
-                          rowsPerPage={10}
-                          searchEnabled={true}
-                          onDataFetched={(items, meta) => setUsers(items)}
-                        />
+                          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-auto"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
                       </div>
+
+                      {/* Users Table */}
+                      <div className="overflow-x-auto">
+                        <div className="min-w-full inline-block align-middle">
+                          <div className="overflow-hidden">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  {userColumns.map((column) => (
+                                    <th
+                                      key={column.key}
+                                      scope="col"
+                                      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap ${
+                                        column.align === 'right' ? 'text-right' : ''
+                                      }`}
+                                    >
+                                      {column.label}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {loading ? (
+                                  <tr>
+                                    <td colSpan={userColumns.length} className="px-4 py-8 text-center">
+                                      <div className="flex justify-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : currentUsers.length > 0 ? (
+                                  currentUsers.map((user) => (
+                                    <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                                      {userColumns.map((column) => (
+                                        <td
+                                          key={column.key}
+                                          className={`px-4 py-4 whitespace-nowrap ${
+                                            column.align === 'right' ? 'text-right' : ''
+                                          }`}
+                                        >
+                                          {column.render(user)}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td colSpan={userColumns.length} className="px-4 py-8 text-center text-gray-500">
+                                      No users found
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Pagination Controls */}
+                      {userTotalPages > 1 && (
+                        <Pagination
+                          currentPage={currentPage}
+                          totalPages={userTotalPages}
+                          onPageChange={setCurrentPage}
+                          totalItems={filteredUserTotal}
+                          itemsPerPage={5}
+                        />
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -851,18 +1147,100 @@ export default function Users() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-4 md:pt-6 px-0 md:px-6">
-                      <div className="overflow-x-auto">
-                        <GlobalData
-                          title="All Roles"
-                          icon={Shield}
-                          fetcher={async (params) => await roleService.getAll(params)}
-                          columns={roleColumns}
-                          serverSide={true}
-                          rowsPerPage={12}
-                          searchEnabled={true}
-                          onDataFetched={(items, meta) => setRoles(items)}
-                        />
+                      {/* Search and Filter Controls */}
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 px-4">
+                        <div className="relative w-full md:w-64">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search roles..."
+                            value={roleSearchQuery}
+                            onChange={(e) => setRoleSearchQuery(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleRoleSearch(e)}
+                            className="pl-9 w-full"
+                          />
+                        </div>
+                        
+                        <select
+                          value={roleStatusFilter}
+                          onChange={(e) => {
+                            setRoleStatusFilter(e.target.value);
+                            setCurrentRolePage(1);
+                          }}
+                          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-auto"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
                       </div>
+
+                      {/* Roles Table */}
+                      <div className="overflow-x-auto">
+                        <div className="min-w-full inline-block align-middle">
+                          <div className="overflow-hidden">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  {roleColumns.map((column) => (
+                                    <th
+                                      key={column.key || 'actions'}
+                                      scope="col"
+                                      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap ${
+                                        column.align === 'right' ? 'text-right' : ''
+                                      }`}
+                                    >
+                                      {column.label}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {loading ? (
+                                  <tr>
+                                    <td colSpan={roleColumns.length} className="px-4 py-8 text-center">
+                                      <div className="flex justify-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : currentRoles.length > 0 ? (
+                                  currentRoles.map((role) => (
+                                    <tr key={role._id} className="hover:bg-gray-50 transition-colors">
+                                      {roleColumns.map((column) => (
+                                        <td
+                                          key={column.key || 'actions'}
+                                          className={`px-4 py-4 whitespace-nowrap ${
+                                            column.align === 'right' ? 'text-right' : ''
+                                          }`}
+                                        >
+                                          {column.render(role)}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td colSpan={roleColumns.length} className="px-4 py-8 text-center text-gray-500">
+                                      No roles found
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Pagination Controls */}
+                      {roleTotalPages > 1 && (
+                        <Pagination
+                          currentPage={currentRolePage}
+                          totalPages={roleTotalPages}
+                          onPageChange={setCurrentRolePage}
+                          totalItems={filteredRoleTotal}
+                          itemsPerPage={5}
+                        />
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -988,7 +1366,7 @@ export default function Users() {
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Available Roles</SelectLabel>
-                    {roles.map((role) => (
+                    {allRoles.map((role) => (
                       <SelectItem
                         key={role._id}
                         value={role._id}
@@ -1055,7 +1433,7 @@ export default function Users() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                 <Label className="text-sm">Select Role</Label>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => loadRoles()} className="px-2 py-1 text-xs">Refresh</Button>
+                  <Button size="sm" variant="outline" onClick={() => loadAllRoles()} className="px-2 py-1 text-xs">Refresh</Button>
                   {canCreateRole && (
                     <Button size="sm" className="px-2 py-1 text-xs" onClick={() => { setRoleDialogOpen(true); setEditingRole(null); setRoleChangeOpen(false); }}>
                       Create Role
@@ -1070,7 +1448,7 @@ export default function Users() {
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Available Roles</SelectLabel>
-                    {roles.map((r) => (
+                    {allRoles.map((r) => (
                       <SelectItem key={r._id} value={r._id} disabled={!r.isActive}>
                         {r.name.replace(/_/g, ' ')}{!r.isActive ? ' (Inactive)' : ''}
                       </SelectItem>
@@ -1088,9 +1466,10 @@ export default function Users() {
                   try {
                     const data = await userService.updateRole(roleChangeUser._id, roleChangeValue);
                     if (data.success) {
+                      toast.success('Role updated successfully');
                       showMessage('success', 'Role updated');
                       setRoleChangeOpen(false);
-                      loadUsers();
+                      loadAllUsers(); // Reload all users
                     } else {
                       showMessage('error', data.error || 'Failed to update role');
                     }
@@ -1224,7 +1603,6 @@ export default function Users() {
                       <div className="grid grid-cols-1 gap-2">
                         {module.permissions.map((action) => {
                           const permValue = roleForm.permissions[module.name]?.[action];
-                          // If permValue is an object, render its sub-actions
                           if (permValue && typeof permValue === 'object') {
                             return (
                               <div key={action} className="p-2 rounded-lg hover:bg-slate-50 transition-colors">
@@ -1247,7 +1625,6 @@ export default function Users() {
                             );
                           }
 
-                          // fallback: render simple checkbox
                           return (
                             <label
                               key={action}
@@ -1304,4 +1681,3 @@ export default function Users() {
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ export const ContactStatus = {
   READ: "read",
   REPLIED: "replied",
   ARCHIVED: "archived",
+  RESOLED: "resolved",
 };
 
 const ContactMessageSchema = new mongoose.Schema(

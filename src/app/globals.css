@@ -155,3 +155,8 @@
   scrollbar-width: none;
 }
 
+/* globals.css mein add karein */
+.table-height-5-rows {
+  height: calc(3rem * 5 + 4rem); /* 3rem per row + 4rem for header */
+  min-height: calc(3rem * 5 + 4rem);
+}

@@ -51,7 +51,7 @@ export default function Header() {
 
         {/* Right Section - Theme Toggle & Mobile Menu Button */}
         <div className="flex items-center space-x-4">
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
           
           {/* Mobile Menu Button */}
           <button

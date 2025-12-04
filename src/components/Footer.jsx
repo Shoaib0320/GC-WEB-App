@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Linkedin, Twitter, Github, Mail } from "lucide-react";
+import { Linkedin, Twitter, Github, Mail, Facebook, Instagram } from "lucide-react";
 
 export default function Footer() {
     return (
@@ -20,14 +20,14 @@ export default function Footer() {
                     </p>
 
                     <div className="flex items-center space-x-3">
-                        <a href="#" aria-label="LinkedIn" className="text-gray-300 hover:text-white">
+                        <a href="https://www.linkedin.com/company/globiumclouds/posts/?feedView=all" target="_blank" aria-label="LinkedIn" className="text-gray-300 hover:text-white">
                             <Linkedin className="w-5 h-5" />
                         </a>
-                        <a href="#" aria-label="Twitter" className="text-gray-300 hover:text-white">
-                            <Twitter className="w-5 h-5" />
+                        <a href="https://www.facebook.com/globiumclouds/" target="_blank" aria-label="Facebook" className="text-gray-300 hover:text-white">
+                            <Facebook className="w-5 h-5" />
                         </a>
-                        <a href="#" aria-label="Github" className="text-gray-300 hover:text-white">
-                            <Github className="w-5 h-5" />
+                        <a href="https://www.instagram.com/explore/locations/202412828462806/globium-clouds/" target="_blank" aria-label="Instagram" className="text-gray-300 hover:text-white">
+                            <Instagram className="w-5 h-5" />
                         </a>
                     </div>
                 </div>
@@ -49,13 +49,14 @@ export default function Footer() {
                 {/* Contact */}
                 <div>
                     <h4 className="text-sm font-semibold mb-3">Contact</h4>
-                    <p className="text-sm text-gray-300">Email: <a href="mailto:hello@globiumclouds.com" className="hover:text-white">hello@globiumclouds.com</a></p>
-                    <p className="text-sm text-gray-300">Phone: <a href="tel:+1234567890" className="hover:text-white">+1 (234) 567-890</a></p>
-                    <p className="text-sm text-gray-300 mt-2">Address: 123 Cloud Ave, Suite 400, City, Country</p>
+                    <p className="text-sm text-gray-300">Email: <a href="mailto:globiumclouds@gmail.com" className="hover:text-white">globiumclouds@gmail.com</a></p>
+                    <p className="text-sm text-gray-300">Phone: <a href="tel:+92 335 2778488" className="hover:text-white">+92 335 2778488</a></p>
+                    <p className="text-sm text-gray-300 mt-2">Address:
+                        House R-84 , near Al.Habeeb Resturent, Sector 15-A/4 Sector 15 A 4 Buffer Zone, Karachi, Pakistan, Karachi Lines, Pakistan</p>
                 </div>
 
                 {/* Newsletter */}
-                <div>
+                {/* <div>
                     <h4 className="text-sm font-semibold mb-3">Subscribe</h4>
                     <p className="text-sm text-gray-300 mb-3">Get updates, product news and discounts.</p>
                     <div className="flex gap-2">
@@ -63,7 +64,7 @@ export default function Footer() {
                         <Button className="whitespace-nowrap">Subscribe</Button>
                     </div>
                     <p className="text-xs text-gray-400 mt-3 flex items-center gap-2"><Mail className="w-3 h-3" /> We respect your privacy.</p>
-                </div>
+                </div> */}
             </div>
 
             <div className="border-t border-gray-800">

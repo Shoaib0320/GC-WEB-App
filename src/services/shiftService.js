@@ -31,6 +31,18 @@ export const shiftService = {
     return response.data;
   },
 
+  // Update shift status (activate/deactivate)
+  updateShiftStatus: async (id, isActive) => {
+    const response = await api.put(`/shifts/${id}/status`, { isActive });
+    return response.data;
+  },
+
+  // Get shift status
+  getShiftStatus: async (id) => {
+    const response = await api.get(`/shifts/${id}/status`);
+    return response.data;
+  },
+
   // Get shifts for dropdown (simple list)
   getShiftsForDropdown: async () => {
     const response = await api.get('/shifts?limit=100&page=1');

@@ -1,3 +1,4 @@
+//src/app/(dashboard)/dashboard/promo-codes/page.jsx
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
@@ -9,23 +10,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Card,
   CardContent,
@@ -38,29 +29,50 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectLabel,
+  SelectGroup,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
+
+// Icons
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  Power,
+  Tag,
+  Percent,
+  User,
+  ChevronLeft,
+  ChevronRight,
+  Loader2
+} from 'lucide-react';
 
 export default function PromoCodesPage() {
-  const [promoCodes, setPromoCodes] = useState([]);
+  const [allPromoCodes, setAllPromoCodes] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
+  
+  // Dialog states
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
-  const [pagination, setPagination] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [agentFilter, setAgentFilter] = useState('all');
 
-  // Form state
+  // Form states
   const [formData, setFormData] = useState({
     promoCode: '',
     discountPercentage: '',
     agentId: '',
-    // maxUsage: 1,
-    // validUntil: '',
-    // description: ''
+    isActive: true
   });
 
   const [editFormData, setEditFormData] = useState({
@@ -68,84 +80,97 @@ export default function PromoCodesPage() {
     promoCode: '',
     discountPercentage: '',
     agentId: '',
-    // maxUsage: 1,
-    // validUntil: '',
-    // description: '',
     isActive: true
   });
 
-  // Fetch agents and promo codes
-  const fetchAgents = async () => {
+  const { hasPermission } = useAuth();
+
+  // Load ALL data initially
+  useEffect(() => {
+    loadAllPromoCodes();
+    loadAllAgents();
+  }, []);
+
+  const loadAllPromoCodes = async () => {
+    try {
+      setLoading(true);
+      // Load ALL promo codes at once
+      const response = await promoCodeService.getAllPromoCodes({ limit: 1000 });
+      setAllPromoCodes(response.data || []);
+    } catch (error) {
+      console.error('Error fetching promo codes:', error);
+      toast.error('Failed to load promo codes');
+      setAllPromoCodes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAllAgents = async () => {
     try {
       const response = await agentService.getAllAgents({ limit: 100 });
       setAgents(response.agents || []);
     } catch (error) {
       console.error('Error fetching agents:', error);
       toast.error('Failed to fetch agents');
+      setAgents([]);
     }
   };
 
-  const fetchPromoCodes = async (page = 1, search = '') => {
-    setLoading(true);
-    try {
-      const response = await promoCodeService.getAllPromoCodes({
-        page,
-        limit: 10,
-        search
-      });
-      setPromoCodes(response.data);
-      setPagination(response.pagination);
-    } catch (error) {
-      console.error('Error fetching promo codes:', error);
-      toast.error('Error fetching promo codes');
-    } finally {
-      setLoading(false);
+  // Client-side filtering and pagination
+  const getFilteredAndPaginatedPromoCodes = () => {
+    let filtered = [...allPromoCodes];
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(promo => 
+        promo.promoCode?.toLowerCase().includes(query) ||
+        promo.agentId?.agentName?.toLowerCase().includes(query) ||
+        promo.agentId?.agentId?.toLowerCase().includes(query)
+      );
     }
+    
+    // Apply status filter
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(promo => promo.isActive === true);
+    } else if (statusFilter === 'inactive') {
+      filtered = filtered.filter(promo => promo.isActive === false);
+    }
+    
+    // Apply agent filter
+    if (agentFilter !== 'all') {
+      filtered = filtered.filter(promo => promo.agentId?._id === agentFilter);
+    }
+    
+    // Calculate pagination
+    const itemsPerPage = 5;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    // Get current page items
+    const paginatedPromoCodes = filtered.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    
+    return {
+      promoCodes: paginatedPromoCodes,
+      total: filtered.length,
+      totalPages: totalPages
+    };
   };
 
-  useEffect(() => {
-    fetchPromoCodes();
-    fetchAgents();
-  }, []);
+  // Get current promo codes for display
+  const { promoCodes: currentPromoCodes, total: filteredTotal, totalPages } = getFilteredAndPaginatedPromoCodes();
 
-  const { hasPermission } = useAuth();
-
-  // Handle search
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    fetchPromoCodes(1, e.target.value);
-  };
-
-  // Handle form input change
+  // Handle form input changes
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle edit form input change
   const handleEditInputChange = (e) => {
-    setEditFormData({
-      ...editFormData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  // Handle select change
-  const handleSelectChange = (name, value) => {
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
-
-  // Handle edit select change
-  const handleEditSelectChange = (name, value) => {
-    setEditFormData({
-      ...editFormData,
-      [name]: value
-    });
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
   };
 
   // Generate random promo code
@@ -155,7 +180,7 @@ export default function PromoCodesPage() {
     for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    setFormData({ ...formData, promoCode: code });
+    setFormData(prev => ({ ...prev, promoCode: code }));
   };
 
   // Create new promo code
@@ -166,16 +191,14 @@ export default function PromoCodesPage() {
     try {
       await promoCodeService.createPromoCode(formData);
       toast.success('Promo code created successfully!');
-      setShowCreateForm(false);
+      setCreateDialogOpen(false);
       setFormData({
         promoCode: '',
         discountPercentage: '',
         agentId: '',
-        // maxUsage: 1,
-        // validUntil: '',
-        // description: ''
+        isActive: true
       });
-      fetchPromoCodes(); // Refresh list
+      await loadAllPromoCodes();
     } catch (error) {
       console.error('Error creating promo code:', error);
       toast.error(error.response?.data?.message || 'Error creating promo code');
@@ -194,24 +217,18 @@ export default function PromoCodesPage() {
         promoCode: editFormData.promoCode,
         discountPercentage: editFormData.discountPercentage,
         agentId: editFormData.agentId,
-        // maxUsage: editFormData.maxUsage,
-        // validUntil: editFormData.validUntil,
-        // description: editFormData.description,
         isActive: editFormData.isActive
       });
       toast.success('Promo code updated successfully!');
-      setShowEditForm(false);
+      setEditDialogOpen(false);
       setEditFormData({
         _id: '',
         promoCode: '',
         discountPercentage: '',
         agentId: '',
-        // maxUsage: 1,
-        // validUntil: '',
-        // description: '',
         isActive: true
       });
-      fetchPromoCodes(); // Refresh list
+      await loadAllPromoCodes();
     } catch (error) {
       console.error('Error updating promo code:', error);
       toast.error(error.response?.data?.message || 'Error updating promo code');
@@ -226,13 +243,10 @@ export default function PromoCodesPage() {
       _id: promo._id,
       promoCode: promo.promoCode,
       discountPercentage: promo.discountPercentage,
-      agentId: promo.agentId?._id || promo.agentId,
-      // maxUsage: promo.maxUsage,
-      // validUntil: new Date(promo.validUntil).toISOString().slice(0, 16),
-      // description: promo.description || '',
+      agentId: promo.agentId?._id || promo.agentId || '',
       isActive: promo.isActive
     });
-    setShowEditForm(true);
+    setEditDialogOpen(true);
     setViewOnly(mode === 'view');
   };
 
@@ -242,8 +256,8 @@ export default function PromoCodesPage() {
 
     try {
       await promoCodeService.deletePromoCode(id);
-  toast.success('Promo code deleted successfully');
-  fetchPromoCodes(); // Refresh list
+      toast.success('Promo code deleted successfully');
+      await loadAllPromoCodes();
     } catch (error) {
       console.error('Error deleting promo code:', error);
       toast.error('Error deleting promo code');
@@ -255,188 +269,572 @@ export default function PromoCodesPage() {
     try {
       await promoCodeService.updatePromoCodeStatus(id, !currentStatus);
       toast.success('Promo code status updated');
-      fetchPromoCodes(); // Refresh list
+      await loadAllPromoCodes();
     } catch (error) {
       console.error('Error updating promo code status:', error);
       toast.error('Error updating status');
     }
   };
 
-  // Check if promo code is expired
-  const isExpired = (validUntil) => {
-    return new Date(validUntil) < new Date();
+  // Handle search
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1);
   };
 
-  // Get usage percentage
-  const getUsagePercentage = (usedCount, maxUsage) => {
-    return (usedCount / maxUsage) * 100;
+  // Pagination component
+  const Pagination = ({ currentPage, totalPages, onPageChange, totalItems }) => {
+    const itemsPerPage = 5;
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    const getPageNumbers = () => {
+      const pages = [];
+      if (totalPages <= 5) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+      return pages;
+    };
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 border-t pt-6">
+        <div className="text-sm text-gray-700">
+          Showing <span className="font-medium">{startItem}</span> to{" "}
+          <span className="font-medium">{endItem}</span> of{" "}
+          <span className="font-medium">{totalItems}</span> promo codes
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Previous</span>
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map((page, index) => (
+              page === '...' ? (
+                <span key={`dots-${index}`} className="px-2 py-1">...</span>
+              ) : (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPageChange(page)}
+                  className={`h-8 w-8 p-0 ${
+                    currentPage === page ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
+                  }`}
+                >
+                  {page}
+                </Button>
+              )
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1"
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Summary statistics
+  const summaryStats = {
+    total: allPromoCodes.length,
+    active: allPromoCodes.filter(p => p.isActive === true).length,
+    inactive: allPromoCodes.filter(p => p.isActive === false).length,
+    totalAgents: new Set(allPromoCodes.map(p => p.agentId?._id)).size
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Promo Code Management</h1>
-          <p className="text-gray-600 mt-1">Create and manage promotional codes for agents</p>
-        </div>
-        <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-            {hasPermission('promoCode', 'create') && (
-              <DialogTrigger asChild>
-                <Button className="bg-green-600 hover:bg-green-700">
-                  Create New Promo Code
-                </Button>
-              </DialogTrigger>
-            )}
-          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Promo Code</DialogTitle>
-              <DialogDescription>
-                Create a new promotional code with discount percentage and assign to an agent.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleCreatePromoCode} className="space-y-4">
-              {/* Promo Code */}
-              <div className="space-y-2">
-                <Label htmlFor="promoCode">Promo Code</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="promoCode"
-                    name="promoCode"
-                    value={formData.promoCode}
-                    onChange={handleInputChange}
-                    required
-                    className="flex-1 uppercase"
-                    placeholder="e.g., SUMMER25"
-                  />
-                  {/* <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={generatePromoCode}
-                  >
-                    Generate
-                  </Button> */}
+    <div className="min-h-screen bg-white p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Card */}
+        <Card className="shadow-lg border-0 bg-white text-black">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Tag className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-xl md:text-2xl font-bold truncate">Promo Code Management</CardTitle>
+                <CardDescription className="text-black text-sm md:text-base">
+                  Create and manage promotional codes for agents
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Promo Codes</p>
+                  <p className="text-2xl font-bold mt-2">{summaryStats.total}</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <Tag className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Discount Percentage */}
-              <div className="space-y-2">
-                <Label htmlFor="discountPercentage">Discount Percentage</Label>
-                <Input
-                  id="discountPercentage"
-                  name="discountPercentage"
-                  type="number"
-                  value={formData.discountPercentage}
-                  onChange={handleInputChange}
-                  min="1"
-                  max="100"
-                  required
-                  placeholder="Enter discount percentage"
-                />
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Codes</p>
+                  <p className="text-2xl font-bold mt-2">{summaryStats.active}</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <Percent className="h-6 w-6 text-green-600" />
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Agent Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="agentId">Agent</Label>
-                <Select 
-                  value={formData.agentId} 
-                  onValueChange={(value) => handleSelectChange('agentId', value)}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Inactive Codes</p>
+                  <p className="text-2xl font-bold mt-2">{summaryStats.inactive}</p>
+                </div>
+                <div className="p-3 bg-red-100 rounded-full">
+                  <Tag className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Agents with Codes</p>
+                  <p className="text-2xl font-bold mt-2">{summaryStats.totalAgents}</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <User className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Card */}
+        <Card className="shadow-xl border-0 overflow-hidden">
+          <CardHeader className="pb-4 border-b bg-white/50">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg md:text-xl font-semibold text-gray-900">All Promo Codes</CardTitle>
+                <CardDescription className="text-sm">
+                  Manage promotional codes and their status
+                </CardDescription>
+              </div>
+              
+              {/* Search and Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search promo codes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
+                    className="pl-9 w-full sm:w-64"
+                  />
+                </div>
+                
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value);
+                    setCurrentPage(1);
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an agent" />
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {agents.map(agent => (
-                      <SelectItem key={agent._id} value={agent._id}>
-                        {agent.agentName} ({agent.agentId})
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Status Filter</SelectLabel>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
 
-              {/* Max Usage */}
-              {/* <div className="space-y-2">
-                <Label htmlFor="maxUsage">Max Usage</Label>
-                <Input
-                  id="maxUsage"
-                  name="maxUsage"
-                  type="number"
-                  value={formData.maxUsage}
-                  onChange={handleInputChange}
-                  min="1"
-                  placeholder="Maximum usage count"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="validUntil">Valid Until</Label>
-                <Input
-                  id="validUntil"
-                  name="validUntil"
-                  type="datetime-local"
-                  value={formData.validUntil}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows="3"
-                  placeholder="Enter promo code description (optional)"
-                />
-              </div> */}
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                <Select
+                  value={agentFilter}
+                  onValueChange={(value) => {
+                    setAgentFilter(value);
+                    setCurrentPage(1);
+                  }}
                 >
-                  {loading ? 'Creating...' : 'Create Promo Code'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCreateForm(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="All Agents" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Agent Filter</SelectLabel>
+                      <SelectItem value="all">All Agents</SelectItem>
+                      {agents.map(agent => (
+                        <SelectItem key={agent._id} value={agent._id}>
+                          {agent.agentName}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+
+                {hasPermission('promoCode', 'create') && (
+                  <Button
+                    onClick={() => setCreateDialogOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Promo Code
+                  </Button>
+                )}
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0 md:p-6">
+            {/* Promo Codes Table */}
+            <div className="overflow-x-auto">
+              <div className="min-w-full inline-block align-middle">
+                <div className="overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Promo Code Details
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Agent
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {loading ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-8 text-center">
+                            <div className="flex justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                            </div>
+                          </td>
+                        </tr>
+                      ) : currentPromoCodes.length > 0 ? (
+                        currentPromoCodes.map((promo) => (
+                          <tr key={promo._id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-4">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-3">
+                                  <div className="shrink-0">
+                                    <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                      <Tag className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-semibold text-gray-900 truncate">
+                                      {promo.promoCode}
+                                    </div>
+                                    <div className="text-xs text-gray-500 truncate">
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                        {promo.discountPercentage}% OFF
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              {promo.agentId ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="shrink-0">
+                                    <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                      <User className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-gray-900 truncate">
+                                      {promo.agentId.agentName}
+                                    </div>
+                                    <div className="text-xs text-gray-500 truncate">
+                                      {promo.agentId.agentId}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-500">Unassigned</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                promo.isActive 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {promo.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {hasPermission('promoCode', 'edit') ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenEdit(promo, 'edit')}
+                                    className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+                                  >
+                                    <Edit className="h-4 w-4 md:mr-1" />
+                                    <span className="hidden md:inline">Edit</span>
+                                  </Button>
+                                ) : hasPermission('promoCode', 'view') ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenEdit(promo, 'view')}
+                                    className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+                                  >
+                                    <Eye className="h-4 w-4 md:mr-1" />
+                                    <span className="hidden md:inline">View</span>
+                                  </Button>
+                                ) : null}
+
+                                {hasPermission('promoCode', 'edit') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleToggleStatus(promo._id, promo.isActive)}
+                                    className={`h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2 ${
+                                      promo.isActive 
+                                        ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' 
+                                        : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                                    }`}
+                                  >
+                                    <Power className="h-4 w-4 md:mr-1" />
+                                    <span className="hidden md:inline">{promo.isActive ? 'Deactivate' : 'Activate'}</span>
+                                  </Button>
+                                )}
+
+                                {hasPermission('promoCode', 'delete') && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeletePromoCode(promo._id)}
+                                    className="h-8 w-8 p-0 md:h-auto md:w-auto md:px-3 md:py-2"
+                                  >
+                                    <Trash2 className="h-4 w-4 md:mr-1" />
+                                    <span className="hidden md:inline">Delete</span>
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                            {searchQuery || statusFilter !== 'all' || agentFilter !== 'all' 
+                              ? "No matching promo codes found" 
+                              : "No promo codes found"}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredTotal}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Edit Promo Code Dialog */}
-      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      {/* Create Promo Code Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-[95vw] md:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Promo Code</DialogTitle>
-            <DialogDescription>
-              Update promotional code information and settings.
+            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
+              <Plus className="h-5 w-5" />
+              Create New Promo Code
+            </DialogTitle>
+            <DialogDescription className="text-sm md:text-base">
+              Create a new promotional code with discount percentage and assign to an agent
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleCreatePromoCode} className="space-y-4">
+            {/* Promo Code */}
+            <div className="space-y-2">
+              <Label htmlFor="promoCode" className="text-sm font-medium text-gray-700">
+                Promo Code *
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="promoCode"
+                  name="promoCode"
+                  value={formData.promoCode}
+                  onChange={handleInputChange}
+                  required
+                  className="flex-1 uppercase focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="e.g., SUMMER25"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={generatePromoCode}
+                  className="text-sm"
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+
+            {/* Discount Percentage */}
+            <div className="space-y-2">
+              <Label htmlFor="discountPercentage" className="text-sm font-medium text-gray-700">
+                Discount Percentage *
+              </Label>
+              <Input
+                id="discountPercentage"
+                name="discountPercentage"
+                type="number"
+                value={formData.discountPercentage}
+                onChange={handleInputChange}
+                min="1"
+                max="100"
+                required
+                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter discount percentage"
+              />
+            </div>
+
+            {/* Agent Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="agentId" className="text-sm font-medium text-gray-700">
+                Agent *
+              </Label>
+              <Select 
+                value={formData.agentId} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, agentId: value }))}
+              >
+                <SelectTrigger className="w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                  <SelectValue placeholder="Select an agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Available Agents</SelectLabel>
+                    {agents.map(agent => (
+                      <SelectItem key={agent._id} value={agent._id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{agent.agentName}</span>
+                          <span className="text-xs text-gray-500 ml-2">({agent.agentId})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors order-2 sm:order-1 w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto order-1 sm:order-2"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create Promo Code
+                  </div>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Promo Code Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-[95vw] md:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
+              <Edit className="h-5 w-5" />
+              {viewOnly ? 'View Promo Code' : 'Edit Promo Code'}
+            </DialogTitle>
+            <DialogDescription className="text-sm md:text-base">
+              {viewOnly ? 'View promo code details' : 'Update promotional code information'}
             </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleEditPromoCode} className="space-y-4">
             {/* Promo Code */}
             <div className="space-y-2">
-              <Label htmlFor="edit-promoCode">Promo Code</Label>
+              <Label htmlFor="edit-promoCode" className="text-sm font-medium text-gray-700">
+                Promo Code *
+              </Label>
               <Input
                 id="edit-promoCode"
                 name="promoCode"
                 value={editFormData.promoCode}
                 onChange={handleEditInputChange}
                 required
-                className="uppercase"
+                className="uppercase focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="e.g., SUMMER25"
                 disabled={viewOnly}
               />
@@ -444,7 +842,9 @@ export default function PromoCodesPage() {
 
             {/* Discount Percentage */}
             <div className="space-y-2">
-              <Label htmlFor="edit-discountPercentage">Discount Percentage</Label>
+              <Label htmlFor="edit-discountPercentage" className="text-sm font-medium text-gray-700">
+                Discount Percentage *
+              </Label>
               <Input
                 id="edit-discountPercentage"
                 name="discountPercentage"
@@ -454,6 +854,7 @@ export default function PromoCodesPage() {
                 min="1"
                 max="100"
                 required
+                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Enter discount percentage"
                 disabled={viewOnly}
               />
@@ -461,325 +862,89 @@ export default function PromoCodesPage() {
 
             {/* Agent Selection */}
             <div className="space-y-2">
-              <Label htmlFor="edit-agentId">Agent</Label>
+              <Label htmlFor="edit-agentId" className="text-sm font-medium text-gray-700">
+                Agent *
+              </Label>
               <Select 
                 value={editFormData.agentId} 
-                onValueChange={(value) => handleEditSelectChange('agentId', value)}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, agentId: value }))}
+                disabled={viewOnly}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                   <SelectValue placeholder="Select an agent" />
                 </SelectTrigger>
                 <SelectContent>
-                  {agents.map(agent => (
-                    <SelectItem key={agent._id} value={agent._id}>
-                      {agent.agentName} ({agent.agentId})
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Available Agents</SelectLabel>
+                    {agents.map(agent => (
+                      <SelectItem key={agent._id} value={agent._id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{agent.agentName}</span>
+                          <span className="text-xs text-gray-500 ml-2">({agent.agentId})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Max Usage */}
-            {/* <div className="space-y-2">
-              <Label htmlFor="edit-maxUsage">Max Usage</Label>
-              <Input
-                id="edit-maxUsage"
-                name="maxUsage"
-                type="number"
-                value={editFormData.maxUsage}
-                onChange={handleEditInputChange}
-                min="1"
-                placeholder="Maximum usage count"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-validUntil">Valid Until</Label>
-              <Input
-                id="edit-validUntil"
-                name="validUntil"
-                type="datetime-local"
-                value={editFormData.validUntil}
-                onChange={handleEditInputChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                name="description"
-                value={editFormData.description}
-                onChange={handleEditInputChange}
-                rows="3"
-                placeholder="Enter promo code description (optional)"
-              />
-            </div> */}
 
             {/* Status */}
             <div className="space-y-2">
-              <Label htmlFor="edit-status">Status</Label>
+              <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700">
+                Status
+              </Label>
               <Select 
                 value={editFormData.isActive.toString()} 
-                onValueChange={(value) => handleEditSelectChange('isActive', value === 'true')}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, isActive: value === 'true' }))}
                 disabled={viewOnly}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
+                  <SelectGroup>
+                    <SelectLabel>Status Options</SelectLabel>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 px-6 rounded-lg transition-colors order-2 sm:order-1 w-full sm:w-auto"
+              >
+                {viewOnly ? 'Close' : 'Cancel'}
+              </Button>
               {!viewOnly && (
-                <>
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    {loading ? 'Updating...' : 'Update Promo Code'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEditForm(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </>
-              )}
-              {viewOnly && (
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowEditForm(false)}
-                  className="flex-1"
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto order-1 sm:order-2"
                 >
-                  Close
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Edit className="h-4 w-4" />
+                      Update Promo Code
+                    </div>
+                  )}
                 </Button>
               )}
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Search Bar */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search promo codes by code or description..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="w-full pl-10"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Promo Codes List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Promo Codes</CardTitle>
-          <CardDescription>
-            Manage all promotional codes and their status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Loading promo codes...</p>
-            </div>
-          ) : promoCodes.length === 0 ? (
-            <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No promo codes</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Get started by creating a new promo code.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Promo Code</TableHead>
-                    <TableHead>Discount</TableHead>
-                    <TableHead>Agent</TableHead>
-                    {/* <TableHead>Usage</TableHead> */}
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {promoCodes.map((promo) => (
-                    <TableRow key={promo._id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-mono font-bold text-gray-900">
-                            {promo.promoCode}
-                          </div>
-                          {promo.description && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              {promo.description}
-                            </div>
-                          )}
-                          {/* <div className="text-xs text-gray-400 mt-1">
-                            Valid until: {new Date(promo.validUntil).toLocaleDateString()}
-                          </div> */}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          {promo.discountPercentage}% OFF
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {promo.agentId?.agentName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {promo.agentId?.agentId}
-                          </div>
-                        </div>
-                      </TableCell>
-                      {/* <TableCell>
-                        <div className="space-y-2">
-                          <div className="text-sm">
-                            {promo.usedCount} / {promo.maxUsage}
-                          </div>
-                          <Progress 
-                            value={getUsagePercentage(promo.usedCount, promo.maxUsage)} 
-                            className="h-2"
-                          />
-                        </div>
-                      </TableCell> */}
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge 
-                            variant={promo.isActive ? "default" : "secondary"}
-                            className={promo.isActive 
-                              ? "bg-green-100 text-green-800 hover:bg-green-100" 
-                              : "bg-red-100 text-red-800 hover:bg-red-100"
-                            }
-                          >
-                            {promo.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                          {/* <Badge 
-                            variant={isExpired(promo.validUntil) ? "destructive" : "outline"}
-                            className={isExpired(promo.validUntil) 
-                              ? "bg-red-100 text-red-800 hover:bg-red-100" 
-                              : "bg-green-100 text-green-800 hover:bg-green-100"
-                            }
-                          >
-                            {isExpired(promo.validUntil) ? 'Expired' : 'Valid'}
-                          </Badge> */}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          {hasPermission('promoCode', 'edit') && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenEdit(promo, 'edit')}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          {!hasPermission('promoCode', 'edit') && hasPermission('promoCode', 'view') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenEdit(promo, 'view')}
-                              className="text-gray-600 hover:bg-gray-50"
-                            >
-                              View
-                            </Button>
-                          )}
-                          {hasPermission('promoCode', 'edit') && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleStatus(promo._id, promo.isActive)}
-                              className={
-                                promo.isActive 
-                                  ? 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50' 
-                                  : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                              }
-                            >
-                              {promo.isActive ? 'Deactivate' : 'Activate'}
-                            </Button>
-                          )}
-                          {hasPermission('promoCode', 'delete') && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeletePromoCode(promo._id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(pagination.currentPage - 1) * 10 + 1}</span> to{' '}
-                <span className="font-medium">
-                  {Math.min(pagination.currentPage * 10, pagination.totalPromoCodes)}
-                </span> of{' '}
-                <span className="font-medium">{pagination.totalPromoCodes}</span> promo codes
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchPromoCodes(pagination.currentPage - 1, searchTerm)}
-                  disabled={!pagination.hasPrev}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchPromoCodes(pagination.currentPage + 1, searchTerm)}
-                  disabled={!pagination.hasNext}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
+
