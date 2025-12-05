@@ -1014,7 +1014,7 @@ export default function Users() {
                         {canCreateUser && (
                           <Button
                             onClick={openUserDialog}
-                            className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                            className="blue-button font-medium py-2.5 px-4 md:px-6 shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
                           >
                             <Plus className="h-4 w-4" />
                             Add User
@@ -1138,7 +1138,7 @@ export default function Users() {
                         {canCreateRole && (
                           <Button
                             onClick={openRoleDialog}
-                            className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                            className="blue-button font-medium py-2.5 px-4 md:px-6 shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
                           >
                             <Plus className="h-4 w-4" />
                             Add Role

@@ -513,7 +513,7 @@ export default function PromoCodesPage() {
                 {hasPermission('promoCode', 'create') && (
                   <Button
                     onClick={() => setCreateDialogOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                    className="blue-button flex items-center gap-2 w-full sm:w-auto justify-center"
                   >
                     <Plus className="h-4 w-4" />
                     Add Promo Code
@@ -790,7 +790,7 @@ export default function PromoCodesPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto order-1 sm:order-2"
+                className="blue-button w-full sm:w-auto order-1 sm:order-2"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
@@ -925,7 +925,7 @@ export default function PromoCodesPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto order-1 sm:order-2"
+                  className="blue-button w-full sm:w-auto order-1 sm:order-2"
                 >
                   {loading ? (
                     <div className="flex items-center gap-2">

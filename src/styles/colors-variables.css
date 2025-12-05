@@ -1,0 +1,63 @@
+/* Primary Blue Color Variables */
+:root {
+  --primary-blue: #10B5DB;
+  --primary-blue-light: #4DC3E8;
+  --primary-blue-dark: #0D8FB0;
+  --primary-blue-hover: #0FA4C8;
+  --primary-blue-active: #0E9BC0;
+  --primary-blue-disabled: #A0D4E0;
+
+  /* Button Semantic Variables */
+  --button-bg-primary: var(--primary-blue);
+  --button-text-primary: #FFFFFF;
+  --button-border-primary: var(--primary-blue);
+  --button-bg-primary-hover: var(--primary-blue-hover);
+  --button-bg-primary-active: var(--primary-blue-active);
+  --button-bg-primary-disabled: var(--primary-blue-disabled);
+}
+
+/* Reusable Blue Button Class */
+.blue-button {
+  background-color: var(--button-bg-primary);
+  color: var(--button-text-primary);
+  border: 1px solid var(--button-border-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.blue-button:hover {
+  background-color: var(--button-bg-primary-hover);
+  border-color: var(--button-bg-primary-hover);
+}
+
+.blue-button:active {
+  background-color: var(--button-bg-primary-active);
+  border-color: var(--button-bg-primary-active);
+}
+
+.blue-button:disabled,
+.blue-button:disabled:hover,
+.blue-button:disabled:active {
+  background-color: var(--button-bg-primary-disabled);
+  border-color: var(--button-bg-primary-disabled);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Additional utility classes for different button sizes */
+.blue-button-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.blue-button-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.125rem;
+}

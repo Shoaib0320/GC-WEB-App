@@ -113,7 +113,7 @@ export default function BookingsPage() {
         {canCreateBooking && (
           <Button
             onClick={() => setCreateDialogOpen(true)}
-            className="flex items-center gap-2 w-full sm:w-auto bg-[#10B5DB] text-white hover:bg-[#10B5DB]/90 transition-colors rounded-lg"
+            className="blue-button flex items-center gap-2 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             Create Booking

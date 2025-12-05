@@ -1,14 +1,15 @@
 // /components/AttendancePanel.jsx
 "use client";
 import React, { useEffect, useState, useRef } from "react";
+import { useLoaderContext } from '../context/LoaderContext';
 
 export default function AttendancePanel() {
+  const { showLoader, hideLoader, isLoading } = useLoaderContext();
   const [shifts, setShifts] = useState([]);
   const [selectedShift, setSelectedShift] = useState("");
   const [now, setNow] = useState(new Date());
   const [location, setLocation] = useState(null);
   const [todayAttendance, setTodayAttendance] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const timerRef = useRef();
 
@@ -79,7 +80,7 @@ export default function AttendancePanel() {
 
   async function handleCheckin() {
     if (!selectedShift) return setMessage("Select shift first");
-    setLoading(true); setMessage("");
+    showLoader("attendance-checkin", "Checking in..."); setMessage("");
     if (!location) {
       try {
         await new Promise(resolve => {
@@ -105,7 +106,7 @@ export default function AttendancePanel() {
       console.error(err);
       setMessage("Server error on check-in");
     } finally {
-      setLoading(false);
+      hideLoader("attendance-checkin");
     }
   }
 
@@ -153,10 +154,10 @@ export default function AttendancePanel() {
       </div>
 
       <div className="flex gap-2">
-        <button onClick={handleCheckin} disabled={!checkinAllowed || loading} className={`px-4 py-2 rounded ${checkinAllowed ? "bg-green-600 text-white" : "bg-gray-300"}`}>
+        <button onClick={handleCheckin} disabled={!checkinAllowed || isLoading("attendance-checkin")} className={`px-4 py-2 rounded ${checkinAllowed ? "bg-green-600 text-white" : "bg-gray-300"}`}>
           Check In
         </button>
-        <button onClick={handleCheckout} disabled={!checkoutAllowed || loading} className={`px-4 py-2 rounded ${checkoutAllowed ? "bg-red-500 text-white" : "bg-gray-300"}`}>
+        <button onClick={handleCheckout} disabled={!checkoutAllowed || isLoading("attendance-checkout")} className={`px-4 py-2 rounded ${checkoutAllowed ? "bg-red-500 text-white" : "bg-gray-300"}`}>
           Check Out
         </button>
         <button onClick={askLocation} className="px-3 py-2 border rounded">Set Location</button>

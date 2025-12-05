@@ -329,7 +329,7 @@
 
 
 // components/web/LeaveRequestModal.jsx - FULLY RESPONSIVE SHADCN UI VERSION
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -338,7 +338,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -351,7 +351,15 @@ const LeaveRequestModal = ({ visible, onClose, onSubmit }) => {
     return today.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState('');
-  const [reason, setReason] = useState('');
+  const reasonRef = useRef(null);
+  const badgeRef = useRef(null);
+  const [hasReason, setHasReason] = useState(false);
+
+  useEffect(() => {
+    if (visible && reasonRef.current) {
+      reasonRef.current.focus();
+    }
+  }, [visible]);
 
   const getTodayISO = () => {
     return new Date().toISOString().split('T')[0];
@@ -383,7 +391,8 @@ const LeaveRequestModal = ({ visible, onClose, onSubmit }) => {
       alert('Please select a leave type');
       return;
     }
-    if (!reason.trim()) {
+    const reasonValue = reasonRef.current?.value?.trim();
+    if (!reasonValue) {
       alert('Please provide a reason');
       return;
     }
@@ -391,7 +400,7 @@ const LeaveRequestModal = ({ visible, onClose, onSubmit }) => {
     const submitData = {
       leaveType,
       startDate,
-      reason: reason.trim(),
+      reason: reasonValue,
     };
 
     if (endDate && endDate !== startDate) {
@@ -407,7 +416,13 @@ const LeaveRequestModal = ({ visible, onClose, onSubmit }) => {
     setLeaveType('casual');
     setStartDate(getTodayISO());
     setEndDate('');
-    setReason('');
+    setHasReason(false);
+    if (reasonRef.current) {
+      reasonRef.current.value = '';
+    }
+    if (badgeRef.current) {
+      badgeRef.current.textContent = '0/500';
+    }
   };
 
   const handleClose = () => {
@@ -609,27 +624,33 @@ const LeaveRequestModal = ({ visible, onClose, onSubmit }) => {
               </div>
               
               <div className="space-y-3">
-                <Textarea
+                <textarea
+                  ref={reasonRef}
                   id="reason"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
                   placeholder="Please provide a detailed reason for your leave request..."
                   maxLength={500}
                   rows={5}
-                  className="min-h-[120px] resize-vertical text-base"
+                  onInput={(e) => {
+                    const length = e.target.value.length;
+                    if (badgeRef.current) {
+                      badgeRef.current.textContent = `${length}/500`;
+                    }
+                    setHasReason(length > 0);
+                  }}
+                  className="w-full min-h-[120px] resize-vertical text-base p-3 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 />
-                
+
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                   <p className="text-sm text-muted-foreground">
                     Please be specific about your leave reason
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={reason.length >= 450 ? "destructive" : "secondary"} 
-                      className="text-xs"
+                    <div
+                      ref={badgeRef}
+                      className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
                     >
-                      {reason.length}/500
-                    </Badge>
+                      0/500
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       characters
                     </span>
@@ -649,10 +670,10 @@ const LeaveRequestModal = ({ visible, onClose, onSubmit }) => {
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSubmit}
             className="flex-1 h-12 text-base font-semibold sm:order-2 order-1"
-            disabled={!reason.trim()}
+            disabled={!hasReason}
           >
             <span className="flex items-center gap-2">
               📨 Submit Leave Request

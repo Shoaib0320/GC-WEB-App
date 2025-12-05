@@ -4,11 +4,11 @@ import { attendanceService } from "@/services/attendanceService";
 
 export default function AttendanceSystem() {
   const [attendance, setAttendance] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
   const [userType, setUserType] = useState('user'); // 'user' or 'agent'
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  const { showLoader, hideLoader } = useLoaderContext();
 
   const LIMIT = 10;
 
@@ -118,12 +118,7 @@ export default function AttendanceSystem() {
       </div>
 
       {/* Table */}
-      {loading ? (
-        <div className="text-center py-20 text-gray-500 animate-pulse">
-          Loading attendance records...
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg shadow">
+      <div className="overflow-x-auto rounded-lg shadow">
           <table className="min-w-full border-collapse">
             <thead className="bg-gray-100 dark:bg-gray-800">
               <tr className="text-left text-sm font-semibold text-gray-700 dark:text-gray-300">

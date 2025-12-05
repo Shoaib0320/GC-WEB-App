@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useLoaderContext } from '../context/LoaderContext';
 
 export function ResetPasswordDialog({ agent, onSuccess }) {
   const [open, setOpen] = useState(false);

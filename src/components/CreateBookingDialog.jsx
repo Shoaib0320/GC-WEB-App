@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { X, Calendar, Clock, User, Phone, Mail, MapPin, Car, Plus, Trash2, Tag, DollarSign, Package, Loader2, Home, Bird } from "lucide-react";
+import { Calendar, Clock, User, Phone, Mail, MapPin, Car, Tag, DollarSign, Package, Loader2, Home, Bird } from "lucide-react";
 import { promoCodeService } from "@/services/promocodeService";
 import { ALL_SERVICES, VENDORS, TIME_SLOTS } from "@/Data/bookingData";
 import { toast } from "sonner";
+import { useLoaderContext } from '@/context/LoaderContext';
 
 // ✅ Booking Types
 const BOOKING_TYPES = {
@@ -84,8 +85,8 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
     discountPercent: 0,
   });
 
-  // ✅ SUBMITTING STATE
-  const [submitting, setSubmitting] = useState(false);
+  // ✅ Loader Context
+  const { showLoader, hideLoader } = useLoaderContext();
 
   // ✅ Fetch Promo Codes
   useEffect(() => {
@@ -349,23 +350,25 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
     };
 
     try {
-      setSubmitting(true);
+      showLoader("create-booking", "Creating booking...");
       const res = await onSubmit(bookingData);
 
       if (res && res.success) {
         resetForm();
         if (onClose) onClose();
+        toast.success("Booking created successfully!");
       } else if (res && !res.success) {
         toast.error(res.message || "Failed to create booking");
       } else {
         resetForm();
         if (onClose) onClose();
+        toast.success("Booking created successfully!");
       }
     } catch (err) {
       console.error("Create booking error:", err);
       toast.error(err?.message || "Failed to create booking");
     } finally {
-      setSubmitting(false);
+      hideLoader("create-booking");
     }
   };
 
@@ -588,32 +591,18 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="relative">
-          <DialogTitle className="flex items-center gap-2 text-2xl">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-2 text-xl">
             <User className="w-6 h-6" />
             Create New Booking
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-0 top-0"
-            onClick={onClose}
-          >
-            <X className="w-4 h-4" />
-          </Button>
         </DialogHeader>
 
-        {submitting && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 rounded-lg">
-            <Loader2 className="w-14 h-14 animate-spin text-primary" />
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* 📋 CUSTOMER INFORMATION */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <User className="w-5 h-5" />
                 Customer Information
@@ -769,7 +758,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
           {/* 📅 APPOINTMENT DETAILS */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Calendar className="w-5 h-5" />
                 Appointment Details
@@ -811,7 +800,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
           {/* 🎯 SERVICE DETAILS */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <CurrentIcon className="w-5 h-5" />
                 {getCurrentServiceCategory()?.name} Details
@@ -943,7 +932,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
           {/* 💰 PRICING & PROMO CODE */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <DollarSign className="w-5 h-5" />
                 Pricing & Promo Code
@@ -1015,7 +1004,7 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
 
           {/* 📝 ADDITIONAL NOTES */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-lg">Additional Notes</CardTitle>
             </CardHeader>
             <CardContent>
@@ -1029,19 +1018,12 @@ const CreateBookingDialog = ({ open, onClose, onSubmit }) => {
           </Card>
 
           {/* ACTIONS */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} size="lg">
               Cancel
             </Button>
-            <Button type="submit" className="min-w-[150px]" disabled={submitting}>
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                "Create Booking"
-              )}
+            <Button type="submit" size="lg" className="min-w-[150px] bg-blue-600 hover:bg-blue-700">
+              Create Booking
             </Button>
           </div>
         </form>

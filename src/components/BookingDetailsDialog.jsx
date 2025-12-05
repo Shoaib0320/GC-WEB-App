@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from '@/context/AuthContext';
+import { useLoaderContext } from '@/context/LoaderContext';
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,13 +18,13 @@ export default function BookingDetailsDialog({
   onClose,
   onStatusChange,
 }) {
-  const [loading, setLoading] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
   const [reason, setReason] = useState("");
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Permissions
   const { hasPermission } = useAuth();
+  const { showLoader, hideLoader, isLoading } = useLoaderContext();
   const canChangeStatus = hasPermission('booking', 'update_status') || hasPermission('booking', 'edit');
 
   // Close on escape key
@@ -439,14 +440,14 @@ export default function BookingDetailsDialog({
     }
 
     try {
-      setLoading(true);
+      showLoader();
       const bodyPayload = {
         status: newStatus,
       };
       if (newStatus === "cancelled" && cancellationReason) {
         bodyPayload.cancellationReason = cancellationReason;
       }
-      
+
       const response = await fetch(`/api/booking/${_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -478,7 +479,7 @@ export default function BookingDetailsDialog({
       console.error(err);
       toast.error(`Failed to ${newStatus} booking ❌`);
     } finally {
-      setLoading(false);
+      hideLoader();
     }
   };
 
@@ -523,10 +524,10 @@ export default function BookingDetailsDialog({
             </Button>
             <Button
               onClick={() => updateBookingStatus("cancelled", reason)}
-              disabled={!reason.trim() || loading}
+              disabled={!reason.trim()}
               className="bg-red-600 hover:bg-red-700 px-4 text-sm"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Cancel"}
+              Yes, Cancel
             </Button>
           </div>
         </div>
@@ -775,7 +776,7 @@ export default function BookingDetailsDialog({
                     <Button
                       variant="outline"
                       onClick={() => setShowCancelDialog(true)}
-                      disabled={loading || status === "cancelled" || status === "completed"}
+                      disabled={isLoading || status === "cancelled" || status === "completed"}
                       className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 px-4 py-2 text-sm"
                     >
                       Cancel Booking
@@ -783,7 +784,7 @@ export default function BookingDetailsDialog({
 
                     <Button
                       onClick={() => updateBookingStatus("confirmed")}
-                      disabled={loading || status === "confirmed" || status === "completed" || status === "rescheduled"}
+                      disabled={isLoading || status === "confirmed" || status === "completed" || status === "rescheduled"}
                       className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
                     >
                       Confirm Booking
@@ -791,16 +792,16 @@ export default function BookingDetailsDialog({
 
                     <Button
                       onClick={() => updateBookingStatus("completed")}
-                      disabled={loading || status === "completed" || status === "cancelled"}
+                      disabled={isLoading || status === "completed" || status === "cancelled"}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm"
                     >
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                       Complete Booking
                     </Button>
 
                     <Button
                       onClick={() => setShowReschedule(true)}
-                      disabled={loading || status === "completed" || status === "cancelled"}
+                      disabled={isLoading || status === "completed" || status === "cancelled"}
                       className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 text-sm"
                     >
                       Reschedule

@@ -459,7 +459,7 @@ export default function AgentsPage() {
           {hasPermission('agent', 'create') && (
             <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
               <DialogTrigger asChild>
-                <Button className="bg-[#10B5DB] hover:bg-[#10B5DB]/90 gap-2">
+                <Button className="blue-button gap-2">
                   <Plus className="h-4 w-4" />
                   Create New Agent
                 </Button>
@@ -714,10 +714,10 @@ export default function AgentsPage() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-3 pt-4">
-                    <Button 
-                      type="submit" 
-                      disabled={loading || shifts.length === 0 || !validateAgentId(formData.agentId)} 
-                      className="flex-1 bg-[#10B5DB] hover:bg-[#10B5DB]/90 gap-2"
+                    <Button
+                      type="submit"
+                      disabled={loading || shifts.length === 0 || !validateAgentId(formData.agentId)}
+                      className="flex-1 blue-button gap-2"
                     >
                       {loading ? 'Creating...' : (
                         <>
@@ -978,10 +978,10 @@ export default function AgentsPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button 
-                type="submit" 
-                disabled={loading || !validateAgentId(editFormData.agentId)} 
-                className="flex-1 bg-[#10B5DB] hover:bg-[#10B5DB]/90 gap-2"
+              <Button
+                type="submit"
+                disabled={loading || !validateAgentId(editFormData.agentId)}
+                className="flex-1 blue-button gap-2"
               >
                 {loading ? 'Updating...' : (
                   <>
@@ -1187,7 +1187,7 @@ export default function AgentsPage() {
                 </Button>
                 <Button
                   onClick={() => setShowViewModal(false)}
-                  className="bg-[#10B5DB] hover:bg-[#10B5DB]/90"
+                  className="blue-button"
                 >
                   Close
                 </Button>
@@ -1545,8 +1545,8 @@ export default function AgentsPage() {
                         size="sm"
                         onClick={() => setCurrentPage(pageNum)}
                         className={`h-8 w-8 p-0 ${
-                          currentPage === pageNum 
-                            ? "bg-[#10B5DB] hover:bg-[#10B5DB]/90" 
+                          currentPage === pageNum
+                            ? "blue-button"
                             : ""
                         }`}
                       >

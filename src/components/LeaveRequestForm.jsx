@@ -1,20 +1,21 @@
 "use client";
 import React, { useState } from "react";
 import { attendanceService } from "@/services/attendanceService";
+import { useLoaderContext } from '../context/LoaderContext';
 
 export default function LeaveRequestForm({ userType = 'user', onSuccess }) {
+  const { showLoader, hideLoader, isLoading } = useLoaderContext();
   const [formData, setFormData] = useState({
     leaveType: "casual",
     startDate: "",
     endDate: "",
     reason: ""
   });
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    showLoader("leave-request-submit", "Submitting leave request...");
     setMessage({ type: "", text: "" });
 
     try {
@@ -33,7 +34,7 @@ export default function LeaveRequestForm({ userType = 'user', onSuccess }) {
     } catch (error) {
       setMessage({ type: "error", text: "Failed to submit leave request" });
     } finally {
-      setLoading(false);
+      hideLoader("leave-request-submit");
     }
   };
 

@@ -4,12 +4,13 @@ import { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin } from 'lucide-react';
 import { AgentContext } from '../context/AgentContext';
+import { useLoaderContext } from '../context/LoaderContext';
 
 const ShiftSchedule = () => {
     const { agent } = useContext(AgentContext);
+    const { showLoader, hideLoader } = useLoaderContext();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [schedule, setSchedule] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     // Days mapping
     const daysMap = {
@@ -87,7 +88,6 @@ const ShiftSchedule = () => {
         }
 
         setSchedule(scheduleData);
-        setLoading(false);
     };
 
     // Navigation functions
@@ -148,22 +148,6 @@ const ShiftSchedule = () => {
 
         return currentWeekStart.toDateString() === displayedWeekStart.toDateString();
     };
-
-    if (loading) {
-        return (
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 w-full max-w-md mx-auto">
-                <div className="animate-pulse">
-                    <div className="h-6 bg-slate-200 rounded w-2/3 mb-4"></div>
-                    <div className="grid grid-cols-7 gap-2 mb-6">
-                        {[...Array(7)].map((_, i) => (
-                            <div key={i} className="aspect-square bg-slate-200 rounded-lg"></div>
-                        ))}
-                    </div>
-                    <div className="h-20 bg-slate-200 rounded-xl"></div>
-                </div>
-            </div>
-        );
-    }
 
     if (!agent?.shift) {
         return (

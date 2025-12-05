@@ -464,7 +464,7 @@ export default function AdminCreateShift() {
                 {hasPermission('shift', 'create') && (
                   <Button
                     onClick={openCreate}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 md:px-6 rounded-lg transition-colors shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+                    className="blue-button flex items-center gap-2 w-full sm:w-auto justify-center"
                   >
                     <Plus className="h-4 w-4" />
                     Add Shift
@@ -638,10 +638,10 @@ export default function AdminCreateShift() {
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto order-1 sm:order-2"
+                className="blue-button w-full sm:w-auto order-1 sm:order-2"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
