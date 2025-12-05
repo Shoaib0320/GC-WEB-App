@@ -1,148 +1,249 @@
-import React from 'react';
+// components/sales/MonthSelector.jsx
+import React, { useContext } from 'react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ThemeContext } from '@/context/ThemeContext';
 
-const MonthSelector = ({ currentMonth = '', onMonthChange, theme }) => {
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+const MonthSelector = ({ 
+  currentMonth = '', 
+  onMonthChange, 
+  theme 
+}) => {
+  const { theme: themeContext } = useContext(ThemeContext);
+  const activeTheme = theme || themeContext;
 
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
+  // Parse current month
+  const getCurrentMonthInfo = () => {
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+    
+    if (!currentMonth) {
+      const now = new Date();
+      return {
+        monthName: months[now.getMonth()],
+        year: now.getFullYear(),
+        monthIndex: now.getMonth()
+      };
+    }
+    
+    const [monthName, year] = currentMonth.split(' ');
+    const monthIndex = months.indexOf(monthName);
+    
+    return {
+      monthName,
+      year: parseInt(year),
+      monthIndex: monthIndex !== -1 ? monthIndex : new Date().getMonth()
+    };
+  };
 
-  // Split safely
-  const [month = months[currentDate.getMonth()], year = currentYear] = currentMonth.split(' ');
-  const currentMonthIndex = months.indexOf(month);
-  const displayYear = year || currentYear;
+  const { monthName, year, monthIndex } = getCurrentMonthInfo();
 
-  const navigateMonth = (direction) => {
-    let newMonthIndex = currentMonthIndex + direction;
-    let newYear = Number(displayYear);
-
+  // Navigate to previous month
+  const handlePrevMonth = () => {
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+    
+    let newMonthIndex = monthIndex - 1;
+    let newYear = year;
+    
     if (newMonthIndex < 0) {
       newMonthIndex = 11;
-      newYear--;
-    } else if (newMonthIndex > 11) {
-      newMonthIndex = 0;
-      newYear++;
+      newYear = year - 1;
     }
-
-    onMonthChange(`${months[newMonthIndex]} ${newYear}`);
+    
+    const newMonth = `${months[newMonthIndex]} ${newYear}`;
+    onMonthChange(newMonth);
   };
 
-  const getCurrentMonthData = () => {
-    return `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  // Navigate to next month
+  const handleNextMonth = () => {
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+    
+    let newMonthIndex = monthIndex + 1;
+    let newYear = year;
+    
+    if (newMonthIndex > 11) {
+      newMonthIndex = 0;
+      newYear = year + 1;
+    }
+    
+    const newMonth = `${months[newMonthIndex]} ${newYear}`;
+    onMonthChange(newMonth);
   };
 
-  const isCurrentMonth = currentMonth === getCurrentMonthData();
+  // Jump to current month
+  const handleCurrentMonth = () => {
+    const now = new Date();
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+    const currentMonth = `${months[now.getMonth()]} ${now.getFullYear()}`;
+    onMonthChange(currentMonth);
+  };
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      {/* Top Navigation */}
+    <div
+      style={{
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: activeTheme?.colors?.surface || '#fff',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        border: `1px solid ${activeTheme?.colors?.border || '#e5e7eb'}`,
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 14,
-          gap: 10,
-          flexWrap: "wrap",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
         }}
       >
-        {/* Previous Button */}
-        <button
-          onClick={() => navigateMonth(-1)}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            backgroundColor: theme?.colors?.surface || "#fff",
-            border: "1px solid rgba(0,0,0,0.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            boxShadow: "0 2px 5px rgba(0,0,0,0.06)",
-            flexShrink: 0,
-            marginBottom: 8,
-          }}
-          aria-label="Previous Month"
-        >
-          <span style={{ color: theme?.colors?.primary || "#000", fontSize: 16 }}>
-            {"<"}
-          </span>
-        </button>
-
-        {/* Month Display */}
-        <div style={{ textAlign: "center", flex: 1, minWidth: "140px" }}>
-          <span
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
             style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: theme?.colors?.text || "#000",
-              letterSpacing: 0.3,
+              padding: 8,
+              borderRadius: 8,
+              backgroundColor: '#f0f9ff',
             }}
           >
-            {month} {displayYear}
-          </span>
-
-          {isCurrentMonth && (
-            <div
+            <Calendar size={18} color="#3b82f6" />
+          </div>
+          <div>
+            <h3
               style={{
-                fontSize: 11,
-                color: theme?.colors?.primary || "#000",
-                marginTop: 4,
+                fontSize: 14,
                 fontWeight: 600,
+                color: activeTheme?.colors?.text || '#000',
+                margin: 0,
               }}
             >
-              Current
-            </div>
-          )}
+              Month Selector
+            </h3>
+            <p
+              style={{
+                fontSize: 12,
+                color: activeTheme?.colors?.textSecondary || '#666',
+                margin: '2px 0 0 0',
+              }}
+            >
+              Select a month to view data
+            </p>
+          </div>
         </div>
-
-        {/* Next Button */}
+        
         <button
-          onClick={() => navigateMonth(1)}
+          onClick={handleCurrentMonth}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            backgroundColor: theme?.colors?.surface || "#fff",
-            border: "1px solid rgba(0,0,0,0.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            boxShadow: "0 2px 5px rgba(0,0,0,0.06)",
-            flexShrink: 0,
-            marginBottom: 8,
+            padding: '6px 12px',
+            fontSize: 12,
+            fontWeight: 500,
+            backgroundColor: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
           }}
-          aria-label="Next Month"
         >
-          <span style={{ color: theme?.colors?.primary || "#000", fontSize: 16 }}>
-            {">"}
-          </span>
+          Current
         </button>
       </div>
 
-      {/* Button: Go To Current Month */}
-      <button
-        onClick={() => onMonthChange(getCurrentMonthData())}
+      {/* Month Navigation */}
+      <div
         style={{
-          padding: "8px 16px",
-          borderRadius: 24,
-          backgroundColor: theme?.colors?.primary || "#000",
-          color: theme?.colors?.surface || "#fff",
-          border: "none",
-          cursor: "pointer",
-          display: "block",
-          margin: "0 auto",
-          fontSize: 13,
-          fontWeight: 600,
-          boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: '#f8fafc',
+          padding: 12,
+          borderRadius: 8,
         }}
       >
-        Current Month
-      </button>
+        <button
+          onClick={handlePrevMonth}
+          style={{
+            padding: 6,
+            borderRadius: 6,
+            border: `1px solid ${activeTheme?.colors?.border || '#e5e7eb'}`,
+            backgroundColor: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ChevronLeft size={18} color={activeTheme?.colors?.text || '#000'} />
+        </button>
+        
+        <div
+          style={{
+            textAlign: 'center',
+            flex: 1,
+            margin: '0 12px',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: activeTheme?.colors?.text || '#000',
+              marginBottom: 2,
+            }}
+          >
+            {monthName}
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: activeTheme?.colors?.textSecondary || '#666',
+            }}
+          >
+            {year}
+          </div>
+        </div>
+        
+        <button
+          onClick={handleNextMonth}
+          style={{
+            padding: 6,
+            borderRadius: 6,
+            border: `1px solid ${activeTheme?.colors?.border || '#e5e7eb'}`,
+            backgroundColor: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ChevronRight size={18} color={activeTheme?.colors?.text || '#000'} />
+        </button>
+      </div>
+
+      {/* Selected Month Info */}
+      <div
+        style={{
+          marginTop: 12,
+          padding: 8,
+          backgroundColor: '#f0f9ff',
+          borderRadius: 6,
+          fontSize: 12,
+          color: '#1e40af',
+          textAlign: 'center',
+        }}
+      >
+        Currently viewing: <strong>{monthName} {year}</strong>
+      </div>
     </div>
   );
 };

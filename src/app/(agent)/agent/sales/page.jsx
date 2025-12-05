@@ -1,13 +1,13 @@
-//src/app/(agent)/agent/sales/page.jsx
+// //src/app/(agent)/agent/sales/page.jsx
 "use client";
 
 import React, { useContext, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  TrendingUp, 
-  Target, 
-  Users, 
-  DollarSign, 
+import {
+  TrendingUp,
+  Target,
+  Users,
+  DollarSign,
   RefreshCw,
   Calendar,
   BarChart3,
@@ -45,9 +45,15 @@ const SalesScreen = () => {
   const [recentBookings, setRecentBookings] = useState([]);
   const [performanceMetrics, setPerformanceMetrics] = useState(null);
   const [bookingStats, setBookingStats] = useState(null);
-  const [monthlyProgress, setMonthlyProgress] = useState({
-    currentBookings: 0,
-    monthlyTarget: 0,
+
+  // State for target progress
+  const [targetProgress, setTargetProgress] = useState({
+    achievedDigits: 0,
+    achievedAmount: 0,
+    digitTarget: 0,
+    amountTarget: 0,
+    targetType: 'none',
+    currency: 'PKR'
   });
 
   // Animation variants
@@ -58,14 +64,6 @@ const SalesScreen = () => {
       y: 0,
       transition: { duration: 0.4, delay: custom * 0.1, ease: "easeOut" }
     })
-  };
-
-  const staggerChildren = {
-    visible: {
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
   };
 
   // Get current month on mount
@@ -79,12 +77,13 @@ const SalesScreen = () => {
     setSelectedMonth(currentMonth);
   }, []);
 
-  // Calculate date range
+  // Calculate date range - FIXED VERSION
   const getDateRange = useCallback(
     (range, month = null) => {
       const now = new Date();
-      let start = new Date();
+      let start, end;
 
+      // Agar specific month select kiya gaya hai to usi month ka data show karein
       if (month) {
         const [monthName, year] = month.split(" ");
         const monthIndex = [
@@ -93,43 +92,88 @@ const SalesScreen = () => {
         ].indexOf(monthName);
 
         if (monthIndex !== -1) {
+          // Specific month ke start aur end dates
           start = new Date(year, monthIndex, 1);
-          const end = new Date(year, monthIndex + 1, 0);
+          end = new Date(year, monthIndex + 1, 0, 23, 59, 59);
+          
           return {
             startDate: start.toISOString().split("T")[0],
             endDate: end.toISOString().split("T")[0],
             month: month,
+            monthName: monthName,
+            year: parseInt(year),
+            monthIndex: monthIndex
           };
         }
       }
 
+      // Agar koi specific month nahi hai, to timeRange ke basis par calculate karein
       switch (range) {
         case "day":
+          start = new Date(now);
           start.setDate(now.getDate() - 1);
           break;
         case "week":
+          start = new Date(now);
           start.setDate(now.getDate() - 7);
           break;
         case "month":
+          start = new Date(now);
           start.setMonth(now.getMonth() - 1);
           break;
         case "year":
+          start = new Date(now);
           start.setFullYear(now.getFullYear() - 1);
           break;
         default:
+          start = new Date(now);
           start.setMonth(now.getMonth() - 1);
       }
 
+      end = new Date(now);
+      
       return {
         startDate: start.toISOString().split("T")[0],
-        endDate: now.toISOString().split("T")[0],
-        month: selectedMonth,
+        endDate: end.toISOString().split("T")[0],
+        month: month || `${months[now.getMonth()]} ${now.getFullYear()}`,
+        isSpecificMonth: false
       };
     },
-    [selectedMonth]
+    []
   );
 
-  // Fetch sales data - UPDATED FOR AGENT CONTEXT
+  // Helper function to calculate month dates
+  const getMonthDates = (monthString) => {
+    if (!monthString) {
+      const now = new Date();
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+      ];
+      monthString = `${months[now.getMonth()]} ${now.getFullYear()}`;
+    }
+    
+    const [monthName, year] = monthString.split(" ");
+    const monthIndex = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ].indexOf(monthName);
+    
+    if (monthIndex === -1) {
+      const now = new Date();
+      return {
+        start: new Date(now.getFullYear(), now.getMonth(), 1),
+        end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+      };
+    }
+    
+    return {
+      start: new Date(year, monthIndex, 1),
+      end: new Date(year, monthIndex + 1, 0, 23, 59, 59)
+    };
+  };
+
+  // Fetch sales data - FIXED VERSION
   const fetchSalesData = useCallback(
     async (isRefreshing = false) => {
       if (!isLoggedIn || agentLoading) {
@@ -139,103 +183,244 @@ const SalesScreen = () => {
         setRecentBookings([]);
         setPerformanceMetrics(null);
         setBookingStats(null);
-        setMonthlyProgress({
-          currentBookings: 0,
-          monthlyTarget: 0,
+        setTargetProgress({
+          achievedDigits: 0,
+          achievedAmount: 0,
+          digitTarget: 0,
+          amountTarget: 0,
+          targetType: 'none',
+          currency: 'PKR'
         });
         setLoading(false);
         setRefreshing(false);
         return;
       }
-      
-      if (!agent?.id && !agent?._id) {
-        console.log("❌ No agent ID found in agent object, applying fallback data");
-        setSalesOverview(null);
-        setPromoCodes([]);
-        setRecentBookings([]);
-        setPerformanceMetrics(null);
-        setBookingStats(null);
-        setMonthlyProgress({
-          currentBookings: 0,
-          monthlyTarget: 0,
-        });
+
+      // Check if agent exists
+      if (!agent) {
+        console.log("❌ Agent not found in context");
+        toast.error("Agent information not found. Please login again.");
         setLoading(false);
         setRefreshing(false);
         return;
       }
+
+      const agentId = agent.id || agent._id;
+      if (!agentId) {
+        console.log("❌ No agent ID found");
+        toast.error("Invalid agent information");
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      console.log("🔄 Starting sales data fetch for agent:", agentId, {
+        selectedMonth,
+        agentTargetType: agent.monthlyTargetType,
+      });
 
       try {
-        const agentId = agent.id || agent._id;
-        console.log("🔄 Starting sales data fetch for agent:", agentId);
-
         if (!isRefreshing) setLoading(true);
 
         const dateParams = getDateRange(timeRange, selectedMonth);
         console.log("📅 Date range params:", dateParams);
 
+        // Get month dates for selected month (FOR TARGET CALCULATION)
+        const selectedMonthDates = getMonthDates(selectedMonth);
+        console.log("📆 Selected month dates:", {
+          start: selectedMonthDates.start.toLocaleDateString(),
+          end: selectedMonthDates.end.toLocaleDateString()
+        });
+
+        // Get all bookings for target calculations
+        const allBookingsResponse = await agentSalesService.getAgentBookings(agentId, {
+          limit: 1000
+        });
+
+        // Extract bookings data from response
+        let allBookings = [];
+        if (allBookingsResponse?.data?.bookings && Array.isArray(allBookingsResponse.data.bookings)) {
+          allBookings = allBookingsResponse.data.bookings;
+        } else if (allBookingsResponse?.bookings && Array.isArray(allBookingsResponse.bookings)) {
+          allBookings = allBookingsResponse.bookings;
+        }
+
+        console.log(`📦 Total bookings fetched: ${allBookings.length}`);
+
+        // Filter SELECTED month's bookings (not current month)
+        const selectedMonthBookings = allBookings.filter(booking => {
+          if (!booking.createdAt) return false;
+          const bookingDate = new Date(booking.createdAt);
+          return bookingDate >= selectedMonthDates.start && bookingDate <= selectedMonthDates.end;
+        });
+
+        console.log(`📅 Selected month (${selectedMonth}) bookings: ${selectedMonthBookings.length}`);
+
+        // Filter selected month's completed bookings
+        const selectedMonthCompletedBookings = selectedMonthBookings.filter(booking => {
+          const status = booking.status?.toLowerCase() || '';
+          return status === 'completed' || status === 'approved' || status === 'success';
+        });
+
+        console.log(`✅ Selected month completed bookings: ${selectedMonthCompletedBookings.length}`);
+
+        // Calculate achieved values based on agent's target type
+        let achievedDigits = 0;
+        let achievedAmount = 0;
+
+        // Get agent's target information
+        const agentTargetType = agent.monthlyTargetType || 'none';
+        const digitTarget = agent.monthlyDigitTarget || 0;
+        const amountTarget = agent.monthlyAmountTarget || 0;
+        const currency = agent.targetCurrency || 'PKR';
+
+        console.log("🎯 Agent target info:", {
+          type: agentTargetType,
+          digitTarget,
+          amountTarget,
+          currency
+        });
+
+        if (agentTargetType === 'digit' || agentTargetType === 'both') {
+          achievedDigits = selectedMonthCompletedBookings.length;
+        }
+
+        if (agentTargetType === 'amount' || agentTargetType === 'both') {
+          // Calculate total amount from completed bookings
+          achievedAmount = selectedMonthCompletedBookings.reduce((sum, booking) => {
+            const amount = parseFloat(booking.amount) || 
+                          parseFloat(booking.totalAmount) || 
+                          parseFloat(booking.total) || 
+                          0;
+            return sum + amount;
+          }, 0);
+
+          console.log("💰 Achieved amount:", achievedAmount);
+        }
+
+        console.log("📊 Achieved values for selected month:", {
+          selectedMonth,
+          achievedDigits,
+          achievedAmount,
+          digitTarget,
+          amountTarget
+        });
+
+        // Update target progress state
+        setTargetProgress({
+          achievedDigits,
+          achievedAmount,
+          digitTarget,
+          amountTarget,
+          targetType: agentTargetType,
+          currency
+        });
+
+        // Now fetch other data in parallel
         const [
           overviewResponse,
           conversionResponse,
-          bookingsResponse,
+          recentBookingsResponse,
           statsResponse,
-        ] = await Promise.all([
+        ] = await Promise.allSettled([
           agentSalesService.getAgentSalesOverview(agentId, dateParams),
           agentSalesService.getAgentConversionRates(agentId, dateParams),
-          agentSalesService.getAgentBookings(agentId, { ...dateParams, limit: 10 }),
+          agentSalesService.getAgentBookings(agentId, {
+            ...dateParams,
+            limit: 10,
+            sort: '-createdAt'
+          }),
           agentSalesService.getAgentBookingStats(agentId, dateParams),
         ]);
 
-        console.log('Agent Sales Overview', overviewResponse);
-        console.log('Agent Conversion Rates', conversionResponse);
-        console.log('Agent Bookings', bookingsResponse);
-        console.log('Agent Booking Stats', statsResponse);
+        console.log("📋 API Responses received");
 
-        console.log("✅ All APIs responded successfully");
+        // Process overview response
+        if (overviewResponse.status === 'fulfilled' && overviewResponse.value?.data) {
+          setSalesOverview(overviewResponse.value.data);
 
-        // CORRECTED DATA SETTING
-        if (overviewResponse?.data) {
-          setSalesOverview(overviewResponse.data);
-          setPromoCodes(overviewResponse.data.promoCodeAnalytics || []);
-          console.log("📈 Overview data set:", overviewResponse.data);
-          console.log("🎫 Promo codes set:", overviewResponse.data.promoCodeAnalytics);
+          // Extract promo codes from overview
+          const promoCodesFromResponse = overviewResponse.value.data.promoCodeAnalytics ||
+            overviewResponse.value.data.promoCodeData ||
+            overviewResponse.value.data.promo_codes ||
+            [];
+          setPromoCodes(promoCodesFromResponse);
+          
+          console.log("📈 Overview data set");
+        } else {
+          console.warn("❌ Overview API failed or returned no data");
+          setSalesOverview(null);
+          setPromoCodes([]);
         }
 
-        if (conversionResponse?.data) {
-          setPerformanceMetrics(conversionResponse.data);
-          console.log("📊 Performance metrics set:", conversionResponse.data);
+        // Process conversion response
+        if (conversionResponse.status === 'fulfilled' && conversionResponse.value?.data) {
+          setPerformanceMetrics(conversionResponse.value.data);
+          console.log("📊 Performance metrics set");
+        } else {
+          console.warn("❌ Conversion API failed or returned no data");
+          setPerformanceMetrics(null);
         }
 
-        if (bookingsResponse?.data) {
-          setRecentBookings(bookingsResponse.data.bookings || []);
-          console.log("📦 Recent bookings set:", bookingsResponse.data.bookings?.length);
+        // Process recent bookings response
+        if (recentBookingsResponse.status === 'fulfilled') {
+          const recentData = recentBookingsResponse.value?.data?.bookings ||
+            recentBookingsResponse.value?.bookings ||
+            [];
+          setRecentBookings(recentData);
+          console.log("📦 Recent bookings set:", recentData.length);
+        } else {
+          console.warn("❌ Recent bookings API failed");
+          setRecentBookings([]);
         }
 
-        if (statsResponse?.data) {
-          setBookingStats(statsResponse.data);
-          console.log("📋 Booking stats set:", statsResponse.data);
-
-          setMonthlyProgress({
-            currentBookings: statsResponse.data.overview?.completedBookings || 0,
-            monthlyTarget: agent.monthlyTarget || 10,
-          });
+        // Process stats response
+        if (statsResponse.status === 'fulfilled' && statsResponse.value?.data) {
+          setBookingStats(statsResponse.value.data);
+          console.log("📋 Booking stats set");
+        } else {
+          console.warn("❌ Stats API failed or returned no data");
+          setBookingStats(null);
         }
+
+        // Show success message if refreshing
+        if (isRefreshing) {
+          toast.success("Sales data refreshed successfully!");
+        }
+
       } catch (error) {
         console.error("💥 Error fetching sales data:", error);
-        toast.error(error.response?.data?.message || "Failed to load sales data. Please try again.");
+
+        // Show specific error messages
+        let errorMessage = "Failed to load sales data. Please try again.";
+
+        if (error.response) {
+          errorMessage = error.response.data?.message ||
+            error.response.data?.error ||
+            `Server error: ${error.response.status}`;
+        } else if (error.request) {
+          errorMessage = "Network error. Please check your connection.";
+        } else {
+          errorMessage = error.message || "Request setup failed.";
+        }
+
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
         setRefreshing(false);
         console.log("🏁 Fetch process completed");
       }
     },
-    [agent, isLoggedIn, agentLoading, timeRange, selectedMonth, getDateRange]
+    [agent, isLoggedIn, agentLoading, timeRange, selectedMonth, getDateRange, toast]
   );
 
+  // Fetch data when component mounts or when selectedMonth changes
   useEffect(() => {
-    if (isLoggedIn && !agentLoading) {
+    if (isLoggedIn && !agentLoading && selectedMonth) {
+      console.log("🔄 Triggering fetch due to selectedMonth change:", selectedMonth);
       fetchSalesData();
     }
-  }, [fetchSalesData, isLoggedIn, agentLoading]);
+  }, [fetchSalesData, isLoggedIn, agentLoading, selectedMonth]);
 
   // Show loading while agent context is loading
   if (agentLoading) {
@@ -274,24 +459,24 @@ const SalesScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      {/* Header Section - Simplified */}
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex-1 p-12">
-          <h1 className="text-2xl font-bold text-gray-900">Sales Dashboard</h1>
+        <div className="flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Sales Dashboard</h1>
           <p className="text-gray-600 mt-1">
             Track your performance and revenue metrics
           </p>
         </div>
-        
+
         {/* Refresh Button */}
         <button
           onClick={() => fetchSalesData(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {refreshing ? 'Refreshing...' : 'Refresh Data'}
         </button>
       </div>
 
@@ -302,10 +487,15 @@ const SalesScreen = () => {
           {/* Monthly Progress */}
           <div className="lg:col-span-2">
             <MonthlyTargetProgress
-              monthlyTarget={monthlyProgress.monthlyTarget}
-              currentBookings={monthlyProgress.currentBookings}
               theme={theme}
               currentMonth={selectedMonth}
+              // Pass actual data as props
+              achievedDigits={targetProgress.achievedDigits}
+              achievedAmount={targetProgress.achievedAmount}
+              digitTarget={targetProgress.digitTarget}
+              amountTarget={targetProgress.amountTarget}
+              targetType={targetProgress.targetType}
+              currency={targetProgress.currency}
             />
           </div>
 
@@ -339,7 +529,7 @@ const SalesScreen = () => {
         {/* Booking Stats */}
         <AnimatePresence>
           {bookingStats && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <BarChart3 className="h-5 w-5 text-blue-600" />
@@ -350,32 +540,32 @@ const SalesScreen = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { 
-                    label: "Total Sales", 
-                    value: bookingStats.overview?.totalBookings || 0, 
+                  {
+                    label: "Total Sales",
+                    value: bookingStats.overview?.totalBookings || 0,
                     icon: TrendingUp,
                     color: "text-blue-600",
                     bgColor: "bg-blue-50"
                   },
-                  { 
-                    label: "Completed", 
-                    value: bookingStats.overview?.completedBookings || 0, 
+                  {
+                    label: "Completed",
+                    value: bookingStats.overview?.completedBookings || 0,
                     icon: CheckCircle,
                     color: "text-green-600",
                     bgColor: "bg-green-50"
                   },
-                  { 
-                    label: "Pending", 
-                    value: bookingStats.overview?.pendingBookings || 0, 
+                  {
+                    label: "Pending",
+                    value: bookingStats.overview?.pendingBookings || 0,
                     icon: Clock,
                     color: "text-orange-600",
                     bgColor: "bg-orange-50"
                   },
-                  { 
-                    label: "Cancelled", 
-                    value: bookingStats.overview?.cancelledBookings || 0, 
+                  {
+                    label: "Cancelled",
+                    value: bookingStats.overview?.cancelledBookings || 0,
                     icon: XCircle,
                     color: "text-red-600",
                     bgColor: "bg-red-50"
