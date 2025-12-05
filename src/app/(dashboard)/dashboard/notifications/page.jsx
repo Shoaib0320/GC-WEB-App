@@ -82,7 +82,7 @@ export default function NotificationsAdminPage() {
       const res = await agentService.getAllAgents();
       // agentService returns raw data (response.data), ensure array
       console.log('Agent Response', res);
-      
+
       setAgents(res.agents);
     } catch (err) {
       console.error('Failed to fetch agents', err);
@@ -244,104 +244,104 @@ export default function NotificationsAdminPage() {
         </div>
       </div>
 
-  {/* Alerts */}
-  {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-  {success && <Alert variant="default" className="bg-green-50 border-green-200"><AlertDescription className="text-green-800">{success}</AlertDescription></Alert>}
+      {/* Alerts */}
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      {success && <Alert variant="default" className="bg-green-50 border-green-200"><AlertDescription className="text-green-800">{success}</AlertDescription></Alert>}
 
-  {/* Notifications Table */}
-  <Card className="rounded-lg shadow-md">
-    <CardHeader>
-      <CardTitle>All Notifications</CardTitle>
-      <CardDescription>History of all sent notifications in the system</CardDescription>
-    </CardHeader>
-    <CardContent>
-      {loading ? (
-        <div className="flex justify-center items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : !canView ? (
-        // If user cannot view notifications but may have other permissions (e.g., create)
-        <div className="text-center py-8 text-muted-foreground">
-          <p>You don't have permission to view notifications.</p>
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>No notifications found</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <Table className="min-w-[600px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="whitespace-nowrap">Title</TableHead>
-                <TableHead className="whitespace-nowrap">Message</TableHead>
-                <TableHead className="whitespace-nowrap">Target</TableHead>
-                <TableHead className="whitespace-nowrap">Type</TableHead>
-                <TableHead className="whitespace-nowrap">Created</TableHead>
-                {/* Only show Actions header when edit/delete available */}
-                {(canEdit || canDelete) && (
-                  <TableHead className="whitespace-nowrap">Actions</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notifications.map((n) => (
-                <TableRow key={n._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                  <TableCell className="font-medium whitespace-nowrap">{n.title}</TableCell>
-                  <TableCell className="max-w-xs truncate" title={n.message}>{n.message}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Badge variant={n.targetType === "all" ? "default" : "secondary"}>{n.targetType}</Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Badge variant="outline">{n.type}</Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">{new Date(n.createdAt).toLocaleDateString()}</TableCell>
-                  {/* Actions cell: only render if edit/delete permissions exist */}
-                  {(canEdit || canDelete) && (
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex gap-2 flex-wrap">
-                        {canEdit && (
-                          <Button variant="outline" size="sm" onClick={() => openModal(n)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
+      {/* Notifications Table */}
+      <Card className="rounded-lg shadow-md">
+        <CardHeader>
+          <CardTitle>All Notifications</CardTitle>
+          <CardDescription>History of all sent notifications in the system</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : !canView ? (
+            // If user cannot view notifications but may have other permissions (e.g., create)
+            <div className="text-center py-8 text-muted-foreground">
+              <p>You don't have permission to view notifications.</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No notifications found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-[600px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Title</TableHead>
+                    <TableHead className="whitespace-nowrap">Message</TableHead>
+                    <TableHead className="whitespace-nowrap">Target</TableHead>
+                    <TableHead className="whitespace-nowrap">Type</TableHead>
+                    <TableHead className="whitespace-nowrap">Created</TableHead>
+                    {/* Only show Actions header when edit/delete available */}
+                    {(canEdit || canDelete) && (
+                      <TableHead className="whitespace-nowrap">Actions</TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {notifications.map((n) => (
+                    <TableRow key={n._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                      <TableCell className="font-medium whitespace-nowrap">{n.title}</TableCell>
+                      <TableCell className="max-w-xs truncate" title={n.message}>{n.message}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={n.targetType === "all" ? "default" : "secondary"}>{n.targetType}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant="outline">{n.type}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(n.createdAt).toLocaleDateString()}</TableCell>
+                      {/* Actions cell: only render if edit/delete permissions exist */}
+                      {(canEdit || canDelete) && (
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex gap-2 flex-wrap">
+                            {canEdit && (
+                              <Button variant="outline" size="sm" onClick={() => openModal(n)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
 
-                        {canDelete && (
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(n._id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </CardContent>
-  </Card>
+                            {canDelete && (
+                              <Button variant="outline" size="sm" onClick={() => handleDelete(n._id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-  {/* Create/Edit Modal */}
-  <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-    <DialogContent className="sm:max-w-md w-full">
-      <DialogHeader>
-        <DialogTitle>{editingNotification ? "Edit Notification" : "Create New Notification"}</DialogTitle>
-        <DialogDescription>{editingNotification ? "Update the notification details below." : "Fill in the details to create a new notification."}</DialogDescription>
-      </DialogHeader>
+      {/* Create/Edit Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>{editingNotification ? "Edit Notification" : "Create New Notification"}</DialogTitle>
+            <DialogDescription>{editingNotification ? "Update the notification details below." : "Fill in the details to create a new notification."}</DialogDescription>
+          </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
-          <Input id="title" value={formData.title} onChange={(e)=>handleInputChange("title", e.target.value)} placeholder="Enter notification title" required />
-        </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" value={formData.title} onChange={(e) => handleInputChange("title", e.target.value)} placeholder="Enter notification title" required />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="message">Message</Label>
-          <Textarea id="message" value={formData.message} onChange={(e)=>handleInputChange("message", e.target.value)} placeholder="Enter notification message" required rows={4} />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Message</Label>
+              <Textarea id="message" value={formData.message} onChange={(e) => handleInputChange("message", e.target.value)} placeholder="Enter notification message" required rows={4} />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
@@ -378,7 +378,7 @@ export default function NotificationsAdminPage() {
               </Select>
             </div>
 
-            {formData.targetType === "specific" && (
+            {/* {formData.targetType === "specific" && (
               <div className="space-y-2">
                 <Label htmlFor="targetUsers">Select Agent</Label>
                 <Select
@@ -400,19 +400,54 @@ export default function NotificationsAdminPage() {
                   Choose which agent should receive this notification
                 </p>
               </div>
-            )}
+            )} */}
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button type="button" variant="outline" onClick={()=>setIsModalOpen(false)} disabled={submitting}>Cancel</Button>
-          <Button type="submit" disabled={submitting} className="flex items-center justify-center gap-2">
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {editingNotification ? "Update Notification" : "Create Notification"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
-  </Dialog>
-</div>
+{formData.targetType === "specific" && (
+  <div className="space-y-2">
+    <Label htmlFor="targetUsers">Select Agent</Label>
+    <Select
+      value={formData.targetUsers}
+      onValueChange={(val) => handleInputChange('targetUsers', val)}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Choose agent" />
+      </SelectTrigger>
+      <SelectContent className="max-h-72 overflow-y-auto">
+        <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
+          {agents.length} agents available
+        </div>
+        {agents.map((a) => (
+          <SelectItem 
+            key={a._id || a.id} 
+            value={a._id || a.id}
+            className="py-2.5"
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">{a.agentName}</span>
+              <span className="text-xs text-muted-foreground">
+                ID: {a.agentId} | {a.designation || 'Agent'}
+              </span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+    <p className="text-sm text-muted-foreground">
+      Choose which agent should receive this notification
+    </p>
+  </div>
+)}
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button type="submit" disabled={submitting} className="flex items-center justify-center gap-2">
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingNotification ? "Update Notification" : "Create Notification"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
 
   );
 }
