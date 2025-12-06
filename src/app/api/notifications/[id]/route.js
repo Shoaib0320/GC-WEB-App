@@ -107,15 +107,6 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // // Check admin permissions
-    // const allowedRoles = ["admin", "super_admin"];
-    // if (!allowedRoles.includes(authData.user?.role)) {
-    //   return NextResponse.json(
-    //     { message: "Unauthorized: Admin access required" },
-    //     { status: 403 }
-    //   );
-    // }
-
     const { id } = await params;
     const notification = await Notification.findByIdAndDelete(id);
 

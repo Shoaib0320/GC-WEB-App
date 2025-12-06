@@ -1,3 +1,4 @@
+// src/app/api/admin/users/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import User from "@/Models/User";

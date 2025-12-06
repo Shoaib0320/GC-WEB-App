@@ -1,28 +1,3 @@
-// import { NextResponse } from "next/server";
-// import connectDB from "@/lib/mongodb";
-// import Shift from "@/models/Shift";
-
-// export async function GET() {
-//   try {
-//     await connectDB();
-
-//     const shifts = await Shift.find()
-//       .populate("manager", "firstName lastName email")
-//       .sort({ createdAt: -1 });
-
-//     return NextResponse.json({
-//       success: true,
-//       data: shifts,
-//     });
-//   } catch (error) {
-//     console.error("GET /api/shifts error:", error);
-//     return NextResponse.json(
-//       { success: false, message: "Failed to fetch shifts", details: error.message },
-//       { status: 500 }
-//     );
-//   }
-// }
-
 // app/api/shifts/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";

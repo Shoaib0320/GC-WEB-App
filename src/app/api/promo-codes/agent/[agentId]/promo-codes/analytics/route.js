@@ -7,9 +7,7 @@ import connectDB from '@/lib/mongodb';
 export async function GET(request, { params }) {
   try {
     await connectDB();
-        console.log('Params received:', params); // Debug ke liye
-
-    
+        
     const { agentId } = await params;
 
     const { searchParams } = new URL(request.url);
