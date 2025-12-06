@@ -1,18 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "routes": [
     {
       "src": "/api/cron/auto-attendance",
-      "methods": ["GET", "POST"],
-      "headers": {
-        "Authorization": "Bearer ${process.env.CRON_SECRET}"
-      }
+      "methods": ["GET", "POST"]
     }
   ]
 }
