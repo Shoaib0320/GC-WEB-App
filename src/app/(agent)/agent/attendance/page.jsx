@@ -82,14 +82,11 @@ const AttendanceScreen = () => {
     if (isLoggedIn) {
       const initializePage = async () => {
         try {
-          console.log('🔄 Initializing attendance page...');
 
           const currentToken = token || localStorage.getItem('agentToken');
-          console.log('🔐 Current token exists:', !!currentToken);
 
           // If token is missing, logout immediately
           if (!currentToken) {
-            console.log('❌ No token found, logging out');
             await logout();
             router.replace('/agent/login');
             return;
@@ -99,24 +96,20 @@ const AttendanceScreen = () => {
           let isValid = false;
           try {
             isValid = checkTokenValidity();
-            console.log('✅ Token validity check passed:', isValid);
           } catch (tokenError) {
             console.error('❌ Token validation error:', tokenError);
             isValid = false;
           }
 
           if (!isValid) {
-            console.log('❌ Token invalid, logging out');
             // Try to use saved credentials for auto-login first
             const savedCreds = localStorage.getItem("agentCredentials");
             if (savedCreds) {
               try {
                 const { agentId, password } = JSON.parse(savedCreds);
-                console.log('🔄 Attempting auto-login...');
                 const autoLoginResult = await login(agentId, password, true);
 
                 if (autoLoginResult.success) {
-                  console.log('✅ Auto-login successful');
                   await loadInitialData();
                   setupNotifications();
                   return;
@@ -133,7 +126,6 @@ const AttendanceScreen = () => {
           }
 
           // Token is valid, proceed with data loading
-          console.log('✅ Token valid, loading data...');
           await loadInitialData();
           setupNotifications();
 

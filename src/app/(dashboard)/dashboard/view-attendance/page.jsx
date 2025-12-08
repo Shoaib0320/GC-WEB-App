@@ -553,45 +553,45 @@ export default function AdminAttendancePage() {
   //   }
   // };
   const handleUpdateAttendance = async (e) => {
-  e.preventDefault();
-  try {
-    setLoading(prev => ({ ...prev, edit: true }));
-    
-    // Detect if admin is manually setting status
-    const originalStatus = editingAttendance?.status;
-    const isManuallySettingStatus = manualForm.status !== originalStatus;
-    
-    // Prepare update data
-    const updateData = {
-      attendanceId: editingAttendance._id,
-      // Only send status if admin manually changed it
-      status: isManuallySettingStatus ? manualForm.status : null,
-      checkInTime: manualForm.checkInTime || null,
-      checkOutTime: manualForm.checkOutTime || null,
-      shiftId: manualForm.shiftId || null,
-      notes: manualForm.notes || ""
-    };
-    
-    console.log("Sending update data:", updateData);
-    console.log("Original status:", originalStatus);
-    console.log("Manual status:", manualForm.status);
-    console.log("Is manually setting status:", isManuallySettingStatus);
-    
-    const response = await adminService.updateAttendance(updateData);
-    if (response.success) {
-      toast.success("Attendance updated successfully");
-      setShowEditModal(false);
-      fetchAttendance();
-    } else {
-      toast.error(response.message || "Error updating attendance");
+    e.preventDefault();
+    try {
+      setLoading(prev => ({ ...prev, edit: true }));
+
+      // Detect if admin is manually setting status
+      const originalStatus = editingAttendance?.status;
+      const isManuallySettingStatus = manualForm.status !== originalStatus;
+
+      // Prepare update data
+      const updateData = {
+        attendanceId: editingAttendance._id,
+        // Only send status if admin manually changed it
+        status: isManuallySettingStatus ? manualForm.status : null,
+        checkInTime: manualForm.checkInTime || null,
+        checkOutTime: manualForm.checkOutTime || null,
+        shiftId: manualForm.shiftId || null,
+        notes: manualForm.notes || ""
+      };
+
+      console.log("Sending update data:", updateData);
+      console.log("Original status:", originalStatus);
+      console.log("Manual status:", manualForm.status);
+      console.log("Is manually setting status:", isManuallySettingStatus);
+
+      const response = await adminService.updateAttendance(updateData);
+      if (response.success) {
+        toast.success("Attendance updated successfully");
+        setShowEditModal(false);
+        fetchAttendance();
+      } else {
+        toast.error(response.message || "Error updating attendance");
+      }
+    } catch (error) {
+      console.error("Error updating attendance:", error);
+      toast.error("Error updating attendance");
+    } finally {
+      setLoading(prev => ({ ...prev, edit: false }));
     }
-  } catch (error) {
-    console.error("Error updating attendance:", error);
-    toast.error("Error updating attendance");
-  } finally {
-    setLoading(prev => ({ ...prev, edit: false }));
-  }
-};
+  };
 
   const handleShiftAutoAttendance = async (e) => {
     e.preventDefault();

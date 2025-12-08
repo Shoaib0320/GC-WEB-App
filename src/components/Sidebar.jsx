@@ -16,6 +16,8 @@ import {
   DollarSign,
   ClipboardList,
   X,
+  UsersRound,
+  FolderKanban,
 } from "lucide-react";
 
 import { useState, useEffect } from "react";
@@ -59,6 +61,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { label: "Attendance", href: "/dashboard/view-attendance", icon: ClipboardList, permission: { module: "attendance", action: "view" } },
     { label: "Notifications", href: "/dashboard/notifications", icon: Bell, permission: { module: "notification", action: "view" } },
     { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp, permission: { module: "analytics", action: "view" } },
+    { label: "Teams", href: "/dashboard/teams", icon: UsersRound, permission: { module: "team", action: "view" } },
+    { label: "Projects", href: "/dashboard/projects", icon: FolderKanban, permission: { module: "project", action: "view" } },
     { label: "Setting", href: "/dashboard/settings", icon: Settings, permission: { module: "settings", action: "view" } },
   ];
 

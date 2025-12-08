@@ -7,6 +7,7 @@ const permissionGroupSchema = new mongoose.Schema({
   edit: { type: Boolean, default: false },
   delete: { type: Boolean, default: false },
   export: { type: Boolean, default: false },
+
   approve: { type: Boolean, default: false },
 }, { _id: false });
 
@@ -121,7 +122,13 @@ const roleSchema = new mongoose.Schema({
       view_own: { type: Boolean, default: false },
       view_all: { type: Boolean, default: false },
       export: { type: Boolean, default: false }
-    }
+    },
+
+    // 👥 Team Management
+    team: permissionGroupSchema,
+
+    // 📁 Project Management
+    project: permissionGroupSchema
   },
 
   // 🌟 General Info

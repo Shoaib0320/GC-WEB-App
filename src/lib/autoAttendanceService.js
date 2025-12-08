@@ -520,14 +520,6 @@ export async function performAutoCheckout(attendance, currentTime = new Date(), 
 //     else if (finalStatus === "half_day") message = `Auto checked-out successfully! (Half Day: ${workingHours} hours)`;
 //     else if (finalStatus === "absent") message = `Auto checked-out, but marked absent (0 working minutes).`;
 
-//     console.log("✅ performAutoCheckout:", {
-//       attendanceId: populated._id.toString(),
-//       status: populated.status,
-//       workingHours,
-//       overtimeMinutes,
-//       earlyCheckoutMinutes
-//     });
-
 //     return { success: true, message, attendance: populated, workingHours, overtimeMinutes, earlyCheckoutMinutes, finalStatus };
 //   } catch (err) {
 //     console.error("performAutoCheckout error:", err);

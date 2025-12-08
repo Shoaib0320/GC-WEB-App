@@ -114,7 +114,9 @@ export default function Users() {
     holiday: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
     weeklyOff: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
     contact: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
-    role: { view: false, create: false, edit: false, delete: false, manage_roles: false }
+    role: { view: false, create: false, edit: false, delete: false, manage_roles: false },
+    team: { view: false, create: false, edit: false, delete: false, export: false, approve: false },
+    project: { view: false, create: false, edit: false, delete: false, export: false, approve: false }
   };
 
   const [roleForm, setRoleForm] = useState({
@@ -286,8 +288,6 @@ export default function Users() {
       }
 
       const data = await userService.create(userForm);
-
-      console.log('User Data', data);
 
       if (data.success) {
         toast.success('User created successfully');
@@ -710,6 +710,18 @@ export default function Users() {
       title: 'Role Management',
       description: 'Manage roles and permissions',
       permissions: ['view', 'create', 'edit', 'delete', 'manage_roles']
+    },
+    {
+      name: 'team',
+      title: 'Team Management',
+      description: 'Manage team members and their profiles',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
+    },
+    {
+      name: 'project',
+      title: 'Project Management',
+      description: 'Manage portfolio projects',
+      permissions: ['view', 'create', 'edit', 'delete', 'export', 'approve']
     }
   ];
 
