@@ -14,10 +14,17 @@ export const registerLoaderHandlers = (showFn, hideFn) => {
   hideLoader = hideFn;
 };
 
-// Request interceptor to show loader
+// Request interceptor to add auth token and show loader
 api.interceptors.request.use(
   (config) => {
     if (showLoader) showLoader();
+
+    // Add authorization header if token exists
+    const token = localStorage.getItem('agentToken') || localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
   (error) => {

@@ -1,4 +1,4 @@
-// /components/AttendancePanel.jsx
+
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { useLoaderContext } from '../context/LoaderContext';
@@ -8,7 +8,7 @@ export default function AttendancePanel() {
   const [shifts, setShifts] = useState([]);
   const [selectedShift, setSelectedShift] = useState("");
   const [now, setNow] = useState(new Date());
-  const [location, setLocation] = useState(null);
+
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [message, setMessage] = useState("");
   const timerRef = useRef();
@@ -48,14 +48,7 @@ export default function AttendancePanel() {
     }
   }
 
-  function askLocation() {
-    if (!("geolocation" in navigator)) return setMessage("Geolocation not supported");
-    navigator.geolocation.getCurrentPosition(
-      pos => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setMessage("Location permission denied"),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
+
 
   function buildDateForToday(timeStr) {
     if (!timeStr) return null;
@@ -81,23 +74,12 @@ export default function AttendancePanel() {
   async function handleCheckin() {
     if (!selectedShift) return setMessage("Select shift first");
     showLoader("attendance-checkin", "Checking in..."); setMessage("");
-    if (!location) {
-      try {
-        await new Promise(resolve => {
-          navigator.geolocation.getCurrentPosition(
-            pos => { setLocation({lat: pos.coords.latitude, lng: pos.coords.longitude}); resolve(); },
-            () => resolve(),
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-        });
-      } catch(e){}
-    }
 
     try {
       const res = await fetch("/api/attendance/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shiftId: selectedShift, location }),
+        body: JSON.stringify({ shiftId: selectedShift }),
       });
       const json = await res.json();
       setMessage(json.message || "");
@@ -112,12 +94,12 @@ export default function AttendancePanel() {
 
   async function handleCheckout() {
     if (!todayAttendance) return setMessage("You must check-in first");
-    setLoading(true); setMessage("");
+    showLoader("attendance-checkout", "Checking out..."); setMessage("");
     try {
       const res = await fetch("/api/attendance/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendanceId: todayAttendance._id, location }),
+        body: JSON.stringify({ attendanceId: todayAttendance._id }),
       });
       const json = await res.json();
       setMessage(json.message || "");
@@ -126,7 +108,7 @@ export default function AttendancePanel() {
       console.error(err);
       setMessage("Server error on check-out");
     } finally {
-      setLoading(false);
+      hideLoader("attendance-checkout");
     }
   }
 
@@ -160,7 +142,6 @@ export default function AttendancePanel() {
         <button onClick={handleCheckout} disabled={!checkoutAllowed || isLoading("attendance-checkout")} className={`px-4 py-2 rounded ${checkoutAllowed ? "bg-red-500 text-white" : "bg-gray-300"}`}>
           Check Out
         </button>
-        <button onClick={askLocation} className="px-3 py-2 border rounded">Set Location</button>
         <a href="/api/attendance/export" target="_blank" rel="noreferrer" className="px-3 py-2 bg-blue-600 text-white rounded">Export CSV</a>
       </div>
 

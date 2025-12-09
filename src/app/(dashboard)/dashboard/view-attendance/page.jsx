@@ -18,10 +18,11 @@ import {
   Loader2, Calendar, Users, CheckCircle, XCircle, Clock, Plus, Trash2,
   PlayCircle, ToggleLeft, ToggleRight, Edit, ChevronLeft, ChevronRight,
   Download, X, RefreshCw, ChevronDown, UserPlus, FileText, PartyPopper,
-  CalendarDays, Search, Menu, Filter, MoreVertical
+  CalendarDays, Search, Menu, Filter, MoreVertical, Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import CustomModal from "@/components/ui/customModal";
+import ViewAttendanceModal from "@/components/ViewAttendanceModal";
 import { useAuth } from "@/context/AuthContext";
 import {
   Pagination,
@@ -98,7 +99,9 @@ export default function AdminAttendancePage() {
   const [showAutoModal, setShowAutoModal] = useState(false);
   const [showShiftAutoModal, setShowShiftAutoModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [editingAttendance, setEditingAttendance] = useState(null);
+  const [viewingAttendance, setViewingAttendance] = useState(null);
 
   const [manualForm, setManualForm] = useState({
     userType: "agent",
@@ -433,39 +436,10 @@ export default function AdminAttendancePage() {
     }
   };
 
-  // const handleEditAttendance = (attendance) => {
-  //   const formatDateOnly = (val) => {
-  //     if (!val) return '';
-  //     try {
-  //       return new Date(val).toISOString().split('T')[0];
-  //     } catch {
-  //       return '';
-  //     }
-  //   };
-
-  //   const formatTimeOnly = (val) => {
-  //     if (!val) return '';
-  //     try {
-  //       return new Date(val).toISOString().split('T')[1]?.substring(0, 5) || '';
-  //     } catch {
-  //       return '';
-  //     }
-  //   };
-
-  //   setEditingAttendance(attendance);
-  //   setManualForm({
-  //     userType: attendance.user ? "user" : "agent",
-  //     userId: attendance.user?._id || "",
-  //     agentId: attendance.agent?._id || "",
-  //     shiftId: attendance.shift?._id || "",
-  //     date: formatDateOnly(attendance.date) || formatDateOnly(attendance.checkInTime) || new Date().toISOString().split('T')[0],
-  //     status: attendance.status,
-  //     checkInTime: formatTimeOnly(attendance.checkInTime),
-  //     checkOutTime: formatTimeOnly(attendance.checkOutTime),
-  //     notes: attendance.notes || ""
-  //   });
-  //   setShowEditModal(true);
-  // };
+  const handleViewAttendance = (attendance) => {
+    setViewingAttendance(attendance);
+    setShowViewModal(true);
+  };
 
   const handleEditAttendance = (attendance) => {
     const formatDateOnly = (val) => {
@@ -528,30 +502,6 @@ export default function AdminAttendancePage() {
     setShowEditModal(true);
   };
 
-  // //
-  // const handleUpdateAttendance = async (e) => {
-  //   e.preventDefault();
-  //   try {
-  //     setLoading(prev => ({ ...prev, edit: true }));
-  //     const updateData = {
-  //       ...manualForm,
-  //       attendanceId: editingAttendance._id
-  //     };
-  //     const response = await adminService.updateAttendance(updateData);
-  //     if (response.success) {
-  //       toast.success("Attendance updated successfully");
-  //       setShowEditModal(false);
-  //       fetchAttendance();
-  //     } else {
-  //       toast.error(response.message || "Error updating attendance");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error updating attendance:", error);
-  //     toast.error("Error updating attendance");
-  //   } finally {
-  //     setLoading(prev => ({ ...prev, edit: false }));
-  //   }
-  // };
   const handleUpdateAttendance = async (e) => {
     e.preventDefault();
     try {
@@ -626,11 +576,12 @@ export default function AdminAttendancePage() {
       holiday: "bg-purple-100 text-purple-700 border-purple-200",
       weekly_off: "bg-indigo-100 text-indigo-700 border-indigo-200",
       approved_leave: "bg-blue-100 text-blue-700 border-blue-200",
+      early_checkout: "bg-pink-100 text-pink-700 border-pink-200",
       pending_leave: "bg-gray-100 text-gray-700 border-gray-200"
     };
     return (
       <Badge variant="outline" className={`${statusConfig[status] || "bg-gray-100 text-gray-700 border-gray-200"} text-xs px-2 py-1`}>
-        {status.replace('_', ' ')}
+        {status?.replace('_', ' ')}
       </Badge>
     );
   };
@@ -982,25 +933,48 @@ export default function AdminAttendancePage() {
       minWidth: "120px",
       render: (a) => new Date(a.createdAt).toLocaleDateString()
     },
-    ...(canEditAttendance ? [{
+  ...(canEditAttendance ? [{
+      label: "Actions",
+      minWidth: "150px",
+      render: (a) => (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleViewAttendance(a)}
+            title="View attendance details"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEditAttendance(a)}
+            disabled={!canEditAttendanceRecord(a)}
+            title={
+              !canEditAttendanceRecord(a)
+                ? "Cannot edit holiday/weekly off records"
+                : "Edit attendance"
+            }
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    }] : [{
       label: "Actions",
       minWidth: "100px",
       render: (a) => (
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleEditAttendance(a)}
-          disabled={!canEditAttendanceRecord(a)}
-          title={
-            !canEditAttendanceRecord(a)
-              ? "Cannot edit holiday/weekly off records"
-              : "Edit attendance"
-          }
+          onClick={() => handleViewAttendance(a)}
+          title="View attendance details"
         >
-          <Edit className="h-4 w-4" />
+          <Eye className="h-4 w-4" />
         </Button>
       ),
-    }] : []),
+    }]),
   ];
 
   // ✅ Leave Requests Table Columns
@@ -1785,6 +1759,8 @@ export default function AdminAttendancePage() {
       </form>
     </CustomModal>
   );
+
+
   // Edit Attendance Modal
   const EditAttendanceModal = () => (
     <CustomModal
@@ -1899,6 +1875,12 @@ export default function AdminAttendancePage() {
         <AutoAttendanceModal />
         <ShiftAutoAttendanceModal />
         <EditAttendanceModal />
+        <ViewAttendanceModal
+          isOpen={showViewModal}
+          onClose={() => setShowViewModal(false)}
+          attendance={viewingAttendance}
+          getStatusBadge={getStatusBadge}
+        />
 
         {/* Header - Fully Responsive */}
         <div className="flex flex-col gap-4 sm:gap-6">

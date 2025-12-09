@@ -76,7 +76,7 @@ export async function POST(request) {
     } = await request.json();
 
     // Validation
-    if (!promoCode || !discountPercentage || !agentId ) {
+    if (!promoCode || !agentId ) {
       return NextResponse.json(
         { success: false, message: 'Required fields missing' },
         { status: 400 }
@@ -104,7 +104,7 @@ export async function POST(request) {
     }
 
     // Validate discount percentage
-    if (discountPercentage < 1 || discountPercentage > 100) {
+    if (discountPercentage > 100) {
       return NextResponse.json(
         { success: false, message: 'Discount percentage must be between 1 and 100' },
         { status: 400 }

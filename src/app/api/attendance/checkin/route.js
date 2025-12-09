@@ -183,6 +183,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import Shift from "@/Models/Shift";
+import Agent from "@/Models/Agent";
 import { verifyToken, getUserIdFromToken } from "@/lib/jwt";
 
 /**
@@ -269,7 +270,7 @@ export async function POST(request) {
 
     // ---------- Input ----------
     const body = await request.json();
-    const { shiftId, location = null, userType = "agent" } = body;
+    const { shiftId, userType = "agent" } = body;
 
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -301,7 +302,6 @@ export async function POST(request) {
       shift: shiftId || null,
       date: todayStart,
       checkInTime: now,
-      checkInLocation: location || null,
       status,
       isLate,
       lateMinutes: lateMinutes || 0,

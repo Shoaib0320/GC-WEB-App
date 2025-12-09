@@ -186,7 +186,7 @@ export async function POST(request) {
 
     const userId = getUserIdFromToken(decoded);
     const body = await request.json();
-    const { attendanceId, location, userType = "agent" } = body;
+    const { attendanceId, userType = "agent" } = body;
 
         console.log('Request ', request.body);
 
@@ -247,7 +247,6 @@ export async function POST(request) {
     }
 
     attendance.checkOutTime = now;
-    attendance.checkOutLocation = location || null;
 
     // CALCULATE EARLY CHECKOUT / OVERTIME
     let earlyCheckout = false;

@@ -742,7 +742,7 @@ export default function PromoCodesPage() {
                 type="number"
                 value={formData.discountPercentage}
                 onChange={handleInputChange}
-                min="1"
+                // min="1"
                 max="100"
                 required
                 className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"

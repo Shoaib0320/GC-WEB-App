@@ -11,9 +11,6 @@ const promoCodeSchema = new mongoose.Schema({
   },
   discountPercentage: {
     type: Number,
-    required: true,
-    min: 1,
-    max: 100
   },
   agentId: {
     type: mongoose.Schema.Types.ObjectId,

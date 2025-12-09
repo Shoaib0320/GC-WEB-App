@@ -358,15 +358,11 @@ const AttendanceScreen = () => {
   const handleCheckIn = async () => {
     if (!agentShift) return toast.error("No shift assigned.");
     if (todayLeave) return toast.info("You have an approved leave today.");
-    if (distance === null || distance > checkRadius)
-      return toast.error(`You must be within ${checkRadius} meters to check in.`);
 
     try {
       setChecking(true);
-      const location = await getCurrentLocation();
       const result = await agentAttendanceService.checkIn({
         shiftId: agentShift._id,
-        location: { lat: location.latitude, lng: location.longitude },
         userType: "agent",
       });
 
@@ -374,7 +370,6 @@ const AttendanceScreen = () => {
         toast.success("Checked in successfully!");
         await loadTodayStatus();
         await loadMonthlySummary();
-        await startBackgroundLocation();
       } else {
         toast.error(result.message || "Unable to check in");
       }
@@ -389,15 +384,11 @@ const AttendanceScreen = () => {
   const handleCheckOut = async () => {
     if (!todayAttendance) return toast.error("No check-in found today.");
     if (todayLeave) return toast.info("You have an approved leave today.");
-    if (distance === null || distance > checkRadius)
-      return toast.error(`You must be within ${checkRadius} meters to check out.`);
 
     try {
       setChecking(true);
-      const location = await getCurrentLocation();
       const result = await agentAttendanceService.checkOut({
         attendanceId: todayAttendance._id,
-        location: { lat: location.latitude, lng: location.longitude },
         userType: "agent",
       });
 
@@ -420,8 +411,6 @@ const AttendanceScreen = () => {
   const canCheckIn = () =>
     !todayAttendance &&
     !todayLeave &&
-    distance !== null &&
-    distance <= checkRadius &&
     agentShift &&
     !checking;
 
@@ -429,8 +418,6 @@ const AttendanceScreen = () => {
     todayAttendance &&
     !todayAttendance.checkOutTime &&
     !todayLeave &&
-    distance !== null &&
-    distance <= checkRadius &&
     !checking;
 
   const handleLeaveSubmit = async (formData) => {

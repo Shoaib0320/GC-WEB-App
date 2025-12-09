@@ -1,26 +1,18 @@
-# Global Loader Migration Tasks
+# TODO: Remove Location Logic from Agent Attendance
 
-## Files to Update
-- [x] src/components/ShiftSchedule.jsx - Replace local loading state with global loader
-- [x] src/components/AttendancePanel.jsx - Replace local loading state with global loader
-- [x] src/components/LeaveRequestForm.jsx - Replace local loading state with global loader
-- [ ] src/components/ResetPasswordDialog.jsx - Replace local loading state with global loader
-- [ ] src/components/NotificationBell.jsx - Replace local loading state with global loader
-- [ ] src/components/SearchBar.jsx - Replace local loading state with global loader
-- [ ] src/components/LeaveRequestsList.jsx - Replace local loading state with global loader
-- [ ] src/components/AttendanceFilter.jsx - Replace local loading state with global loader
-- [ ] src/components/common/GlobalData.jsx - Replace local loading state with global loader
-- [ ] src/app/(dashboard)/dashboard/agents/page.jsx - Replace local loading state with global loader
-- [ ] src/app/(agent)/agent/settings/page.jsx - Replace local loading state with global loader
-- [ ] src/app/(dashboard)/dashboard/users/page.jsx - Replace local loading state with global loader
-- [ ] src/components/BookingDetailsDialog.jsx - Fix missing loading state declaration
-- [ ] src/components/AttendanceSystem.jsx - Fix missing loading state declaration
+## Tasks
+- [x] Remove location fetching and state management from AttendancePanel.jsx
+- [x] Remove location parameter from check-in API call in AttendancePanel.jsx
+- [x] Update check-in API route to not expect or store location data
+- [x] Update check-out API route to not expect or store location data
+- [x] Remove "Set Location" button from AttendancePanel.jsx
+- [x] Test check-in and check-out functionality to ensure it works without location
+- [x] Verify agents can check in/out from any location
 
-## Migration Pattern
-For each file:
-1. Import useLoaderContext
-2. Remove local `const [loading, setLoading] = useState(...)`
-3. Replace `setLoading(true)` with `showLoader("unique-id", "message")`
-4. Replace `setLoading(false)` with `hideLoader("unique-id")`
-5. Replace `loading` references with `isLoading` from context (if needed for UI)
-6. Use unique IDs for different operations in the same component
+## Progress
+- [x] Plan approved by user
+- [x] AttendancePanel.jsx updated (removed location button, updated loader usage)
+- [x] Check-in API route updated
+- [x] Check-out API route updated
+- [x] Agent attendance page updated (removed location requirement for check-out)
+- [x] Testing completed
