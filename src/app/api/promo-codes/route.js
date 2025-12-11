@@ -111,9 +111,6 @@ export async function POST(request) {
       );
     }
 
-
-    
-
     // Create promo code
     const newPromoCode = await PromoCode.create({
       promoCode: promoCode.toUpperCase(),
