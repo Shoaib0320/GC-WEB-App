@@ -24,10 +24,10 @@ export default function Header() {
         {/* Logo */}
         <div className="flex items-center space-x-3">
           <Image
-            src="/images/GCLogo.png"
+            src="/images/GCLogo_1.png"
             alt="GC Logo"
-            width={40}
-            height={40}
+            width={70}
+            height={70}
             className="object-contain rounded-md"
             priority
           />

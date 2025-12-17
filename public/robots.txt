@@ -1,0 +1,16 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+
+# Googlebot
+User-agent: Googlebot
+Allow: /
+
+# Host
+Host: https://www.globiumclouds.com/
+
+# Sitemaps
+Sitemap: https://www.globiumclouds.com/sitemap.xml
+Sitemap: https://www.globiumclouds.com/server-sitemap.xml
