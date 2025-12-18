@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Attendance from "@/Models/Attendance";
 import { verifyToken } from "@/lib/jwt";
+import Agent from "@/Models/Agent";
+import User from "@/Models/User";
 
 export async function POST(request) {
   try {
