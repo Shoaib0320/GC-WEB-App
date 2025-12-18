@@ -107,7 +107,6 @@ export async function POST(request) {
       .populate("user", "firstName lastName email")
       .populate("agent", "agentName agentId email")
       .populate("shift", "name startTime endTime")
-      .populate("manager", "firstName lastName email");
 
     return NextResponse.json({ 
       success: true, 
